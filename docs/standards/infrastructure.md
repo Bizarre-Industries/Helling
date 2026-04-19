@@ -56,8 +56,8 @@ Verify: `make build` on fresh clone produces byte-identical binaries
 Rollback: if critical issue found within 48 hours, yank release and publish patch.
 
 Tooling:
-  - Atlas: database schema migrations (versioned, forward-only)
-  - nfpm: .deb package generation (hellingd, helling-cli, helling-proxy)
+  - goose + sqlc: SQL-first migrations and typed query generation
+  - nfpm: .deb package generation (hellingd, helling-cli, edge service config)
   - aptly: APT repository management (hosts .deb packages for apt-get upgrade)
   - live-build / mkosi: ISO image building (bootable installer)
   - GoReleaser: orchestrates build + package + sign + publish
@@ -75,13 +75,13 @@ Pre-upgrade:
   - Verify package signature (GPG-signed .deb via aptly repo)
 
 During upgrade (handled by .deb postinst script):
-  - systemctl stop helling-proxy (dashboard offline)
+  - systemctl stop caddy (dashboard offline)
   - systemctl stop hellingd (API offline)
   - dpkg replaces binaries
-  - systemctl start hellingd (auto-migrates database schema via Atlas)
+  - systemctl start hellingd (auto-applies database migrations via goose)
   - Health check (GET /health?detail=true via curl in postinst)
   - If health check fails: postinst exits non-zero, dpkg marks package as failed
-  - systemctl start helling-proxy
+  - systemctl start caddy
 
 Post-upgrade:
   - Dashboard shows "What's New" banner
@@ -96,7 +96,7 @@ Rollback:
   → Restarts services
   → Verifies health
 
-RULE: Schema migrations (Atlas) must be forward-only but the application must handle
+RULE: Schema migrations (goose) must be forward-only but the application must handle
 running against an older schema gracefully (new columns have defaults, removed
 columns are ignored). This allows rollback without schema rollback.
 ```

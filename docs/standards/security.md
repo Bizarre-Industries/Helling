@@ -93,7 +93,7 @@ Auth flow for Helling-specific endpoints:
 ```
 At rest:
   - SQLite: file permissions 0600 (owner read/write only)
-  - Secrets in DB: encrypted with AES-256-GCM, key from helling.yaml or env var
+  - Secrets in DB: encrypted with age (`filippo.io/age`), key material external to DB
   - Backup encryption: optional passphrase-based (AES-256-GCM)
   - ZFS encryption: supported at pool level (Incus manages)
   - Audit logs: append-only, immutable once written

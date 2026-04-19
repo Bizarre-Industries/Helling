@@ -9,34 +9,35 @@
 
 | Concern                | Tool                           | What it does                   | Custom code                  |
 | ---------------------- | ------------------------------ | ------------------------------ | ---------------------------- |
-| HTTP routing           | `go-chi/chi/v5`                | Middleware chain, URL params   | ~100 lines (router)          |
+| HTTP routing           | `net/http` ServeMux            | Method/path matching in stdlib | ~100 lines (router wiring)   |
 | API types + validation | `oapi-codegen` (strict-server) | Types + router from spec       | Handler implementations only |
 | Auth (PAM)             | `msteinert/pam`                | PAM conversation               | ~100 lines                   |
 | Auth (JWT)             | `golang-jwt/jwt/v5`            | Token create/verify            | ~200 lines                   |
 | Auth (TOTP)            | `pquerna/otp`                  | QR generation, code verify     | ~100 lines                   |
-| Database               | `gorm.io/gorm` + SQLite        | Helling state only (ADR-018)   | Model definitions            |
-| Config                 | `spf13/viper`                  | YAML + env vars                | Config struct                |
+| Database               | `database/sql` + `sqlc`        | Helling state only (ADR-038)   | SQL files + generated code   |
+| Migrations             | `goose`                        | Forward-only SQL migrations    | Migration files              |
+| Config                 | `gopkg.in/yaml.v3`             | YAML + env vars                | Config loader                |
 | BMC                    | `bmc-toolbox/bmclib/v2`        | IPMI, Redfish                  | Thin wrapper                 |
 | Proxy                  | `net/http/httputil`            | Reverse proxy to Unix sockets  | ~300 lines                   |
 | Scheduling             | `systemd timers`               | Backup/snapshot cron (ADR-017) | Unit file generation         |
 | Audit                  | `log/slog` → journal           | Structured logging (ADR-019)   | Zero — slog is stdlib        |
 | Firewall               | `nft` CLI (shell out)          | Host nftables rules (ADR-018)  | exec.Command wrapper         |
 | Disk health            | `smartctl` CLI (shell out)     | SMART data (ADR-018)           | exec.Command wrapper         |
-| System info            | `shirou/gopsutil/v4`           | CPU, RAM, disk, NICs           | Direct calls                 |
+| System info            | OS tools via shell-out         | CPU, RAM, disk, NICs           | exec.Command wrappers        |
 
 ### hellingd go.mod (target)
 
-Target shape: a small dependency set centered on router, auth/JWT, config, optional BMC integration, and SQLite persistence. Keep everything else in stdlib, systemd, or CLI tools.
+Target shape: a small dependency set centered on stdlib routing, auth/JWT, config, optional BMC integration, and SQL-first SQLite persistence. Keep everything else in stdlib, systemd, or CLI tools.
 
 ### What hellingd does NOT import
 
-| Don't import           | Use instead                 |
-| ---------------------- | --------------------------- |
-| `lxc/incus/v6`         | Proxy to Incus Unix socket  |
-| `containers/podman/v5` | Proxy to Podman Unix socket |
-| `google/nftables`      | Shell out to `nft --json`   |
-| `go-co-op/gocron`      | systemd timers              |
-| `coreos/go-systemd`    | Shell out to `systemctl`    |
+| Don't import           | Use instead                                       |
+| ---------------------- | ------------------------------------------------- |
+| `lxc/incus/v6`         | Proxy to Incus HTTPS loopback (no SDK dependency) |
+| `containers/podman/v5` | Proxy to Podman Unix socket                       |
+| `google/nftables`      | Shell out to `nft --json`                         |
+| `go-co-op/gocron`      | systemd timers                                    |
+| `coreos/go-systemd`    | Shell out to `systemctl`                          |
 
 ### Add when needed (later versions)
 
@@ -53,7 +54,7 @@ Target shape: a small dependency set centered on router, auth/JWT, config, optio
 | Concern           | Tool                                       |
 | ----------------- | ------------------------------------------ |
 | Command framework | `spf13/cobra`                              |
-| Config            | `spf13/viper`                              |
+| Config            | `gopkg.in/yaml.v3` + env loader            |
 | API client        | Generated from Helling spec (oapi-codegen) |
 | Man pages         | `cobra/doc.GenManTree()`                   |
 | Shell completions | Cobra built-in                             |
@@ -69,13 +70,13 @@ Target shape: a small dependency set centered on router, auth/JWT, config, optio
 | Components       | `antd` v6                                           |
 | Admin components | `@ant-design/pro-components`                        |
 | Charts           | `@ant-design/charts`                                |
-| CRUD framework   | `@refinedev/core` + `@refinedev/antd`               |
+| CRUD framework   | `@ant-design/pro-components`                        |
 | Data fetching    | `@tanstack/react-query` (via orval for Helling API) |
 | Terminal         | `@xterm/xterm`                                      |
-| VM VGA console   | `spice-html5` class browser client (dynamic import) |
-| Code editor      | `@monaco-editor/react` (dynamic import)             |
+| VM VGA console   | `@canonical/spice-html5` (dynamic import)           |
+| Code editor      | `CodeMirror 6` (dynamic import)                     |
 | Routing          | `react-router-dom` v7                               |
-| HTTP             | `axios` (JWT interceptor)                           |
+| HTTP             | `fetch` wrapper (JWT injection)                     |
 | Icons            | `lucide-react`                                      |
 
 ### Frontend does NOT import
@@ -108,7 +109,7 @@ All tools ship in the ISO. Stable CLI interfaces. JSON output where available.
 
 Previous architecture: 150+ Go handlers wrapping Incus API calls. Each handler decoded HTTP, called Incus Go client, re-encoded response.
 
-New architecture (ADR-014): `httputil.ReverseProxy` forwards requests to Incus Unix socket. Zero Go code per Incus endpoint. New Incus features work automatically.
+New architecture (ADR-014 + ADR-036): `httputil.ReverseProxy` forwards requests to Incus HTTPS loopback with per-user client cert identity. Zero Go code per Incus endpoint. New Incus features work automatically.
 
 Helling adds on top of the proxy:
 

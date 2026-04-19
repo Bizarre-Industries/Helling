@@ -10,12 +10,12 @@
 
 ---
 
-## Architecture Decisions (ADRs 001-036)
+## Architecture Decisions (ADRs 001-040)
 
 | #   | Decision                                                      | Status                |
 | --- | ------------------------------------------------------------- | --------------------- |
 | 001 | Incus over libvirt                                            | Accepted              |
-| 003 | React + Ant Design + refine over SvelteKit                    | Accepted              |
+| 003 | React + Ant Design over SvelteKit                             | Accepted              |
 | 010 | SPICE as in-browser VM console protocol                       | Accepted              |
 | 011 | Proxy to Podman socket, no Go bindings                        | Superseded by ADR-035 |
 | 012 | Incus Network ACLs for VM/CT firewalling                      | Accepted              |
@@ -42,6 +42,10 @@
 | 034 | Lima dev environment                                          | Accepted              |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
 | 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
+| 037 | Caddy as edge service                                         | Accepted              |
+| 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
+| 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
+| 040 | net/http ServeMux over chi                                    | Accepted              |
 
 ---
 
@@ -60,7 +64,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 | 7   | git-cliff                           | CHANGELOG from conventional commits                 | v0.1.0-alpha |
 | 8   | .devcontainer                       | Reproducible dev environment                        | v0.1.0-alpha |
 | 9   | Extended pre-commit hooks           | Spec lint, staleness, SPDX, tidy, commit lint       | v0.1.0-alpha |
-| 10  | Atlas + GORM provider               | Database migrations (replaces AutoMigrate)          | v0.1.0-beta  |
+| 10  | sqlc + goose                        | SQL-first query generation and migrations           | v0.1.0-beta  |
 | 11  | invopop/jsonschema                  | Config JSON Schema from Go struct                   | v0.1.0-beta  |
 | 12  | cupaloy                             | API response snapshot testing                       | v0.1.0-beta  |
 | 13  | SPICE browser console               | VM VGA console in browser                           | v0.1.0-beta  |
@@ -143,7 +147,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] WebSocket proxy for SPICE/serial/exec (upgrade forwarding)
 - [ ] Auto-snapshot before destructive operations (proxy hook)
 - [ ] VM screenshot thumbnails (capture + cache)
-- [ ] Atlas database migrations (replace AutoMigrate)
+- [ ] SQL-first migrations with goose + generated queries via sqlc
 
 #### Frontend
 
@@ -158,7 +162,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 #### Automation
 
-- [ ] Atlas + GORM provider configured
+- [ ] sqlc + goose configured
 - [ ] Config JSON Schema generation
 - [ ] cupaloy response snapshot tests
 - [ ] Cloud-init template library
@@ -211,7 +215,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] LDAP/AD sync (`go-ldap/ldap/v3`)
 - [ ] OIDC (PKCE, group mapping) (`coreos/go-oidc/v3`)
 - [ ] Projects + quotas (Incus project limits)
-- [ ] Secrets management (AES-256-GCM encrypted KV)
+- [ ] Secrets management (age-encrypted KV)
 - [ ] Internal CA (root cert generation, issuance, CRL, auto-renewal)
 - [ ] Dashboard: LDAP/OIDC/WebAuthn login options, project switcher, quota display
 

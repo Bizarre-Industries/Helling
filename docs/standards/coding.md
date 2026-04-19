@@ -475,17 +475,16 @@ RULE: License check in CI (no AGPL-incompatible licenses).
 RULE: govulncheck in CI. Zero known vulnerabilities at release time.
 
 Approved dependencies (no justification needed):
-  lxc/incus/v6              — Incus client (core functionality)
-  containers/podman/v5      — Podman client (core functionality, NOT docker/docker)
   bmc-toolbox/bmclib        — BMC management (core functionality)
-  go-chi/chi or gorilla/mux — HTTP router
-  gorm.io/gorm        — Database ORM
+  net/http (stdlib)         — HTTP routing baseline
+  sqlc + database/sql       — Typed query generation + persistence
+  goose                     — SQL migrations
   pquerna/otp          — TOTP 2FA
   go-webauthn/webauthn — WebAuthn
   prometheus/client    — Metrics
   golang-jwt/jwt       — JWT
   spf13/cobra          — CLI framework
-  spf13/viper          — Configuration
+  gopkg.in/yaml.v3     — Configuration
   stretchr/testify     — Test assertions
 
 Requires justification:

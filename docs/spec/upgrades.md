@@ -4,7 +4,7 @@ Upgrade behavior for Helling management components in v0.1.
 
 ## Scope
 
-- In scope: `hellingd`, `helling-proxy`, `helling` package upgrades.
+- In scope: `hellingd`, Caddy edge service config/package, `helling` package upgrades.
 - Out of scope: runtime workload migration orchestration for Incus/Podman workloads.
 
 ## Source and Packaging
@@ -13,7 +13,7 @@ Upgrade behavior for Helling management components in v0.1.
 - Standard upgrade path:
 
 ```bash
-apt update && apt install --only-upgrade helling helling-proxy hellingd
+apt update && apt install --only-upgrade helling caddy hellingd
 ```
 
 ## Release and Version Rules
@@ -29,11 +29,11 @@ apt update && apt install --only-upgrade helling helling-proxy hellingd
    - package signature verification
    - disk space and service health
 2. Create SQLite backup snapshot before package replacement.
-3. Stop management plane services (`helling-proxy`, `hellingd`).
+3. Stop management plane services (Caddy edge service, `hellingd`).
 4. Install upgraded packages.
 5. Start `hellingd` and run startup migrations.
 6. Run health checks.
-7. Start `helling-proxy`.
+7. Start Caddy edge service.
 8. Mark upgrade successful and emit audit/event records.
 
 ## Migration Behavior
@@ -67,7 +67,7 @@ Rollback trigger conditions:
 Upgrade success requires:
 
 - `hellingd` healthy and responsive
-- `helling-proxy` healthy and serving dashboard/API
+- Caddy edge service healthy and serving dashboard/API
 - authentication path functional
 - Incus and Podman proxy paths responsive
 

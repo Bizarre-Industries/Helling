@@ -1,10 +1,10 @@
-# ADR-028: Unix socket between proxy and daemon
+# ADR-028: Unix socket between edge service and daemon
 
 > Status: Accepted (2026-04-19)
 
 ## Context
 
-Local inter-process communication between `helling-proxy` and `hellingd` needs low overhead and strong local identity signals.
+Local inter-process communication between the edge service and `hellingd` needs low overhead and strong local identity signals.
 
 ## Decision
 

@@ -4,8 +4,8 @@ Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focus
 
 ## System Overview
 
-- Browser UI terminates at `helling-proxy` over HTTPS.
-- `helling-proxy` serves static web assets and forwards `/api/*` to `hellingd`.
+- Browser UI terminates at Caddy over HTTPS.
+- Caddy serves static web assets and forwards `/api/*` to `hellingd`.
 - `hellingd` enforces authn/authz and either:
   - handles Helling-specific endpoints (`/api/v1/*`), or
   - proxies upstream APIs for Incus (`/api/incus/*`) and Podman (`/api/podman/*`).
@@ -26,7 +26,7 @@ Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focus
 └──────────────────────────────┬────────────────────────────────┘
                                │ HTTPS
 ┌──────────────────────────────▼────────────────────────────────┐
-│                        helling-proxy                           │
+│                           Caddy                                │
 │              TLS termination + static asset serving            │
 │                 /api/* forwarding to hellingd                  │
 └──────────────────────────────┬────────────────────────────────┘
@@ -80,12 +80,14 @@ Helling keeps backend dependencies intentionally small and aligned to proxy-firs
 
 Core backend dependencies (approximately 10-12 with build-profile variance):
 
-- `go-chi/chi` for routing
+- `net/http` ServeMux for routing
 - `golang-jwt/jwt` for JWT handling
 - `msteinert/pam` for PAM integration
 - `pquerna/otp` for TOTP
-- `spf13/viper` for config loading
-- `gorm.io/gorm` and `gorm.io/driver/sqlite` for state persistence
+- `gopkg.in/yaml.v3` for config loading
+- `database/sql` + generated `sqlc` query layer for state persistence
+- `goose` for SQL migrations
+- `filippo.io/age` for secret encryption
 - `bmc-toolbox/bmclib` for deferred BMC integration paths
 - minimal observability/system libraries as required by v0.1 handlers
 
@@ -95,7 +97,7 @@ Incus and Podman APIs are not linked via heavy SDK dependency surfaces for proxi
 
 ### Proxied upstream request
 
-1. Request arrives at `helling-proxy`.
+1. Request arrives at Caddy.
 2. Forward to `hellingd`.
 3. `hellingd` validates JWT/API token and resolves user context.
 4. For Incus requests, `hellingd` loads user client cert and forwards with mTLS identity.
@@ -104,7 +106,7 @@ Incus and Podman APIs are not linked via heavy SDK dependency surfaces for proxi
 
 ### Helling-native request
 
-1. Request arrives at `helling-proxy`.
+1. Request arrives at Caddy.
 2. Forward to `hellingd`.
 3. `hellingd` validates auth and authorization.
 4. Helling handler executes domain logic.

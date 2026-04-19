@@ -4,7 +4,7 @@
 | --- | ------------------------------------------------------------- | --------------------- |
 | 001 | Incus over libvirt                                            | Accepted              |
 | 002 | Debian over Fedora                                            | Accepted              |
-| 003 | React + Ant Design + refine over SvelteKit                    | Accepted              |
+| 003 | React + Ant Design over SvelteKit                             | Accepted              |
 | 004 | Podman on host                                                | Accepted              |
 | 005 | k3s via cloud-init for v0.1 Kubernetes                        | Accepted              |
 | 006 | Defer microVM support from v0.1                               | Accepted              |
@@ -37,3 +37,7 @@
 | 034 | Lima dev environment                                          | Accepted              |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
 | 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
+| 037 | Caddy as edge service                                         | Accepted              |
+| 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
+| 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
+| 040 | net/http ServeMux over chi                                    | Accepted              |

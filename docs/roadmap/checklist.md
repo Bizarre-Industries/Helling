@@ -98,7 +98,7 @@
 
 ### Database
 
-- [ ] Atlas migration generates correct SQL from GORM models
+- [ ] goose migrations apply cleanly and sqlc generation matches schema
 - [ ] Schema upgrade works without data loss
 
 ---
@@ -159,7 +159,7 @@
 ### Packaging
 
 - [ ] `dpkg -i helling_*.deb` installs successfully on Debian 13
-- [ ] `systemctl status hellingd helling-proxy` shows active
+- [ ] `systemctl status hellingd caddy` shows active
 - [ ] `man helling` displays man page
 - [ ] `helling completion bash | head` generates completions
 - [ ] ISO boots in VM, installs, dashboard accessible at :8006

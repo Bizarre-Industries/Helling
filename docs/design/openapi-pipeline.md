@@ -65,13 +65,14 @@ func (s *Handlers) ListUsers(ctx context.Context, req ListUsersRequestObject) (L
 The generated code handles: route registration, JSON decoding, parameter parsing, response encoding, error formatting.
 
 Config:
+
 ```yaml
 # apps/hellingd/oapi-codegen.yaml
 package: api
 output: api/helling.gen.go
 generate:
   strict-server: true
-  chi-server: true
+  std-http-server: true
   models: true
 ```
 
@@ -102,6 +103,7 @@ export const useCreateSchedule = () => useMutation({ mutationFn: ... });
 ```
 
 Config:
+
 ```typescript
 // web/orval.config.ts
 export default defineConfig({
@@ -127,24 +129,24 @@ export default defineConfig({
 
 ### Generated (never edit, regenerate from spec)
 
-| Artifact | Generator | Output |
-|---|---|---|
-| Go server interface + types + router | oapi-codegen strict-server | `api/helling.gen.go` (~2k lines) |
-| Go API client (for CLI) | oapi-codegen client | `cli/internal/client/client.gen.go` (~3k lines) |
-| TypeScript types + React Query hooks | orval | `web/src/api/generated/` |
-| Shell completions | Cobra built-in | `helling completion bash/zsh/fish` |
-| Man pages | Cobra doc generation | `helling(1)` |
+| Artifact                             | Generator                  | Output                                          |
+| ------------------------------------ | -------------------------- | ----------------------------------------------- |
+| Go server interface + types + router | oapi-codegen strict-server | `api/helling.gen.go` (~2k lines)                |
+| Go API client (for CLI)              | oapi-codegen client        | `cli/internal/client/client.gen.go` (~3k lines) |
+| TypeScript types + React Query hooks | orval                      | `web/src/api/generated/`                        |
+| Shell completions                    | Cobra built-in             | `helling completion bash/zsh/fish`              |
+| Man pages                            | Cobra doc generation       | `helling(1)`                                    |
 
 ### Written by hand
 
-| Artifact | Lines |
-|---|---|
-| Proxy middleware (the core) | ~300 |
-| Helling handler implementations | ~500 |
-| Auth service | ~1,000 |
-| CLI commands | ~500 |
-| Frontend pages | ~5,000 |
-| **Total hand-written** | **~7,300** |
+| Artifact                        | Lines      |
+| ------------------------------- | ---------- |
+| Proxy middleware (the core)     | ~300       |
+| Helling handler implementations | ~500       |
+| Auth service                    | ~1,000     |
+| CLI commands                    | ~500       |
+| Frontend pages                  | ~5,000     |
+| **Total hand-written**          | **~7,300** |
 
 ---
 

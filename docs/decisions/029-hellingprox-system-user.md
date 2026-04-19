@@ -8,7 +8,7 @@ Running both daemons as root expands impact of web-facing compromise.
 
 ## Decision
 
-Run `helling-proxy` as dedicated low-privilege system user `hellingprox`.
+Run the edge service as dedicated low-privilege system user `hellingprox`.
 
 - No shell login
 - Minimal filesystem permissions

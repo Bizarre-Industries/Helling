@@ -32,18 +32,18 @@ No waiver policy. If a rule genuinely doesn't apply, disable it in `api/.vacuum.
 
 Beyond vacuum's recommended ruleset, Helling enforces:
 
-| Rule ID | What it checks |
-| --- | --- |
-| `helling-property-snake-case` | Property names must be snake_case (overrides camelCase default). |
-| `helling-ulid-id-path-param` | Path parameters named `id` must use `pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'`. |
-| `helling-required-example` | Every request/response media type must have `example` or `examples`. |
-| `helling-required-description` | Every `requestBody`, `parameter`, `schema`, and schema `property` must have `description`. |
-| `helling-sensitive-writeonly` | Properties named `password`, `secret`, `token`, `encrypted_*` must declare `writeOnly: true`. |
+| Rule ID                              | What it checks                                                                                                  |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `helling-property-snake-case`        | Property names must be snake_case (overrides camelCase default).                                                |
+| `helling-ulid-id-path-param`         | Path parameters named `id` must use `pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'`.                                      |
+| `helling-required-example`           | Every request/response media type must have `example` or `examples`.                                            |
+| `helling-required-description`       | Every `requestBody`, `parameter`, `schema`, and schema `property` must have `description`.                      |
+| `helling-sensitive-writeonly`        | Properties named `password`, `secret`, `token`, `encrypted_*` must declare `writeOnly: true`.                   |
 | `helling-error-envelope-on-mutation` | Every `POST`/`PUT`/`DELETE`/`PATCH` operation must declare 400, 401, 429 responses referencing `ErrorEnvelope`. |
-| `helling-pagination-on-list` | Any GET returning an array must include `PageLimit` and `PageCursor` parameters. |
-| `helling-no-single-ref-combinator` | Forbid `allOf: [$ref: X]` wrapping a single ref. Inline instead. |
-| `helling-operation-id-camelcase` | `operationId` must match `^[a-z][a-zA-Z0-9]*$`. |
-| `helling-tag-declared` | Every `tags: [X]` on an operation must reference a `tags[]` entry at the root. |
+| `helling-pagination-on-list`         | Any GET returning an array must include `PageLimit` and `PageCursor` parameters.                                |
+| `helling-no-single-ref-combinator`   | Forbid `allOf: [$ref: X]` wrapping a single ref. Inline instead.                                                |
+| `helling-operation-id-camelcase`     | `operationId` must match `^[a-z][a-zA-Z0-9]*$`.                                                                 |
+| `helling-tag-declared`               | Every `tags: [X]` on an operation must reference a `tags[]` entry at the root.                                  |
 
 See `api/.vacuum.yaml` for the normative ruleset.
 
@@ -55,26 +55,28 @@ vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 
 Exit code non-zero fails the job.
 
-### 1.5 Current score (2026-04-20, `201a2c7`): 33/100
+### 1.5 Gate semantics after ADR-043 (2026-04-20)
 
-To reach 100, the fixes below are required in order.
+With Huma as the contract source for Helling-owned endpoints, the generated OpenAPI artifact should auto-score 100/100 by construction for structural/doc coverage categories.
 
-**Category: Examples (52 → 100)**
-- Add `example` to every `requestBody.content.application/json` block (~16 operations).
-- Add `example` to every response schema's `content.application/json` block (~48 responses).
-- Use `examples:` for multi-example endpoints (login with TOTP vs without, etc).
+The OpenAPI gate now validates two classes of failure:
 
-**Category: Descriptions (63 → 100)**
-- Add `description` to every `requestBody` block (16 missing).
-- Add `description` to every `parameter` (9 missing, plus future adds).
-- Add `description` to every schema (`User`, `Token`, `Schedule`, etc.).
-- Add `description` to every schema `property`.
+1. Struct-tag/doc-comment drift from intended API semantics.
+2. Custom design-intent rules that protect Helling wire contracts.
 
-**Category: Schemas (87 → 100)**
-- Remove `allOf: [$ref: CreateScheduleRequest]` in `UpdateScheduleRequest` and `UpdateWebhookRequest`. Inline the fields, or define a distinct update schema.
-- De-duplicate schema descriptions.
+Practical implication:
 
-**No action needed for:** Contract Information, Operations, Tags, Validation, Security, OWASP (all already at 100).
+- Legacy hygiene rules such as `helling-required-description` become largely redundant because descriptions are enforced at the Go type/field layer before generation.
+- Intent-oriented rules remain valuable regression detectors and must stay enabled.
+
+Rules that remain high-value include:
+
+- `writeOnly` enforcement for sensitive fields.
+- ULID pattern enforcement for identifier fields and path params.
+- Error envelope consistency for mutation and auth/error paths.
+- Pagination contract enforcement for list endpoints.
+
+Any gate failure is treated as a code/type contract regression, not a manual YAML formatting task.
 
 ### 1.6 Concrete before/after: `POST /api/v1/auth/login`
 
@@ -83,7 +85,7 @@ To reach 100, the fixes below are required in order.
 ```yaml
 /api/v1/auth/login:
   post:
-    tags: [ Auth ]
+    tags: [Auth]
     operationId: authLogin
     summary: PAM authenticate and issue JWT pair
     security: []
@@ -92,24 +94,24 @@ To reach 100, the fixes below are required in order.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/AuthLoginRequest'
+            $ref: "#/components/schemas/AuthLoginRequest"
     responses:
-      '200':
+      "200":
         description: Login successful
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvelopeAuthLoginResponse'
-      '202':
+              $ref: "#/components/schemas/EnvelopeAuthLoginResponse"
+      "202":
         description: MFA challenge required
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvelopeMfaChallengeResponse'
-      '401':
-        $ref: '#/components/responses/AuthError'
-      '429':
-        $ref: '#/components/responses/RateLimitError'
+              $ref: "#/components/schemas/EnvelopeMfaChallengeResponse"
+      "401":
+        $ref: "#/components/responses/AuthError"
+      "429":
+        $ref: "#/components/responses/RateLimitError"
 ```
 
 **After (100/100):**
@@ -117,7 +119,7 @@ To reach 100, the fixes below are required in order.
 ```yaml
 /api/v1/auth/login:
   post:
-    tags: [ Auth ]
+    tags: [Auth]
     operationId: authLogin
     summary: PAM authenticate and issue JWT pair
     description: |
@@ -134,7 +136,7 @@ To reach 100, the fixes below are required in order.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/AuthLoginRequest'
+            $ref: "#/components/schemas/AuthLoginRequest"
           examples:
             basic:
               summary: Password-only login
@@ -148,7 +150,7 @@ To reach 100, the fixes below are required in order.
                 password: correct-horse-battery-staple
                 totp_code: "492018"
     responses:
-      '200':
+      "200":
         description: Login successful. Access token returned; refresh token set as `helling_refresh` cookie.
         headers:
           Set-Cookie:
@@ -161,7 +163,7 @@ To reach 100, the fixes below are required in order.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvelopeAuthLoginResponse'
+              $ref: "#/components/schemas/EnvelopeAuthLoginResponse"
             example:
               data:
                 access_token: eyJhbGciOiJFZERTQSIsImtpZCI6ImsxIn0...
@@ -169,24 +171,24 @@ To reach 100, the fixes below are required in order.
                 expires_in: 900
               meta:
                 request_id: req_01JZABC0123456789ABCDEF
-      '202':
+      "202":
         description: MFA challenge required. Complete via `/auth/mfa/complete`.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvelopeMfaChallengeResponse'
+              $ref: "#/components/schemas/EnvelopeMfaChallengeResponse"
             example:
               data:
                 mfa_required: true
                 mfa_token: mfa_01JZABC...
               meta:
                 request_id: req_01JZABC...
-      '400':
-        $ref: '#/components/responses/ValidationError'
-      '401':
-        $ref: '#/components/responses/AuthError'
-      '429':
-        $ref: '#/components/responses/RateLimitError'
+      "400":
+        $ref: "#/components/responses/ValidationError"
+      "401":
+        $ref: "#/components/responses/AuthError"
+      "429":
+        $ref: "#/components/responses/RateLimitError"
 ```
 
 Apply this shape to every operation. One weekend of disciplined work.
@@ -199,29 +201,29 @@ Every field in a request/response schema must carry constraints aligned with `do
 User:
   type: object
   description: A Helling-managed user account, backed by a PAM identity.
-  required: [ id, username, role, status, created_at ]
+  required: [id, username, role, status, created_at]
   properties:
     id:
       type: string
       description: ULID identifier.
-      pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
       example: "01JZABC0123456789ABCDEF"
     username:
       type: string
       description: POSIX-compatible username. Matches `^[a-z_][a-z0-9_-]{0,31}$`.
-      pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+      pattern: "^[a-z_][a-z0-9_-]{0,31}$"
       minLength: 1
       maxLength: 32
       example: alice
     role:
       type: string
       description: Fixed Helling role (ADR-032).
-      enum: [ admin, user, auditor ]
+      enum: [admin, user, auditor]
       example: admin
     status:
       type: string
       description: Account activity state.
-      enum: [ active, disabled ]
+      enum: [active, disabled]
       example: active
     created_at:
       type: string
@@ -232,11 +234,11 @@ User:
 AuthLoginRequest:
   type: object
   description: PAM login credentials.
-  required: [ username, password ]
+  required: [username, password]
   properties:
     username:
       type: string
-      pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+      pattern: "^[a-z_][a-z0-9_-]{0,31}$"
       minLength: 1
       maxLength: 32
     password:
@@ -248,7 +250,7 @@ AuthLoginRequest:
     totp_code:
       type: string
       description: Optional TOTP code for single-shot MFA.
-      pattern: '^[0-9]{6}$'
+      pattern: "^[0-9]{6}$"
       minLength: 6
       maxLength: 6
 ```
@@ -336,55 +338,55 @@ run:
 
 linters:
   enable:
-    - asasalint           # as and variadic mismatches
-    - asciicheck          # non-ASCII in idents
-    - bidichk             # bidirectional unicode tricks
-    - bodyclose           # http.Response.Body closed
-    - contextcheck        # ctx passed consistently
-    - copyloopvar         # Go 1.22+ loop variable semantics
-    - dupl                # duplicate code blocks
-    - durationcheck       # multiplication of time.Duration values
-    - errcheck            # unchecked errors
-    - errname             # error types named correctly
-    - errorlint           # errors.Is / errors.As usage
-    - exhaustive          # switch/map completeness for enums
-    - forbidigo           # forbid specific function calls
-    - gci                 # import ordering
+    - asasalint # as and variadic mismatches
+    - asciicheck # non-ASCII in idents
+    - bidichk # bidirectional unicode tricks
+    - bodyclose # http.Response.Body closed
+    - contextcheck # ctx passed consistently
+    - copyloopvar # Go 1.22+ loop variable semantics
+    - dupl # duplicate code blocks
+    - durationcheck # multiplication of time.Duration values
+    - errcheck # unchecked errors
+    - errname # error types named correctly
+    - errorlint # errors.Is / errors.As usage
+    - exhaustive # switch/map completeness for enums
+    - forbidigo # forbid specific function calls
+    - gci # import ordering
     - gocheckcompilerdirectives
-    - gochecksumtype      # sum-type completeness
-    - goconst             # repeated strings → const
-    - gocritic            # meta-linter, broad checks
-    - gocyclo             # cyclomatic complexity
+    - gochecksumtype # sum-type completeness
+    - goconst # repeated strings → const
+    - gocritic # meta-linter, broad checks
+    - gocyclo # cyclomatic complexity
     - gofmt
-    - gofumpt             # stricter gofmt
+    - gofumpt # stricter gofmt
     - goimports
-    - gosec               # security checks (SQL injection, path traversal, file perms)
+    - gosec # security checks (SQL injection, path traversal, file perms)
     - gosimple
     - govet
     - ineffassign
     - misspell
-    - musttag             # struct tags on types going through JSON/YAML
-    - nakedret            # named returns without explicit return
-    - nilerr              # nil err returned but not nil value
-    - nilnil              # nil, nil returns
-    - noctx               # http.Get without context
-    - nolintlint          # //nolint directives must have explanation
-    - perfsprint          # Sprintf → faster alternatives
-    - prealloc            # slice prealloc hints
-    - predeclared         # shadowing builtins
-    - reassign            # reassigning package-level vars
-    - revive              # replacement for deprecated golint
-    - rowserrcheck        # sql.Rows.Err() called
-    - sloglint            # slog key-value usage consistency
-    - sqlclosecheck       # sql.Rows closed
+    - musttag # struct tags on types going through JSON/YAML
+    - nakedret # named returns without explicit return
+    - nilerr # nil err returned but not nil value
+    - nilnil # nil, nil returns
+    - noctx # http.Get without context
+    - nolintlint # //nolint directives must have explanation
+    - perfsprint # Sprintf → faster alternatives
+    - prealloc # slice prealloc hints
+    - predeclared # shadowing builtins
+    - reassign # reassigning package-level vars
+    - revive # replacement for deprecated golint
+    - rowserrcheck # sql.Rows.Err() called
+    - sloglint # slog key-value usage consistency
+    - sqlclosecheck # sql.Rows closed
     - staticcheck
-    - testifylint         # testify assertion correctness
-    - thelper             # t.Helper() in helpers
-    - tparallel           # t.Parallel() correctness
+    - testifylint # testify assertion correctness
+    - thelper # t.Helper() in helpers
+    - tparallel # t.Parallel() correctness
     - unconvert
     - unparam
     - unused
-    - usestdlibvars       # prefer stdlib consts
+    - usestdlibvars # prefer stdlib consts
     - wastedassign
     - whitespace
 
@@ -394,7 +396,7 @@ linters-settings:
   dupl:
     threshold: 150
   gosec:
-    excludes: []    # no exclusions
+    excludes: [] # no exclusions
   forbidigo:
     forbid:
       - p: '^fmt\.Print.*$'
@@ -420,14 +422,14 @@ issues:
 
 ### 5.1 Additional Go gates
 
-| Check | Command | Gate |
-| --- | --- | --- |
-| `go vet` | `go vet ./...` | exit 0 |
-| `go build` | `go build ./...` | exit 0 |
-| `go test -race` | `go test -race ./...` | exit 0 |
-| `govulncheck` | `govulncheck ./...` | exit 0, zero HIGH+CRITICAL |
-| `gofmt -l` | `test -z "$(gofmt -l .)"` | zero diff |
-| `go mod tidy` | verify diff after run is empty | zero diff |
+| Check           | Command                        | Gate                       |
+| --------------- | ------------------------------ | -------------------------- |
+| `go vet`        | `go vet ./...`                 | exit 0                     |
+| `go build`      | `go build ./...`               | exit 0                     |
+| `go test -race` | `go test -race ./...`          | exit 0                     |
+| `govulncheck`   | `govulncheck ./...`            | exit 0, zero HIGH+CRITICAL |
+| `gofmt -l`      | `test -z "$(gofmt -l .)"`      | zero diff                  |
+| `go mod tidy`   | verify diff after run is empty | zero diff                  |
 
 ### 5.2 Coverage gates
 
@@ -455,7 +457,10 @@ Linter: `biome lint` with `biome.json` at `web/`.
     "enabled": true,
     "rules": {
       "recommended": true,
-      "correctness": { "noUnusedVariables": "error", "useExhaustiveDependencies": "error" },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "error"
+      },
       "suspicious": { "noExplicitAny": "error", "noConsole": "warn" },
       "style": { "useConst": "error", "useTemplate": "error" },
       "a11y": { "recommended": true, "useButtonType": "error" },
@@ -472,6 +477,7 @@ Linter: `biome lint` with `biome.json` at `web/`.
 ```
 
 Additional gates:
+
 - `tsc --noEmit` must pass.
 - `orval` generation must be idempotent: `bun run gen:api && git diff --exit-code web/src/api/generated`.
 - `bun test` must pass (vitest).
@@ -539,6 +545,7 @@ Scanner: `grype` (see §9).
 ### 9.1 Current state (to be removed)
 
 security.md §4 currently references:
+
 - govulncheck (keep)
 - gitleaks (keep)
 - golangci-lint + gosec (keep, moved into §5)
@@ -551,13 +558,13 @@ security.md §4 currently references:
 
 ### 9.2 New scanning matrix
 
-| Tool | Covers | Frequency | Gate |
-| --- | --- | --- | --- |
-| CodeQL | SAST for Go + JS/TS; security-extended queries | Every push | Zero HIGH/CRITICAL alerts |
-| Grype | Vulnerabilities in built artifacts and SBOMs | Every push on release branches; weekly otherwise | Zero HIGH/CRITICAL in final images |
-| govulncheck | Go module vulnerabilities (symbol-aware) | Every push | Zero HIGH/CRITICAL |
-| gitleaks | Committed secrets | Every push + pre-commit hook | Zero findings |
-| OpenSSF Scorecard | Project hygiene metrics | Weekly | Score ≥ 7.0 |
+| Tool              | Covers                                         | Frequency                                        | Gate                               |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------ | ---------------------------------- |
+| CodeQL            | SAST for Go + JS/TS; security-extended queries | Every push                                       | Zero HIGH/CRITICAL alerts          |
+| Grype             | Vulnerabilities in built artifacts and SBOMs   | Every push on release branches; weekly otherwise | Zero HIGH/CRITICAL in final images |
+| govulncheck       | Go module vulnerabilities (symbol-aware)       | Every push                                       | Zero HIGH/CRITICAL                 |
+| gitleaks          | Committed secrets                              | Every push + pre-commit hook                     | Zero findings                      |
+| OpenSSF Scorecard | Project hygiene metrics                        | Weekly                                           | Score ≥ 7.0                        |
 
 ### 9.3 CodeQL workflow
 
@@ -568,11 +575,11 @@ Analyze Go and JavaScript. Enable security-extended + security-and-quality query
 name: CodeQL
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 3 * * 1'   # weekly Monday 03:00 UTC
+    - cron: "0 3 * * 1" # weekly Monday 03:00 UTC
 
 permissions:
   actions: read
@@ -585,7 +592,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ go, javascript-typescript ]
+        language: [go, javascript-typescript]
     steps:
       - uses: actions/checkout@<sha-pinned>
       - uses: github/codeql-action/init@<sha-pinned>
@@ -617,7 +624,7 @@ Symbol-aware Go vuln scanner. Much better signal than osv-scanner for Go. Runs o
 ```yaml
 - uses: golang/govulncheck-action@<sha-pinned>
   with:
-    go-version-input: '1.26'
+    go-version-input: "1.26"
     check-latest: true
 ```
 
@@ -697,6 +704,7 @@ CI: `typos` must exit zero.
 ### 10.3 API-CLI-WebUI parity
 
 `phase0-parity-matrix.md` enforcement is currently manual. Add a CI script that compares:
+
 - Every `operationId` in `api/openapi.yaml`
 - Every command in `docs/spec/cli.md` (parsed from the fenced code blocks)
 - Every route in `docs/spec/webui-spec.md` (parsed from the `/foo` headings)
@@ -730,9 +738,9 @@ Single workflow runs all gates in parallel. File: `.github/workflows/quality.yml
 name: Quality
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -761,7 +769,7 @@ jobs:
     steps:
       - uses: actions/checkout@<sha-pinned>
       - uses: DavidAnson/markdownlint-cli2-action@<sha-pinned>
-        with: { globs: '**/*.md' }
+        with: { globs: "**/*.md" }
       - run: npx prettier --check '**/*.md'
 
   yaml:
@@ -783,7 +791,7 @@ jobs:
     steps:
       - uses: actions/checkout@<sha-pinned>
       - uses: actions/setup-go@<sha-pinned>
-        with: { go-version: '1.26' }
+        with: { go-version: "1.26" }
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race -coverprofile=cover.out ./...
@@ -831,7 +839,7 @@ jobs:
     steps:
       - uses: actions/checkout@<sha-pinned>
       - uses: lycheeverse/lychee-action@<sha-pinned>
-        with: { args: '--offline docs/' }
+        with: { args: "--offline docs/" }
       - uses: crate-ci/typos@<sha-pinned>
       - run: bash scripts/check-parity.sh
 ```
@@ -839,6 +847,7 @@ jobs:
 CodeQL and Grype are separate workflows (`.github/workflows/codeql.yml`, `.github/workflows/security.yml`) because they have different cadence and permission profiles.
 
 Branch protection (for main):
+
 - Require status checks: `openapi`, `markdown`, `yaml`, `shell`, `go`, `frontend`, `sql`, `secrets`, `docs`, `CodeQL`.
 - Require all conversations resolved.
 - Require linear history (no merge commits).
@@ -901,6 +910,7 @@ f, err := os.Open(path)
 Global rule disables must live in the tool's config file with a comment. `api/.vacuum.yaml` can disable individual rules globally; inline suppression is not a vacuum feature anyway.
 
 For failing-in-CI exceptions, create a waiver file at `docs/waivers/<YYYY-MM-DD>-<slug>.md` describing:
+
 - What is waived.
 - Why.
 - When it will be removed.
@@ -921,9 +931,19 @@ Every CI run writes quality scores to `docs/quality/latest.json`:
   "timestamp": "2026-04-20T22:00:00Z",
   "openapi_score": 100,
   "openapi_warnings": 0,
-  "go_coverage": { "handlers": 83, "services": 91, "clients": 74, "overall": 82 },
+  "go_coverage": {
+    "handlers": 83,
+    "services": 91,
+    "clients": 74,
+    "overall": 82
+  },
   "frontend_coverage": { "components": 65, "hooks": 83, "utils": 92 },
-  "security": { "codeql_high": 0, "grype_high": 0, "govulncheck_high": 0, "gitleaks": 0 },
+  "security": {
+    "codeql_high": 0,
+    "grype_high": 0,
+    "govulncheck_high": 0,
+    "gitleaks": 0
+  },
   "parity_gaps": 0
 }
 ```
@@ -940,18 +960,18 @@ Improvement → CI succeeds, value recorded.
 
 v0.1.0 release gates (enforced now, in this order):
 
-| Week | Gate activated |
-| --- | --- |
-| This week | vacuum score ≥ 100 on api/openapi.yaml |
-| This week | markdownlint + prettier on all .md |
-| This week | yamllint strict on all yaml |
-| This week | shellcheck + shfmt |
-| Next | gitleaks + govulncheck + CodeQL |
-| Next | golangci-lint with full linter set |
-| Before v0.1 | Coverage gates |
-| Before v0.1 | Parity matrix automated check |
-| Before v0.1 | Grype on built artifacts |
-| Before v0.2 | Waiver expiry enforcement |
+| Week        | Gate activated                         |
+| ----------- | -------------------------------------- |
+| This week   | vacuum score ≥ 100 on api/openapi.yaml |
+| This week   | markdownlint + prettier on all .md     |
+| This week   | yamllint strict on all yaml            |
+| This week   | shellcheck + shfmt                     |
+| Next        | gitleaks + govulncheck + CodeQL        |
+| Next        | golangci-lint with full linter set     |
+| Before v0.1 | Coverage gates                         |
+| Before v0.1 | Parity matrix automated check          |
+| Before v0.1 | Grype on built artifacts               |
+| Before v0.2 | Waiver expiry enforcement              |
 
 Before this doc merges, `api/openapi.yaml` must already pass at 100/100. Otherwise the doc is aspirational, not normative.
 

@@ -43,4 +43,4 @@
 | 040 | net/http ServeMux over chi                                    | Accepted              |
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 | 042 | Security scanning stack consolidation                         | Accepted              |
-| 043 | Huma with humago for Helling-owned HTTP layer                 | Proposed              |
+| 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |

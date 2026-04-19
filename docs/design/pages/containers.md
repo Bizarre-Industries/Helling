@@ -1,5 +1,7 @@
 # Containers
 
+<!-- markdownlint-disable MD022 MD032 -->
+
 > Status: Draft
 
 Route: `/containers` (list) + `/containers/:id` (detail)
@@ -28,6 +30,7 @@ Sidebar: Podman section in resource tree. List view: `Segmented` toggle for 3 vi
 ## Components
 
 ### List (`/containers`)
+
 - `Segmented` -- Containers | Stacks | Pods view toggle
 - **Containers view:** `ProTable` (status Badge, name, image, ports as links, CPU%, RAM%, health Badge). `rowSelection` for bulk. Image update `Badge dot` when newer digest available.
 - **Stacks view:** `Collapse` panels per compose stack. Stack actions: Start/Stop All, View YAML, Edit + Redeploy, Combined Logs, Save as Template.
@@ -44,7 +47,7 @@ Sidebar: Podman section in resource tree. List view: `Segmented` toggle for 3 vi
 
 **Stats tab:** `Area` charts from @ant-design/charts (CPU, RAM, net I/O, disk I/O). Timeframe `Segmented` (1h, 6h, 24h).
 
-**Files tab:** `Tree` filesystem browser. Click file to view/edit (Monaco dynamic import). `Upload.Dragger` for upload. Download per file.
+**Files tab:** `Tree` filesystem browser. Click file to view/edit (CodeMirror dynamic import). `Upload.Dragger` for upload. Download per file.
 
 **Config tab:** `Descriptions` of full container config. `Typography.Text copyable` on all values.
 
@@ -58,12 +61,15 @@ Sidebar: Podman section in resource tree. List view: `Segmented` toggle for 3 vi
 ## States
 
 ### Empty State
+
 "No application containers yet." [Create Container] [Deploy from Template] [Import Compose File]
 
 ### Loading State
+
 Cached data immediately. SSE pushes container state changes.
 
 ### Error State
+
 Podman socket unavailable: "Podman service is not responding. Container management is offline." [View System Logs]. Socket-activated: handle connection refused gracefully with retry.
 
 ## User Actions

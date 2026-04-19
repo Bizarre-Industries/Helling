@@ -41,3 +41,4 @@
 | 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
 | 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
 | 040 | net/http ServeMux over chi                                    | Accepted              |
+| 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |

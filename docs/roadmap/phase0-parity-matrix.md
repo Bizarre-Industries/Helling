@@ -10,6 +10,8 @@ Normative inputs:
 - CLI contract: `docs/spec/cli.md`
 - WebUI contract: `docs/spec/webui-spec.md`
 
+Last reviewed against OpenAPI baseline: commit `201a2c7` (2026-04-20).
+
 ## Domain Matrix
 
 | Domain     | API Operations (OpenAPI)                              | CLI Coverage (spec)                                                             | WebUI Coverage (spec)                              | Parity Status                  |

@@ -1,20 +1,21 @@
 # Helling WebUI Specification
 
+<!-- markdownlint-disable MD040 -->
+
 ## Stack
 
 ```
 React 19 + Vite (SPA, no SSR)
 antd 6                          → Core components
 @ant-design/pro-components      → ProTable, ProForm, StepsForm, ProLayout, Descriptions
-@refinedev/core + @refinedev/antd → CRUD framework (data provider, auth, useTable, useForm)
 @ant-design/charts              → Charts (G2-based, antd theme integrated)
 @tanstack/react-query           → Data fetching (via orval-generated hooks for Helling API)
 react-router-dom v7             → Routing
 xterm.js                        → Terminal (serial console, exec, logs)
 spice-html5                     → VM VGA console (SPICE protocol path, ADR-010)
-@monaco-editor/react            → YAML editor (cloud-init, compose, hookscripts, dynamic import)
+@uiw/react-codemirror           → YAML editor (cloud-init, compose, hookscripts, dynamic import)
 lucide-react                    → Icons
-axios                           → HTTP client with JWT interceptor
+fetch wrapper                   → Shared request wrapper with JWT injection + request ID propagation
 ```
 
 ## Data Flow (ADR-014, ADR-015)
@@ -25,7 +26,7 @@ The dashboard uses three API clients:
 - **incusClient** — Incus proxy endpoints (`/api/incus/*`). Typed fetch wrapper. Native Incus response format.
 - **podmanClient** — Podman proxy endpoints (`/api/podman/*`). Typed fetch wrapper. Native Podman response format.
 
-All three include the JWT token in the Authorization header via a shared axios interceptor.
+All three include the JWT token in the Authorization header via a shared fetch wrapper.
 
 Pages that show Incus resources (instances, storage, networks, images, cluster) fetch from the Incus proxy. Pages that show Podman resources (containers, pods, volumes) fetch from the Podman proxy. Pages for Helling features (users, schedules, webhooks, audit, BMC, K8s, settings) use orval-generated hooks from the Helling API.
 
@@ -152,7 +153,7 @@ Inline row actions: Start/Stop/Console (no drill-down needed). Bulk actions bar 
 
 **Guest:** `<Descriptions>` (filesystems, disk usage from virt-df). Reset Password / Inject SSH Key / Sysprep `<Button>`s. Only rendered when libguestfs available.
 
-**Options:** Boot order (antd `<List>` with drag-and-drop via `dnd-kit`). Autostart `<Switch>`. Protection `<Switch>`. Cloud-init `<CloudInitForm>` with YAML toggle (Monaco dynamic import). Profiles `<Select mode="multiple">`. Hookscript assignment per lifecycle phase.
+**Options:** Boot order (antd `<List>` with drag-and-drop via `dnd-kit`). Autostart `<Switch>`. Protection `<Switch>`. Cloud-init `<CloudInitForm>` with YAML toggle (CodeMirror dynamic import). Profiles `<Select mode="multiple">`. Hookscript assignment per lifecycle phase.
 
 ### /containers — Container List
 
@@ -178,7 +179,7 @@ Image update detection: `<Badge dot>` on container row when newer digest availab
 
 **Stats:** `<Area>` charts (CPU, RAM, net I/O, disk I/O) from `@ant-design/charts`. Timeframe `<Segmented>`.
 
-**Files:** `<Tree>` filesystem browser. Click file → view/edit (Monaco). Upload `<Upload dragger>`. Download per file.
+**Files:** `<Tree>` filesystem browser. Click file → view/edit (CodeMirror). Upload `<Upload dragger>`. Download per file.
 
 **Config:** `<Descriptions>` of full container config. `<Typography.Text copyable>` on all values.
 
@@ -200,7 +201,7 @@ Image update detection: `<Badge dot>` on container row when newer digest availab
 />
 ```
 
-Deploy → `<ModalForm>` with customizable env vars. Advanced toggle → Monaco YAML editor.
+Deploy → `<ModalForm>` with customizable env vars. Advanced toggle → CodeMirror YAML editor.
 
 ~50 built-in templates. Custom template repo URL in settings.
 
@@ -272,7 +273,7 @@ Node cards with `<Progress>` CPU/RAM. Quorum `<Badge>`. Join `<ModalForm>`. Evac
 
 ### /users
 
-4 `<Tabs>`: Users `<ProTable>` (role, 2FA, last login), Roles, Permissions (ACL editor), API Tokens. 2FA setup: TOTP QR (`<QRCode>`), WebAuthn, recovery codes.
+4 `<Tabs>`: Users `<ProTable>` (role, 2FA, last login), Roles, Permissions (ACL editor), API Tokens. 2FA setup: TOTP QR (`<QRCode>`), recovery codes.
 
 ### /audit
 
@@ -292,4 +293,4 @@ Source `<Segmented>`. Severity `<Select>`. Search `<Input.Search>`. Time range `
 
 ### /setup + /login
 
-Setup: create first admin. Login: username + password + optional TOTP/WebAuthn. First-login onboarding `<Tour>` (antd Tour component — dismissable).
+Setup: create first admin. Login: username + password + optional TOTP. First-login onboarding `<Tour>` (antd Tour component — dismissable).

@@ -31,7 +31,7 @@ Helling is a Proxmox-style hypervisor platform built on Debian 13, combining:
 
 - **Incus** (VMs via QEMU/KVM + system containers via LXC)
 - **Podman** (application containers, Docker-compatible)
-- **Cloud Hypervisor** (microVMs for ephemeral workloads)
+- **k3s on Incus VMs** for Kubernetes provisioning (Cloud Hypervisor microVM runtime is deferred from v0.1)
 
 All accessible through a unified React dashboard with a proxy-first architecture.
 
@@ -441,8 +441,8 @@ type ProxyConfig struct {
     TargetSocket string
     PathPrefix   string
     Validator    JWTValidator
+  Authorizer   Authorizer
     Auditor      Auditor
-    ProjectMapper ProjectMapper
 }
 
 func NewProxyHandler(cfg ProxyConfig) http.Handler {
@@ -536,12 +536,12 @@ func handleWebSocketProxy(w http.ResponseWriter, r *http.Request, targetSocket s
 ```go
 func WithMiddleware(handler http.Handler, cfg proxy.ProxyConfig) http.Handler {
     return WithJWT(
-        WithRBAC(
+    WithPolicy(
             WithAudit(
                 WithAutoSnapshot(handler, cfg),
                 cfg.Auditor,
             ),
-            cfg.ProjectMapper,
+      cfg.Authorizer,
         ),
         cfg.Validator,
     )
@@ -567,18 +567,15 @@ func WithJWT(next http.Handler, validator JWTValidator) http.Handler {
     })
 }
 
-func WithRBAC(next http.Handler, mapper ProjectMapper) http.Handler {
+func WithPolicy(next http.Handler, authorizer Authorizer) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         user := r.Context().Value("user").(*UserClaims)
 
-        // For Incus requests, inject project parameter
-        if strings.HasPrefix(r.URL.Path, "/api/incus/") {
-            project := mapper.GetUserProject(user.Username)
-            q := r.URL.Query()
-            if q.Get("project") == "" {
-                q.Set("project", project)
-                r.URL.RawQuery = q.Encode()
-            }
+    // Authorize request against role + scope policy. For Incus, scope is
+    // enforced by per-user Incus trust identities (restricted=true + project).
+    if !authorizer.Allow(user, r.Method, r.URL.Path) {
+      http.Error(w, "forbidden", http.StatusForbidden)
+      return
         }
 
         next.ServeHTTP(w, r)
@@ -625,8 +622,8 @@ func NewRouter(h *Handlers) http.Handler {
         TargetSocket:  h.IncusSocketPath,
         PathPrefix:    "/api/incus",
         Validator:     h.Auth,
+      Authorizer:    h.Authz,
         Auditor:       h.Auditor,
-        ProjectMapper: h.Auth,
     })
     r.Handle("/api/incus/*", incusProxy)
 
@@ -635,8 +632,8 @@ func NewRouter(h *Handlers) http.Handler {
         TargetSocket:  h.PodmanSocketPath,
         PathPrefix:    "/api/podman",
         Validator:     h.Auth,
+      Authorizer:    h.Authz,
         Auditor:       h.Auditor,
-        ProjectMapper: nil, // No project mapping for Podman
     })
     r.Handle("/api/podman/*", podmanProxy)
 
@@ -755,7 +752,7 @@ curl -X POST http://localhost:8006/api/v1/auth/login \
 **File:** `web/src/api/incus.ts`
 
 ```typescript
-import axios from "axios";
+import { apiFetch } from "@/api/fetch";
 
 export interface IncusInstance {
   name: string;
@@ -782,10 +779,10 @@ export interface IncusResponse<T> {
 export class IncusClient {
   async listInstances(project?: string): Promise<IncusInstance[]> {
     const url = project
-      ? `/api/incus/1.0/instances&recursion=2`
+      ? `/api/incus/1.0/instances?recursion=2&project=${encodeURIComponent(project)}`
       : "/api/incus/1.0/instances?recursion=2";
 
-    const { data } = await axios.get<IncusResponse<IncusInstance[]>>(url);
+    const data = await apiFetch<IncusResponse<IncusInstance[]>>(url);
     return data.metadata;
   }
 
@@ -794,7 +791,10 @@ export class IncusClient {
       ? `/api/incus/1.0/instances/${name}/state`
       : `/api/incus/1.0/instances/${name}/state`;
 
-    await axios.put(url, { action: "start" });
+    await apiFetch(url, {
+      method: "PUT",
+      body: JSON.stringify({ action: "start" }),
+    });
   }
 
   async stopInstance(name: string, project?: string): Promise<void> {
@@ -802,7 +802,10 @@ export class IncusClient {
       ? `/api/incus/1.0/instances/${name}/state`
       : `/api/incus/1.0/instances/${name}/state`;
 
-    await axios.put(url, { action: "stop", force: true });
+    await apiFetch(url, {
+      method: "PUT",
+      body: JSON.stringify({ action: "stop", force: true }),
+    });
   }
 
   // ... more methods
@@ -825,18 +828,21 @@ export interface PodmanContainer {
 
 export class PodmanClient {
   async listContainers(): Promise<PodmanContainer[]> {
-    const { data } = await axios.get<PodmanContainer[]>(
+    return apiFetch<PodmanContainer[]>(
       "/api/podman/v5.0/libpod/containers/json?all=true",
     );
-    return data;
   }
 
   async startContainer(id: string): Promise<void> {
-    await axios.post(`/api/podman/v5.0/libpod/containers/${id}/start`);
+    await apiFetch(`/api/podman/v5.0/libpod/containers/${id}/start`, {
+      method: "POST",
+    });
   }
 
   async stopContainer(id: string): Promise<void> {
-    await axios.post(`/api/podman/v5.0/libpod/containers/${id}/stop`);
+    await apiFetch(`/api/podman/v5.0/libpod/containers/${id}/stop`, {
+      method: "POST",
+    });
   }
 
   // ... more methods
@@ -999,16 +1005,16 @@ bun dev
 
 **Priority:** MEDIUM - Keeps codebase aligned with ADRs
 
-**Delete Docker mode (ADR-021):**
+**Enforce ISO-only deployment posture (ADR-021):**
 
 ```bash
-rm -f deploy/Dockerfile
-rm -f deploy/docker-compose.yml
-rm -f deploy/entrypoint.sh
+# Validate Docker artifacts are absent (do not re-introduce them)
+test ! -f deploy/Dockerfile
+test ! -f deploy/docker-compose.yml
+test ! -f deploy/entrypoint.sh
 
-# Remove Docker references from docs
-find docs/ -name "*.md" -exec sed -i '/Docker mode/d' {} \;
-find docs/ -name "*.md" -exec sed -i '/docker-compose/d' {} \;
+# Review docs for stale references and update manually where needed
+rg -n "Docker mode|docker-compose|deploy/Dockerfile" docs/
 ```
 
 **Remove unused dependencies (ADR-018, ADR-017, ADR-011):**

@@ -1,5 +1,7 @@
 # Users
 
+<!-- markdownlint-disable MD022 MD032 -->
+
 > Status: Draft
 
 Route: `/users`
@@ -40,7 +42,7 @@ Sidebar: "Users" selected (admin-only section). Main panel: 4 Tabs.
 
 **API Tokens tab:** `ProTable` (name, scope Tags, created, expires, last used). Create via `ModalForm` (name, scope checkboxes, expiry DatePicker). `Typography.Text copyable` for token value (shown once).
 
-**2FA setup:** `ModalForm` with `QRCode` (antd QRCode component) for TOTP, WebAuthn registration Button, recovery codes list with copy/download.
+**2FA setup:** `ModalForm` with `QRCode` (antd QRCode component) for TOTP and recovery codes list with copy/download.
 
 ## Data Model
 
@@ -52,18 +54,21 @@ Sidebar: "Users" selected (admin-only section). Main panel: 4 Tabs.
 ## States
 
 ### Empty State
+
 Only shown if zero additional users beyond admin. "You're the only user. [Create User] to share access."
 
 ### Loading State
+
 Cached user list. Token creation returns value immediately.
 
 ### Error State
+
 PAM unavailable: banner with link to system logs. Users shown as cached.
 
 ## User Actions
 
 - Create/edit/delete users with role assignment
-- Enable/disable 2FA (TOTP QR code, WebAuthn, recovery codes)
+- Enable/disable 2FA (TOTP QR code, recovery codes)
 - Create/revoke API tokens with scope and expiry
 - View and revoke active sessions
 - Manage role definitions and permission assignments

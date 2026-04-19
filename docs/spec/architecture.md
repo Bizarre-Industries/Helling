@@ -1,5 +1,7 @@
 # Helling Architecture
 
+<!-- markdownlint-disable MD040 -->
+
 Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focused set of Helling-owned control-plane endpoints.
 
 ## System Overview
@@ -64,15 +66,7 @@ Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focus
 
 SQLite stores Helling control-plane state only. Runtime state for VMs, containers, storage, and networks remains in Incus/Podman.
 
-Current v0.1 schema tables are defined in `docs/spec/sqlite-schema.md` and include:
-
-- `users`
-- `sessions`
-- `api_tokens`
-- `totp_secrets`
-- `recovery_codes`
-- `incus_user_certs`
-- `auth_events`
+Canonical schema definitions (including current v0.1 tables and constraints) are maintained in `docs/spec/sqlite-schema.md`.
 
 ## Canonical Dependency Baseline (v0.1)
 

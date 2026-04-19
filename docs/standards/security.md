@@ -1,5 +1,7 @@
 # Security Standards
 
+<!-- markdownlint-disable MD040 -->
+
 Security requirements for Helling at every layer: application, infrastructure, supply chain, operations, and incident response.
 
 ---
@@ -94,7 +96,7 @@ Auth flow for Helling-specific endpoints:
 At rest:
   - SQLite: file permissions 0600 (owner read/write only)
   - Secrets in DB: encrypted with age (`filippo.io/age`), key material external to DB
-  - Backup encryption: optional passphrase-based (AES-256-GCM)
+  - Backup encryption: optional passphrase-protected age recipients (scrypt)
   - ZFS encryption: supported at pool level (Incus manages)
   - Audit logs: append-only, immutable once written
 
@@ -145,12 +147,12 @@ ProtectKernelModules=true
 ProtectControlGroups=true
 
 # Capabilities
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_DAC_OVERRIDE
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+AmbientCapabilities=
 
 # Filesystem
 ReadWritePaths=/var/lib/helling /var/log/helling /etc/helling /run/helling
-ReadOnlyPaths=/opt/helling
+ReadOnlyPaths=/usr/bin
 
 # Network
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
@@ -304,8 +306,8 @@ CVE process:
   - No secrets in environment variables baked into container images
   - CI secrets: GitHub Secrets only, never in workflow files
   - Configuration secrets: helling.yaml (file permissions 0600) or env vars
-  - Database secrets (user passwords, API tokens): encrypted in SQLite with master key
-  - Master key: from HELLING_MASTER_KEY env var or /etc/helling/master.key (0400)
+  - Database secrets (user passwords, API tokens): encrypted in SQLite with age recipients
+  - Identity key: configured via `secrets.identity_path` (or equivalent env override), file mode 0400
 ```
 
 ### For Users

@@ -52,7 +52,7 @@ Sidebar: node group expanded, VMs/CTs visible in resource tree. List view: full-
 
 **Guest tab:** `Descriptions` (filesystems, disk usage from guest agent). Buttons: Reset Password, Inject SSH Key, Sysprep. Only rendered when guest agent available.
 
-**Options tab:** Boot order (drag-and-drop List via dnd-kit). `Switch` for autostart, protection. Cloud-init editor (Monaco, dynamic import) with YAML toggle. `Select mode="multiple"` for profiles. Hookscript assignment.
+**Options tab:** Boot order (drag-and-drop List via dnd-kit). `Switch` for autostart, protection. Cloud-init editor (CodeMirror, dynamic import) with YAML toggle. `Select mode="multiple"` for profiles. Hookscript assignment.
 
 ## Data Model
 

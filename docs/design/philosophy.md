@@ -1,5 +1,7 @@
 # WebUI Design Philosophy
 
+<!-- markdownlint-disable MD040 -->
+
 Function over beauty. Information density over whitespace. Speed over animation. Every pixel earns its place by showing data or enabling action.
 
 ---
@@ -194,14 +196,14 @@ Every new dependency must justify its bundle size:
   - TanStack Query: YES (caching + deduplication)
   - xterm.js: YES (terminal emulation is hard)
   - spice-html5: YES (VM VGA browser console, ADR-010)
-  - @monaco-editor/react: MAYBE (large bundle, only load on pages that need it)
+  - @uiw/react-codemirror: MAYBE (load only on pages that need raw YAML/config editing)
   - D3: MAYBE (only for network topology visualization)
   - Three.js: NO (why would we need 3D?)
   - Framer Motion: NO (see Rule 3)
   - React-Beautiful-DnD equivalent: NO (HTML5 drag API works fine)
 
 Dynamic imports for heavy components:
-  import('@monaco-editor/react') // Only on cloud-init editor
+  import('@uiw/react-codemirror') // Only on cloud-init/config editor
   import('spice-html5')       // Only on VM VGA console tab (ADR-010)
   import('xterm')          // Only on terminal tab
 ```
@@ -241,7 +243,7 @@ Table density:
 
 ## What This Means for Implementation
 
-The dashboard uses React 19 + antd 6 + @refinedev/antd + @tanstack/react-query (via orval-generated hooks). antd's compact theme (configured in `theme.ts`) provides information density. refine handles CRUD boilerplate (data fetching, pagination, auth). Override antd defaults for admin-density:
+The dashboard uses React 19 + antd 6 + @tanstack/react-query (via orval-generated hooks). antd's compact theme (configured in `theme.ts`) provides information density. Generated hooks and a shared fetch wrapper handle data fetching, pagination, and auth token injection. Override antd defaults for admin-density:
 
 ```css
 /* antd compact theme overrides for information-dense admin UI */

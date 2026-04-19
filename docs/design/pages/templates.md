@@ -1,5 +1,7 @@
 # Templates
 
+<!-- markdownlint-disable MD022 MD032 -->
+
 > Status: Draft
 
 Route: `/templates`
@@ -26,7 +28,7 @@ Sidebar: "Templates" selected. Main panel: category filter bar + card grid. This
 - `Card` -- cover image (logo), title, description, category `Tag`, "Deploy" `Button` (primary)
 - `Input.Search` -- search/filter templates by name
 - `Segmented` or `Tag` group -- category filter (Media, Dev Tools, Monitoring, Networking, Databases, etc.)
-- `ModalForm` -- deploy form with customizable env vars (name, port, data path). Advanced toggle reveals Monaco YAML editor.
+- `ModalForm` -- deploy form with customizable env vars (name, port, data path). Advanced toggle reveals CodeMirror YAML editor.
 - `Tabs` -- App Templates | Workspace Templates
 
 ## Data Model
@@ -38,12 +40,15 @@ Sidebar: "Templates" selected. Main panel: category filter bar + card grid. This
 ## States
 
 ### Empty State
+
 "No custom templates. Helling ships with ~50 built-in app templates." "You can also [add a custom template repository] or [convert a running instance to a template]."
 
 ### Loading State
+
 Show cached template list immediately. Background refresh.
 
 ### Error State
+
 If custom repo unreachable: inline warning on that repo card. Built-in templates always available.
 
 ## User Actions

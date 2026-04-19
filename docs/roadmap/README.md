@@ -12,6 +12,7 @@ This directory contains Helling's implementation roadmap and planning documents.
 **Contains:**
 
 - Architecture Decisions (ADRs 001-040)
+- Architecture Decisions (ADRs 001-041)
 - Automation & Tooling Index (28 tools)
 - Version gates and feature lists for v0.1-v1.0
 - Post-v1 feature ideas
@@ -157,6 +158,8 @@ Follow this sequence from [implementation-guide.md](./implementation-guide.md):
 - **Permissions:** See [docs/spec/permissions.md](../spec/permissions.md)
 - **Events:** See [docs/spec/events.md](../spec/events.md)
 - **Validation and pagination:** See [docs/spec/validation.md](../spec/validation.md) and [docs/spec/pagination.md](../spec/pagination.md)
+- **Ops/runtime specs:** See [docs/spec/config.md](../spec/config.md), [docs/spec/caddy.md](../spec/caddy.md), [docs/spec/systemd-units.md](../spec/systemd-units.md), [docs/spec/pam.md](../spec/pam.md), [docs/spec/first-boot.md](../spec/first-boot.md), [docs/spec/observability.md](../spec/observability.md), [docs/spec/backup-format.md](../spec/backup-format.md), and [docs/spec/threat-model.md](../spec/threat-model.md)
+- **Operational runbooks:** See [docs/runbooks/README.md](../runbooks/README.md)
 - **Automation details:** See [docs/design/full-automation-pipeline.md](../design/full-automation-pipeline.md)
 - **Contributing:** See [CONTRIBUTING.md](../../CONTRIBUTING.md)
 

@@ -46,6 +46,7 @@
 | 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
 | 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
 | 040 | net/http ServeMux over chi                                    | Accepted              |
+| 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 
 ---
 
@@ -92,7 +93,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 **Gate:** Boot ISO → setup wizard → dashboard shows real Incus instances and Podman containers.
 
-#### Backend
+#### Backend (Beta)
 
 - [ ] Proxy middleware: `/api/incus/*` → Incus HTTPS loopback, `/api/podman/*` → Podman socket
 - [ ] JWT validation on proxy requests
@@ -109,7 +110,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] Delete Docker mode: Dockerfile, devauth.go, entrypoint.sh
 - [ ] Remove unused Go deps (podman bindings, google/nftables, gocron)
 
-#### Frontend
+#### Frontend (Beta)
 
 - [ ] Three API clients: hellingClient, incusClient, podmanClient
 - [ ] orval hooks for Helling API
@@ -127,7 +128,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] Keep: auth, user, system, version, completion
 - [ ] Generated client from Helling spec
 
-#### Automation
+#### Automation (Beta)
 
 - [ ] `make generate` + `make check-generated` working
 - [ ] vacuum spec linting in CI

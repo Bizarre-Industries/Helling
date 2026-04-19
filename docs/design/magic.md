@@ -1,5 +1,7 @@
 # Magic Touches
 
+<!-- markdownlint-disable MD040 MD032 MD060 -->
+
 Features that make people stop and say "no other hypervisor does this." Not more endpoints. Not more pages. Things that change how people think about managing infrastructure.
 
 ---
@@ -35,7 +37,9 @@ Configurable: `auto_snapshot.enabled: true`, `auto_snapshot.retention: 24h`, `au
 
 ---
 
-## 2. VM Screenshot Thumbnails
+## 2. VM Screenshot Thumbnails (Deferred from v0.1)
+
+Status: deferred from v0.1 scope; keep as post-v0.1 design direction.
 
 The resource tree and instance list show a tiny screenshot of what's currently on each VM's display. You can SEE which VM has the Windows login screen, which one is running htop, which one is showing an error — without opening any console.
 
@@ -121,7 +125,7 @@ Scheduled (weekly by default):
 Dashboard shows:
   Backup status per instance:
   ✓ vm-web-1: Last backup 2h ago, last verified 3d ago (PASS)
-  ✓ vm-db-1:  Last backup 6h ago, last verified 3d ago (PASS)  
+  ✓ vm-db-1:  Last backup 6h ago, last verified 3d ago (PASS)
   ⚠ vm-old:   Last backup 12d ago, last verified 3d ago (FAIL: boot timeout)
   ✗ ct-dev:   No backup configured
 ```
@@ -157,11 +161,12 @@ vm-old: Health 31/100
 Dashboard:
   Infrastructure Health: 78/100
   ████████████████████░░░░░ 78%
-  
+
   12 healthy │ 3 warnings │ 1 critical
 ```
 
 Criteria (configurable weights):
+
 - Running/responsive (+20)
 - Recent backup (+20), verified backup (+15)
 - CPU utilization healthy (+15), RAM healthy (+15)
@@ -302,20 +307,20 @@ Import from other platforms. Not just disk images — configs, networks, firewal
 helling import proxmox --host 192.168.1.100 --user root --token xxx
   Scanning Proxmox server...
   Found: 12 VMs, 5 CTs, 3 storage pools, 4 networks
-  
+
   Select resources to import:
   [x] vm-100 (ubuntu-web, 4 cores, 8GB, 50GB)
   [x] vm-101 (windows-dev, 8 cores, 16GB, 100GB)
   [ ] vm-102 (old-test, stopped for 200 days)
   [x] ct-200 (dns-server, 1 core, 512MB)
-  
+
   Import plan:
   - Download vm-100 disk (50GB) → convert to Incus volume
   - Download vm-101 disk (100GB) → convert to Incus volume
   - Download ct-200 rootfs → convert to Incus container
   - Import network configs (bridge0, bridge1)
   - Import firewall rules (12 rules)
-  
+
   Estimated time: ~45 minutes
   [Start Import]
 
@@ -368,17 +373,17 @@ Estimate per-VM power consumption based on CPU/RAM usage. Track total infrastruc
 Dashboard widget:
   ⚡ Power Consumption
   Total: ~340W (estimated)
-  
+
   node-1 (Dell R730): ~180W
     vm-web-1:    ~25W (2 cores @ 45%)
     vm-db-1:     ~40W (4 cores @ 80%)
     ct-build:    ~15W (2 cores @ 30%)
     host overhead: ~100W
-  
+
   node-2 (Minisforum MS-01): ~65W
     vm-dev:      ~10W (2 cores @ 15%)
     host overhead: ~55W
-  
+
   node-3 (sleeping): 0W 💤
 
 Monthly estimate: ~245 kWh (~$35/month @ $0.14/kWh)
@@ -399,19 +404,19 @@ Clone not just one VM but an entire environment: VMs, containers, networks, fire
 ```
 Select multiple resources → "Clone as Environment":
   Source: production-stack (vm-web, vm-db, container-redis, net-prod, 3 firewall rules)
-  
+
   Clone settings:
     Prefix: staging-
     Network: Create new isolated network (10.100.0.0/24)
     DNS: Update to staging hostnames
-    
+
   Result:
     staging-vm-web (clone of vm-web, connected to staging-net)
     staging-vm-db (clone of vm-db, connected to staging-net)
     staging-redis (clone of container-redis, connected to staging-net)
     staging-net (new bridge, 10.100.0.0/24)
     3 firewall rules (cloned, scoped to staging resources)
-    
+
   Total: cloned in 45 seconds (LXC) or 3 minutes (VM full copy)
 ```
 
@@ -421,19 +426,19 @@ Creates a complete isolated copy of a multi-resource environment. For dev/stagin
 
 ## Summary
 
-| # | Magic Touch | Why it's magic | Effort |
-|---|-------------|---------------|--------|
-| 1 | Auto-snapshot before destructive ops | Zero-effort undo. No other hypervisor. | Low |
-| 2 | VM screenshot thumbnails | See what's on screen without opening console. | Medium |
-| 3 | Config change preview | terraform plan for every operation. | Medium |
-| 4 | Backup verification | Prove backups work. Not just "backup succeeded." | Medium |
-| 5 | Infrastructure health score | 0-100 per resource. Overall infrastructure grade. | Low |
-| 6 | Infrastructure blueprints | Compose for VMs. Deploy/destroy entire environments. | High |
-| 7 | Wake-on-LAN | Energy-efficient homelab. Sleep unused nodes. | Low |
-| 8 | Infrastructure changelog | Git-like history + diff for every config change. | Medium |
-| 9 | Migration assistant | Import from Proxmox/VMware with configs + networks. | High |
-| 10 | Smart command palette | Natural language + structured commands. | Medium |
-| 11 | Power consumption tracking | Per-VM watts, monthly cost, savings recommendations. | Low |
-| 12 | Environment cloning | Clone entire multi-VM stacks for dev/staging. | Medium |
+| #   | Magic Touch                          | Why it's magic                                       | Effort |
+| --- | ------------------------------------ | ---------------------------------------------------- | ------ |
+| 1   | Auto-snapshot before destructive ops | Zero-effort undo. No other hypervisor.               | Low    |
+| 2   | VM screenshot thumbnails             | See what's on screen without opening console.        | Medium |
+| 3   | Config change preview                | terraform plan for every operation.                  | Medium |
+| 4   | Backup verification                  | Prove backups work. Not just "backup succeeded."     | Medium |
+| 5   | Infrastructure health score          | 0-100 per resource. Overall infrastructure grade.    | Low    |
+| 6   | Infrastructure blueprints            | Compose for VMs. Deploy/destroy entire environments. | High   |
+| 7   | Wake-on-LAN                          | Energy-efficient homelab. Sleep unused nodes.        | Low    |
+| 8   | Infrastructure changelog             | Git-like history + diff for every config change.     | Medium |
+| 9   | Migration assistant                  | Import from Proxmox/VMware with configs + networks.  | High   |
+| 10  | Smart command palette                | Natural language + structured commands.              | Medium |
+| 11  | Power consumption tracking           | Per-VM watts, monthly cost, savings recommendations. | Low    |
+| 12  | Environment cloning                  | Clone entire multi-VM stacks for dev/staging.        | Medium |
 
 These are the features that get blog posts written, Reddit threads started, and YouTube videos made. Not because they're technically complex, but because they solve problems nobody else bothered to solve.

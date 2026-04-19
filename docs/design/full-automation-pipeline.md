@@ -54,7 +54,7 @@ Generates typed HTTP client methods for every Helling endpoint. Each Cobra comma
 
 **Tool:** `orval` with react-query client
 
-Generates TypeScript types + React Query hooks from the Helling spec. Custom fetcher wraps axios with JWT interceptor.
+Generates TypeScript types + React Query hooks from the Helling spec. Custom fetcher wraps the shared fetch client with JWT injection and request ID propagation.
 
 **Version:** v0.1.0-alpha | **Priority:** Must-have
 

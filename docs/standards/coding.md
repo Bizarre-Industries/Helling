@@ -275,15 +275,15 @@ Helling-specific handlers:
 //   DELETE /api/v1/{resource}/{id}     → Delete
 
 // RULE: Consistent response envelope:
-// Success: { "data": {...}, "meta": { "total": 100, "page": 1 } }
+// Success: { "data": {...}, "meta": { "request_id": "...", "page": { "has_next": true, "next_cursor": "...", "limit": 50 } } }
 // Error:   { "error": "msg", "code": "CODE", "action": "...", "doc_link": "..." }
 
-// RULE: Pagination via query params: ?page=1&per_page=50&sort=name&order=asc
+// RULE: Pagination via query params: ?limit=50&cursor=opaque&sort=created_at&order=desc
 // RULE: Filtering via query params: ?status=running&type=vm&tags=production
-// RULE: Always include total count in list responses for pagination UI.
+// RULE: Offset/page pagination is not supported for v0.1 API contracts.
 
 // RULE: Rate limiting on all endpoints:
-//   Auth endpoints: 5 req/min per IP
+//   Auth endpoints: 5 failed attempts per 15 minutes per IP + username
 //   Write endpoints: 30 req/min per user
 //   Read endpoints: 120 req/min per user
 
@@ -314,7 +314,7 @@ const data: Instance[] = response.data;
 
 // RULE: Dynamic imports for heavy components:
 const VncConsole = React.lazy(() => import("./VncConsole"));
-const MonacoEditor = React.lazy(() => import("./MonacoEditor"));
+const CodeEditor = React.lazy(() => import("./CodeEditor"));
 
 // RULE: No localStorage/sessionStorage for auth tokens. Use httpOnly cookies or
 // memory-only storage with refresh token flow.

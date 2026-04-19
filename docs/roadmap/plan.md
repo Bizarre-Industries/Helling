@@ -10,28 +10,38 @@
 
 ---
 
-## Architecture Decisions (ADRs 001-025)
+## Architecture Decisions (ADRs 001-036)
 
-| #   | Decision                                               | Replaces                                                       |
-| --- | ------------------------------------------------------ | -------------------------------------------------------------- |
-| 001 | Incus over libvirt                                     | Custom QEMU/KVM/LXC management                                 |
-| 003 | React + Ant Design + refine over SvelteKit             | Manual CRUD boilerplate                                        |
-| 010 | noVNC as primary VM browser console for VM VGA console | Wrong protocol                                                 |
-| 011 | Proxy to Podman socket, no Go bindings                 | API version mismatch, `containers/podman/v5` dep               |
-| 012 | Incus Network ACLs for VM/CT firewalling               | Custom nftables code                                           |
-| 013 | Incus project limits for VM/CT quotas                  | Custom quota enforcement                                       |
-| 014 | Authenticated reverse proxy over handler-per-endpoint  | ~150 handlers wrapping upstream APIs                           |
-| 015 | Native upstream response formats for proxied endpoints | Re-enveloping every response                                   |
-| 016 | Helling CLI for Helling features only                  | ~392 CLI commands wrapping upstream                            |
-| 017 | systemd timers over in-process cron (gocron)           | Custom Go scheduler                                            |
-| 018 | Shell out over Go libraries for host ops               | google/nftables, go-systemd                                    |
-| 019 | systemd journal over SQLite for audit                  | Custom audit tables + files                                    |
-| 020 | Incus config keys over SQLite for tags                 | Custom tag tables + sync                                       |
-| 021 | ISO-only installation                                  | Docker try-it mode + manual Debian install                     |
-| 022 | No CAPMVM / Flintlock                                  | K8s nodes = Incus VMs (k3s cloud-init in v0.1), no microVM K8s |
-| 023 | No custom image format                                 | Native formats per runtime; app templates = compose YAML       |
-| 024 | Incus per-user TLS auth from v0.1                      | JWT project query stopgap removed                              |
-| 025 | GitHub Releases as APT source                          | No aptly/reprepro infra; nfpm .deb on Release assets           |
+| #   | Decision                                                      | Status                |
+| --- | ------------------------------------------------------------- | --------------------- |
+| 001 | Incus over libvirt                                            | Accepted              |
+| 003 | React + Ant Design + refine over SvelteKit                    | Accepted              |
+| 010 | SPICE as in-browser VM console protocol                       | Accepted              |
+| 011 | Proxy to Podman socket, no Go bindings                        | Superseded by ADR-035 |
+| 012 | Incus Network ACLs for VM/CT firewalling                      | Accepted              |
+| 013 | Incus project limits for VM/CT quotas                         | Accepted              |
+| 014 | Authenticated reverse proxy over handler-per-endpoint         | Accepted              |
+| 015 | Native upstream response formats for proxied endpoints        | Accepted              |
+| 016 | Helling CLI for Helling features only                         | Accepted              |
+| 017 | systemd timers over in-process cron (gocron)                  | Accepted              |
+| 018 | Shell out over Go libraries for host ops                      | Accepted              |
+| 019 | systemd journal over SQLite for audit                         | Accepted              |
+| 020 | Incus config keys over SQLite for tags                        | Accepted              |
+| 021 | ISO-only installation                                         | Accepted              |
+| 022 | No CAPMVM / Flintlock                                         | Accepted              |
+| 023 | No custom image format                                        | Accepted              |
+| 024 | Incus per-user TLS auth from v0.1                             | Accepted              |
+| 025 | Signed APT repository via GitHub Pages for updates            | Accepted              |
+| 026 | SHA-pin all third-party GitHub Actions                        | Accepted              |
+| 027 | Two-daemon split                                              | Accepted              |
+| 028 | Unix socket between daemons                                   | Accepted              |
+| 029 | Dedicated hellingprox system user                             | Accepted              |
+| 030 | Argon2id password hashing                                     | Accepted              |
+| 031 | Ed25519 JWT signing                                           | Accepted              |
+| 032 | Three fixed roles for v0.1                                    | Accepted              |
+| 034 | Lima dev environment                                          | Accepted              |
+| 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
+| 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
 
 ---
 
@@ -53,7 +63,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 | 10  | Atlas + GORM provider               | Database migrations (replaces AutoMigrate)          | v0.1.0-beta  |
 | 11  | invopop/jsonschema                  | Config JSON Schema from Go struct                   | v0.1.0-beta  |
 | 12  | cupaloy                             | API response snapshot testing                       | v0.1.0-beta  |
-| 13  | noVNC console (/novnc)              | VM VGA console in browser                           | v0.1.0-beta  |
+| 13  | SPICE browser console               | VM VGA console in browser                           | v0.1.0-beta  |
 | 14  | Cloud-init templates                | Validated preseed templates per distro              | v0.1.0-beta  |
 | 15  | tygo                                | Go → TypeScript event type generation               | v0.2.0       |
 | 16  | Scalar / Redoc                      | Embedded API docs in dashboard                      | v0.2.0       |
@@ -64,7 +74,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 | 21  | Cobra doc generation                | Man pages + markdown CLI reference                  | v1.0.0       |
 | 22  | nfpm                                | .deb packaging                                      | v1.0.0       |
 | 23  | live-build / mkosi                  | Bootable ISO image                                  | v1.0.0       |
-| 24  | nfpm + GitHub Releases              | .deb on Release assets, ISO-configured APT source   | v1.0.0       |
+| 24  | nfpm + signed APT repo              | .deb publish + indexed/signed repository updates    | v1.0.0       |
 | 25  | GoReleaser                          | Release pipeline                                    | v1.0.0       |
 | 26  | Cosign + SLSA                       | Artifact signing + provenance                       | v1.0.0       |
 | 27  | Syft                                | SBOM (CycloneDX + SPDX)                             | v1.0.0       |
@@ -80,7 +90,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 #### Backend
 
-- [ ] Proxy middleware: `/api/incus/*` → Incus socket, `/api/podman/*` → Podman socket
+- [ ] Proxy middleware: `/api/incus/*` → Incus HTTPS loopback, `/api/podman/*` → Podman socket
 - [ ] JWT validation on proxy requests
 - [ ] RBAC: per-user Incus TLS certificate identity enforcement
 - [ ] Audit logging to systemd journal (ADR-019)
@@ -105,7 +115,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] Storage page: pool list from Incus proxy
 - [ ] Networking page: network list from Incus proxy
 - [ ] Images page: from both proxies
-- [ ] Delete: VncConsole.tsx, novnc.d.ts, queries.ts, types.ts, PlaceholderPage.tsx
+- [ ] Delete stale console/client placeholders that conflict with ADR-010 direction
 
 #### CLI
 
@@ -126,18 +136,18 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 ### v0.1.0-beta — Core Dashboard Feature-Complete
 
-**Gate:** Create VM → noVNC console → exec into CT → browse storage pools → see network topology.
+**Gate:** Create VM → SPICE browser console → exec into CT → browse storage pools → see network topology.
 
 #### Backend
 
-- [ ] WebSocket proxy for noVNC/serial/exec (upgrade forwarding)
+- [ ] WebSocket proxy for SPICE/serial/exec (upgrade forwarding)
 - [ ] Auto-snapshot before destructive operations (proxy hook)
 - [ ] VM screenshot thumbnails (capture + cache)
 - [ ] Atlas database migrations (replace AutoMigrate)
 
 #### Frontend
 
-- [ ] noVNC console component (ADR-010)
+- [ ] SPICE browser console component (ADR-010)
 - [ ] Serial console via xterm.js
 - [ ] Exec terminal via xterm.js
 - [ ] Instance detail page: 8 tabs
@@ -229,7 +239,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] Man pages (Cobra doc.GenManTree) installed via .deb
 - [ ] Shell completions installed via .deb postinst
 - [ ] live-build/mkosi: bootable ISO (`make iso`)
-- [ ] GitHub Releases APT source (ADR-025): ISO configures apt source at install time
+- [ ] Signed APT repository (ADR-025): ISO configures apt source and keyring at install time
 
 #### Release
 

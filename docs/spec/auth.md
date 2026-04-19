@@ -103,6 +103,38 @@ This makes Incus the enforcement point and keeps auth decisions auditable throug
 - Revocation: immediate on user disable/delete
 - Storage: encrypted key material in database, never returned to clients
 
+### 3.4 Trust Certificate Lifecycle Details
+
+Certificate authority model:
+
+- Helling generates an internal client-cert signing CA on first boot.
+- CA private key is encrypted at rest and restricted to hellingd runtime use.
+
+User certificate issuance and registration:
+
+1. On user creation, hellingd generates a client keypair and certificate.
+2. Certificate is signed by Helling CA and stored encrypted in SQLite.
+3. hellingd registers the certificate in Incus trust store (`type=client`) with:
+   - `restricted=true`
+   - explicit project restrictions for the user scope.
+
+Renewal and grace policy:
+
+- Automatic renewal starts 30 days before certificate expiry.
+- New certificate is issued and registered before old certificate removal.
+- Old certificate can remain for a short grace window (default 7 days) to avoid session disruption.
+
+Deletion flow:
+
+1. User disable/delete triggers trust cleanup.
+2. hellingd removes certificate trust entry from Incus.
+3. Local encrypted key/cert material is removed from SQLite.
+
+Recovery and backup:
+
+- CA material and certificate metadata are included in standard Helling backup procedures.
+- CA loss is a critical recovery event requiring trust re-bootstrap and user certificate re-issuance.
+
 ---
 
 ## 4. Authorization Model (v0.1)

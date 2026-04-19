@@ -1,18 +1,18 @@
 # Console
 
-> Console is a latency-sensitive surface. v0.1 uses noVNC for VM VGA sessions and xterm.js for serial, exec, and logs. Heavy libraries are loaded only when the Console or Logs tab is active.
+> Console is a latency-sensitive surface. v0.1 uses a SPICE browser client for VM VGA sessions and xterm.js for serial, exec, and logs. Heavy libraries are loaded only when the Console or Logs tab is active.
 
 ## Components
 
 - `antd`: `Tabs`, `Segmented`, `Button`, `Space`, `Select`, `Switch`, `Input.Search`, `Tooltip`
-- `noVNC` (dynamic import) for VM VGA console
+- `spice-html5` class browser client (dynamic import) for VM VGA console
 - `xterm.js` + `@xterm/addon-fit` + `@xterm/addon-search` (dynamic import) for serial/exec/log streams
 
 ## Design Rules
 
-1. **Dynamic imports only.** noVNC and xterm.js must not load in the main bundle.
+1. **Dynamic imports only.** SPICE browser client and xterm.js must not load in the main bundle.
 2. **Console type switcher.**
-   - VMs: VGA (noVNC) and Serial (xterm.js)
+   - VMs: VGA (SPICE) and Serial (xterm.js)
    - System containers: Serial (xterm.js)
    - App containers: Exec + Logs (xterm.js)
 3. **Full-height viewport.** Console fills available page height under toolbar/tab chrome.
@@ -23,9 +23,9 @@
 
 ## Implementation Pattern
 
-### VM VGA Console (noVNC)
+### VM VGA Console (SPICE)
 
-- Create noVNC session from dynamic import after tab activation.
+- Create SPICE session from dynamic import after tab activation.
 - Bind connect/disconnect listeners.
 - Enable viewport scaling and resize sync.
 - Surface VM actions in toolbar: Ctrl+Alt+Del, screenshot, fullscreen.
@@ -52,6 +52,6 @@
 
 ## Cross-References
 
-- ADR-010 (noVNC VM console policy)
+- ADR-010 (SPICE VM console policy)
 - `docs/design/pages/instances.md`
 - `docs/spec/compute.md`

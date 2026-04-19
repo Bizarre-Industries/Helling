@@ -16,7 +16,30 @@ MicroVM support is deferred from v0.1 (ADR-006).
 
 ### Auto-Snapshot Before Destructive Operations
 
-When the proxy detects a destructive request (delete/rebuild/forced stop), it creates an automatic snapshot before forwarding the request.
+Before forwarding selected destructive Incus operations, hellingd attempts an automatic snapshot for recovery safety.
+
+Trigger operations:
+
+- Instance delete
+- Instance rebuild
+- Forced stop (`action=stop` with `force=true`)
+
+Snapshot defaults:
+
+- Name format: `auto-<operation>-<timestamp-utc>`
+- Stateful mode: `false` by default for VM reliability and speed
+- Retention: 24 hours by default
+- Expiry enforcement: use Incus snapshot `expires_at` field (no custom cleanup worker required for auto-snapshots)
+
+Failure policy:
+
+- Fail-open with warning and audit event by default (operation continues)
+- Optional strict mode can block destructive operation when snapshot creation fails
+
+Scope controls:
+
+- Per-project toggle: enable or disable auto-snapshot hook
+- Per-request bypass: admin-only override flag
 
 ### VM Screenshots / Thumbnails
 
@@ -24,7 +47,7 @@ hellingd captures VM console thumbnails and serves them through Helling-specific
 
 ### Console
 
-- **VMs:** noVNC via WebSocket proxy to Incus VNC socket (ADR-010)
+- **VMs:** SPICE via WebSocket proxy to Incus VGA operation channels (ADR-010)
 - **System Containers:** Serial console via WebSocket proxy to Incus console
 - **App Containers:** Exec terminal via WebSocket proxy to Podman exec
 

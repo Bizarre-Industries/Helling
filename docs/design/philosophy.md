@@ -193,7 +193,7 @@ Every new dependency must justify its bundle size:
   - TanStack Table: YES (complex data tables are hard)
   - TanStack Query: YES (caching + deduplication)
   - xterm.js: YES (terminal emulation is hard)
-  - noVNC: YES (VM VGA browser console, ADR-010)
+  - spice-html5: YES (VM VGA browser console, ADR-010)
   - @monaco-editor/react: MAYBE (large bundle, only load on pages that need it)
   - D3: MAYBE (only for network topology visualization)
   - Three.js: NO (why would we need 3D?)
@@ -202,7 +202,7 @@ Every new dependency must justify its bundle size:
 
 Dynamic imports for heavy components:
   import('@monaco-editor/react') // Only on cloud-init editor
-  import('noVNC')             // Only on VM VGA console tab (ADR-010)
+  import('spice-html5')       // Only on VM VGA console tab (ADR-010)
   import('xterm')          // Only on terminal tab
 ```
 

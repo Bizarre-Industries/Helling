@@ -123,7 +123,7 @@ Follow this sequence from [implementation-guide.md](./implementation-guide.md):
 | Version      | Gate                                    | Focus                                     |
 | ------------ | --------------------------------------- | ----------------------------------------- |
 | v0.1.0-alpha | Dashboard shows real data from proxies  | Foundation: proxy, auth, OpenAPI spec     |
-| v0.1.0-beta  | Create VM -> noVNC VGA console works    | Consoles: WebSocket, noVNC, xterm.js      |
+| v0.1.0-beta  | Create VM -> SPICE VGA console works    | Consoles: WebSocket, SPICE, xterm.js      |
 | v0.2.0       | Schedule creates backup, firewall works | Platform: schedules, webhooks, firewall   |
 | v0.3.0       | Prometheus scrapes /metrics             | Observability: metrics, notifications     |
 | v0.4.0       | K8s cluster created, BMC powers on      | Integration: K8s, BMC, clustering         |

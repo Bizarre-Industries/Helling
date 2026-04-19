@@ -72,7 +72,7 @@ Target shape: a small dependency set centered on router, auth/JWT, config, optio
 | CRUD framework   | `@refinedev/core` + `@refinedev/antd`               |
 | Data fetching    | `@tanstack/react-query` (via orval for Helling API) |
 | Terminal         | `@xterm/xterm`                                      |
-| VM VGA console   | `noVNC` (dynamic import)                            |
+| VM VGA console   | `spice-html5` class browser client (dynamic import) |
 | Code editor      | `@monaco-editor/react` (dynamic import)             |
 | Routing          | `react-router-dom` v7                               |
 | HTTP             | `axios` (JWT interceptor)                           |
@@ -80,9 +80,9 @@ Target shape: a small dependency set centered on router, auth/JWT, config, optio
 
 ### Frontend does NOT import
 
-| Don't import                      | Use instead                              |
-| --------------------------------- | ---------------------------------------- |
-| Additional browser console stacks | noVNC is the default VM VGA path in v0.1 |
+| Don't import                      | Use instead                               |
+| --------------------------------- | ----------------------------------------- |
+| Additional browser console stacks | SPICE browser console is the v0.1 default |
 
 ---
 

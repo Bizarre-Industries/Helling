@@ -40,7 +40,7 @@ Sidebar: node group expanded, VMs/CTs visible in resource tree. List view: full-
 
 **Summary tab:** `Descriptions` (status, uptime, vCPUs, RAM, disks, IPs, MACs, tags, notes). `Progress` gauges for CPU/RAM/disk. `Button.Group` quick actions (Start, Stop, Restart, Console, Snapshot, Backup).
 
-**Console tab:** noVNC VGA console (dynamic import, ADR-010) for VMs with Ctrl+Alt+Del Button, clipboard, fullscreen. Serial console (xterm.js) for CTs. `Segmented` to switch VGA/serial.
+**Console tab:** SPICE VGA console (dynamic import, ADR-010) for VMs with Ctrl+Alt+Del Button, clipboard, fullscreen. Serial console (xterm.js) for CTs. `Segmented` to switch VGA/serial.
 
 **Hardware tab:** `ProTable` of devices (CPU, RAM, disks, NICs, USB, PCI, GPU). Add/Edit/Detach per row. Disk resize `Slider`. GPU passthrough with IOMMU group display.
 

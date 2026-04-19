@@ -11,7 +11,7 @@
 | 007 | AGPL license                                                  | Accepted              |
 | 008 | Function over beauty                                          | Accepted              |
 | 009 | Suspend Aqua Security tooling usage                           | Accepted              |
-| 010 | noVNC as primary VM browser console                           | Accepted              |
+| 010 | SPICE as in-browser VM console protocol                       | Accepted              |
 | 011 | Proxy to Podman socket, no Go bindings                        | Superseded by ADR-035 |
 | 012 | Incus ACLs                                                    | Accepted              |
 | 013 | Incus project limits                                          | Accepted              |
@@ -26,7 +26,7 @@
 | 022 | No CAPMVM / Flintlock                                         | Accepted              |
 | 023 | No custom image format                                        | Accepted              |
 | 024 | Incus per-user TLS auth from v0.1                             | Accepted              |
-| 025 | GitHub Releases APT source                                    | Accepted              |
+| 025 | Signed APT repository via GitHub Pages for updates            | Accepted              |
 | 026 | SHA-pin all third-party GitHub Actions                        | Accepted              |
 | 027 | Two-daemon split                                              | Accepted              |
 | 028 | Unix socket between daemons                                   | Accepted              |
@@ -34,7 +34,6 @@
 | 030 | Argon2id password hashing                                     | Accepted              |
 | 031 | Ed25519 JWT signing                                           | Accepted              |
 | 032 | Three fixed roles for v0.1                                    | Accepted              |
-| 033 | k3s via cloud-init for v0.1 provisioning                      | Superseded by ADR-005 |
 | 034 | Lima dev environment                                          | Accepted              |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
 | 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |

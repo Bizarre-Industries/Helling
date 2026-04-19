@@ -10,7 +10,7 @@ Evaluated for K8s-on-microVMs (fast-start K8s nodes via Flintlock + Firecracker/
 
 ## Decision
 
-Reject CAPMVM and Flintlock. Use k3s via cloud-init on Incus VMs for v0.1 provisioning (ADR-005, ADR-033).
+Reject CAPMVM and Flintlock. Use k3s via cloud-init on Incus VMs for v0.1 provisioning (ADR-005).
 
 Reasons:
 

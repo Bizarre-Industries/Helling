@@ -167,9 +167,9 @@ Templates in `/var/lib/helling/templates/cloud-init/` (Ubuntu, Debian, Fedora, A
 
 **Version:** v0.1.0-beta | **Priority:** Medium
 
-### Layer 16: noVNC Console
+### Layer 16: SPICE Browser Console
 
-**Tool:** `noVNC` or static `noVNC`
+**Tool:** `spice-html5` class browser client
 
 VM VGA console in the browser (ADR-010). Dynamic import to avoid loading console libraries on non-console pages.
 
@@ -318,7 +318,7 @@ port:
 | Version      | Automation added                                                                                                                 |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | v0.1.0-alpha | oapi-codegen (server + client), orval, Makefile pipeline, vacuum, nilaway/exhaustive, git-cliff, dev container, pre-commit hooks |
-| v0.1.0-beta  | Atlas migrations, config JSON Schema, snapshot testing, noVNC console, cloud-init templates                                      |
+| v0.1.0-beta  | Atlas migrations, config JSON Schema, snapshot testing, SPICE browser console, cloud-init templates                              |
 | v0.2.0       | tygo event types, embedded API docs (Scalar/Redoc)                                                                               |
 | v0.3.0       | Prometheus metrics, Grafana dashboard generation                                                                                 |
 | v0.8.0       | Schemathesis fuzzing, goss system validation                                                                                     |

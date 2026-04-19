@@ -62,6 +62,8 @@ Proxied requests are authenticated and audited. Incus proxy requests run under t
 
 ## 5. BMC
 
+Deferred from v0.1 (target v0.4).
+
 | Method | Endpoint                 | Description         |
 | ------ | ------------------------ | ------------------- |
 | GET    | /api/v1/bmc              | List BMC endpoints  |
@@ -112,6 +114,8 @@ Proxied requests are authenticated and audited. Incus proxy requests run under t
 
 ## 10. Notifications
 
+Deferred from v0.1 (target v0.3).
+
 | Method | Endpoint                                 | Description    |
 | ------ | ---------------------------------------- | -------------- |
 | GET    | /api/v1/notifications/channels           | List channels  |
@@ -121,10 +125,52 @@ Proxied requests are authenticated and audited. Incus proxy requests run under t
 
 ## 11. Infrastructure
 
-| Method | Endpoint       | Description      |
-| ------ | -------------- | ---------------- |
-| GET    | /api/v1/health | Health check     |
-| GET    | /api/v1/events | SSE event stream |
+| Method | Endpoint       | Description              |
+| ------ | -------------- | ------------------------ |
+| GET    | /api/v1/health | Health check             |
+| GET    | /api/v1/events | Helling SSE event stream |
+
+---
+
+## WebSocket Console Protocol (Incus)
+
+Console and exec sessions follow the upstream Incus operation-secret workflow. Helling does not rewrite this protocol.
+
+1. Client opens an operation via Incus API, for example:
+   - `POST /api/incus/1.0/instances/{name}/console`
+   - `POST /api/incus/1.0/instances/{name}/exec`
+2. Response contains an operation object with websocket secret values in `metadata.fds`.
+3. Client connects websocket channel(s) through the proxy:
+   - `GET /api/incus/1.0/operations/{id}/websocket?secret={fd_secret}`
+4. For console flows, data and control channels are both connected.
+5. For exec flows, stdin/stdout/stderr websocket channels are connected per returned file-descriptor mapping.
+
+Proxy behavior requirements:
+
+- Preserve websocket upgrade semantics and upstream payloads without protocol translation.
+- Authenticate and authorize before operation creation and websocket upgrades.
+- Emit audit for session open/close events, not per-frame traffic.
+- For Incus upstream calls, present caller-specific client certificate identity on the loopback HTTPS transport.
+
+---
+
+## Events Model
+
+Helling exposes two event surfaces:
+
+1. **Incus upstream events (WebSocket pass-through):**
+   - `GET /api/incus/1.0/events`
+   - Protocol and event type semantics are native Incus behavior.
+2. **Helling-native events (SSE):**
+   - `GET /api/v1/events`
+   - Emits Helling control-plane events such as schedule execution, webhook delivery, and auth/audit lifecycle notifications.
+
+Helling-native SSE behavior:
+
+- Content type: `text/event-stream`
+- Reconnect via standard `Last-Event-ID`
+- Heartbeat comments are sent periodically to keep connections alive
+- Optional query filters: `type`, `since`
 
 ---
 
@@ -134,4 +180,4 @@ Proxied requests are authenticated and audited. Incus proxy requests run under t
 - `/api/podman/*` forwards to Podman libpod API via Unix socket.
 - Incus Unix socket access is reserved for host administrator CLI operations and is not used for delegated user proxy authorization.
 
-MicroVM API and Cloud Hypervisor proxy routes are deferred from v0.1 (ADR-006).
+MicroVM API proxy routes are deferred from v0.1 (ADR-006).

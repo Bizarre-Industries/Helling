@@ -1,29 +1,29 @@
-# ADR-010: noVNC as primary VM browser console, SPICE as fallback
+# ADR-010: SPICE as in-browser VM console protocol
 
-> Status: Accepted (2026-04-19)
+> Status: Accepted (re-affirmed 2026-04-20)
 
 ## Context
 
-Helling needs a browser-native VM console that works reliably in common desktop browsers without client installation.
+Helling needs a browser-native VM console that remains aligned with Incus VM console semantics and avoids per-VM launch overrides.
 
-SPICE in browser depends on aging client implementations and inconsistent compatibility. noVNC is broadly deployed, active, and aligned with expected browser console UX.
+Incus VM VGA console sessions are SPICE-based. The upstream API and CLI flows for `type=vga` are built around SPICE sockets and operation websocket bridging.
 
-Incus default VM console wiring may use SPICE, but Helling controls VM launch parameters and can expose a VNC socket for browser use.
+Using noVNC as a primary path requires a `raw.qemu` VNC override per VM, which introduces portability and lifecycle risks and conflicts with the project goal of minimizing runtime behavior that diverges from upstream Incus defaults.
 
 ## Decision
 
-Use noVNC as the default in-browser VM console in v0.1.
+Use SPICE as the default in-browser VM console protocol in v0.1.
 
 Implementation:
 
-1. VM definitions include QEMU VNC socket configuration (`raw.qemu`) on a local Unix socket.
-2. hellingd proxies that socket to WebSocket for browser clients.
-3. WebUI uses noVNC as the primary viewer.
-4. SPICE remains available only as an optional external-client fallback (for example, `.vv` download workflow).
+1. `hellingd` proxies Incus VGA operation websockets without protocol translation.
+2. WebUI uses a SPICE-capable browser client (`spice-html5` class) for VM VGA sessions.
+3. Helling does not inject `raw.qemu` VNC overrides into VM definitions.
+4. External SPICE client workflows remain compatible for troubleshooting.
 
 ## Consequences
 
-- Browser console path is standardized around noVNC
-- Console experience matches operator expectations from comparable virtualization UIs
-- Helling must maintain secure socket-to-WebSocket proxying and access checks
-- SPICE remains optional, not the default dependency for WebUI console
+- Browser VM console path stays aligned with Incus `type=vga` behavior
+- Helling avoids per-VM `raw.qemu` drift and migration fragility
+- WebUI must maintain SPICE browser client compatibility and websocket handling
+- No fallback VNC control plane is introduced in v0.1

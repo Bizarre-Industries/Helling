@@ -1085,11 +1085,11 @@ grep -c "operationId:" api/openapi.yaml # ~40
 
 ## Phase 2: v0.1.0-beta - Core Dashboard
 
-**Gate:** Create VM -> noVNC VGA console -> exec into CT -> browse storage pools
+**Gate:** Create VM -> SPICE VGA console -> exec into CT -> browse storage pools
 
 ### 2.1 WebSocket Proxy for Consoles
 
-**Priority:** HIGH - Required for noVNC/serial/exec
+**Priority:** HIGH - Required for SPICE/serial/exec
 
 **Implementation:** Extend proxy.go with WebSocket detection and forwarding
 
@@ -1099,7 +1099,7 @@ grep -c "operationId:" api/openapi.yaml # ~40
 
 **Endpoints:**
 
-- `/api/incus/1.0/instances/{name}/console?type=vga` - noVNC VGA
+- `/api/incus/1.0/instances/{name}/console?type=vga` - SPICE VGA
 - `/api/incus/1.0/instances/{name}/console?type=console` - Serial
 - `/api/incus/1.0/instances/{name}/exec` - Exec PTY
 
@@ -1114,7 +1114,7 @@ ws.onmessage = (e) => console.log("Received:", e.data);
 // Should see VGA console stream frames
 ```
 
-### 2.2 noVNC Console Component
+### 2.2 SPICE Browser Console Component
 
 **Priority:** HIGH
 
@@ -1122,8 +1122,8 @@ ws.onmessage = (e) => console.log("Received:", e.data);
 
 ```bash
 cd web
-bun add @novnc/novnc
-# Or vendor files to public/novnc/
+bun add spice-html5
+# Or vendor files to public/spice/
 ```
 
 **Component:** `web/src/components/VncConsole.tsx`
@@ -1196,7 +1196,7 @@ bun add @xterm/xterm
 **WebSocket proxy complexity:**
 
 - Use proven libraries (gorilla/websocket)
-- Extensive testing with real noVNC/serial/exec sessions
+- Extensive testing with real SPICE/serial/exec sessions
 - Fallback: direct connections if proxy fails
 
 **PAM reliability:**

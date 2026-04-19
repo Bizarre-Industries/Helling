@@ -36,8 +36,8 @@ Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focus
 │  Auth middleware (PAM+JWT), RBAC, audit, proxy dispatch        │
 │                                                                │
 │  Helling API handlers (approximately 40 endpoints):            │
-│    auth, users, schedules, webhooks, bmc, kubernetes, system, │
-│    host firewall, audit, notifications, infra                  │
+│    auth, users, schedules, webhooks, kubernetes, system,       │
+│    host firewall, audit, infra                                  │
 │                                                                │
 │  Upstream proxy surfaces:                                      │
 │    /api/incus/*  -> Incus HTTPS API (per-user mTLS cert)       │
@@ -74,6 +74,23 @@ Current v0.1 schema tables are defined in `docs/spec/sqlite-schema.md` and inclu
 - `incus_user_certs`
 - `auth_events`
 
+## Canonical Dependency Baseline (v0.1)
+
+Helling keeps backend dependencies intentionally small and aligned to proxy-first architecture.
+
+Core backend dependencies (approximately 10-12 with build-profile variance):
+
+- `go-chi/chi` for routing
+- `golang-jwt/jwt` for JWT handling
+- `msteinert/pam` for PAM integration
+- `pquerna/otp` for TOTP
+- `spf13/viper` for config loading
+- `gorm.io/gorm` and `gorm.io/driver/sqlite` for state persistence
+- `bmc-toolbox/bmclib` for deferred BMC integration paths
+- minimal observability/system libraries as required by v0.1 handlers
+
+Incus and Podman APIs are not linked via heavy SDK dependency surfaces for proxied operations.
+
 ## Request Flow
 
 ### Proxied upstream request
@@ -95,5 +112,5 @@ Current v0.1 schema tables are defined in `docs/spec/sqlite-schema.md` and inclu
 
 ## Scope Notes
 
-- MicroVM API and Cloud Hypervisor proxy routes are deferred from v0.1 (ADR-006).
+- MicroVM API routes are deferred from v0.1 (ADR-006).
 - Kubernetes provisioning in v0.1 uses k3s via cloud-init on Incus VMs.

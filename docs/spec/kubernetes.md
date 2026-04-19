@@ -35,6 +35,25 @@ Dashboard 6-step flow:
 4. Helling records cluster metadata in SQLite.
 5. User downloads kubeconfig from API/CLI/WebUI.
 
+## Bootstrap Sequence (Normative)
+
+Helling uses an orchestrated sequence to avoid race conditions in HA bootstrap.
+
+1. Generate cluster token and cloud-init payloads.
+2. Create first control-plane VM (CP1) with `--cluster-init`.
+3. Wait for CP1 readiness with bounded polling:
+   - k3s API reachable on `:6443`
+   - readiness endpoint reports ready
+4. Create remaining control-plane nodes using the shared token and CP1 endpoint.
+5. After control-plane readiness threshold is met, create worker nodes in parallel.
+6. Persist cluster metadata and return kubeconfig.
+
+Timeout and failure behavior:
+
+- Global provisioning timeout: 10 minutes (default)
+- On timeout or bootstrap failure, Helling tears down created cluster VMs and returns a terminal error.
+- Partial clusters are not retained by default in v0.1.
+
 ## What Helling Does Not Do
 
 - Manage Kubernetes workloads (use kubectl)

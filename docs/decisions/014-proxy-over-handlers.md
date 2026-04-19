@@ -14,7 +14,7 @@ Helling wraps Incus and Podman. The previous architecture implemented individual
 
 ## Decision
 
-Replace per-endpoint handlers with a generic authenticated reverse proxy middleware. hellingd forwards requests to Incus and Podman Unix sockets after:
+Replace per-endpoint handlers with a generic authenticated reverse proxy middleware. hellingd forwards requests to the Incus HTTPS loopback API and Podman Unix socket after:
 
 1. JWT validation
 2. Per-user Incus trust identity (proxy uses user TLS client cert)

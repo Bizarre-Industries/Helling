@@ -11,7 +11,7 @@ antd 6                          → Core components
 @tanstack/react-query           → Data fetching (via orval-generated hooks for Helling API)
 react-router-dom v7             → Routing
 xterm.js                        → Terminal (serial console, exec, logs)
-@novnc/novnc                    → VM VGA console (noVNC protocol path, ADR-010)
+spice-html5                     → VM VGA console (SPICE protocol path, ADR-010)
 @monaco-editor/react            → YAML editor (cloud-init, compose, hookscripts, dynamic import)
 lucide-react                    → Icons
 axios                           → HTTP client with JWT interceptor
@@ -140,7 +140,7 @@ Inline row actions: Start/Stop/Console (no drill-down needed). Bulk actions bar 
 
 **Summary:** `<Descriptions>` (status, uptime, CPU, RAM, disk, IPs, MACs, config, tags, notes). `<Progress>` gauges. Quick action `<Button.Group>`. ALL on one screen, no scrolling on 1080p.
 
-**Console:** `<NoVncConsole>` (`@novnc/novnc`, dynamic import, ADR-010) for VMs: Ctrl+Alt+Del `<Button>`, clipboard, screenshot, fullscreen. `<SerialConsole>` (xterm.js) for CTs.
+**Console:** `<SpiceConsole>` (`spice-html5`, dynamic import, ADR-010) for VMs: Ctrl+Alt+Del `<Button>`, clipboard, screenshot, fullscreen. `<SerialConsole>` (xterm.js) for CTs.
 
 **Hardware:** `<ProTable>` of devices (CPU, RAM, disks, NICs, USB, PCI, GPU). Add/Edit/Detach actions. Disk resize `<Slider>`. GPU passthrough with IOMMU group display.
 

@@ -21,8 +21,6 @@ Baseline flow:
 
 CAPN (Cluster API Provider for Incus) is deferred to v0.5+ as an optional advanced mode.
 
-ADR-033 is superseded to avoid duplicate decision scope.
-
 ## Consequences
 
 - Faster path to reliable Kubernetes support in v0.1

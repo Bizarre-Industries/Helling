@@ -56,7 +56,7 @@
 - [ ] Network page loads network data
 - [ ] No raw `fetch()` in pages (all through orval hooks or typed proxy clients)
 - [ ] No `VncConsole.tsx` exists
-- [ ] No `novnc.d.ts` exists
+- [ ] No stale noVNC-only console path assumptions remain
 
 ### CLI
 
@@ -78,7 +78,7 @@
 
 ### Console
 
-- [ ] noVNC VGA console opens for a running VM
+- [ ] SPICE VGA console opens for a running VM
 - [ ] Serial console opens for a running CT
 - [ ] Exec terminal works for Podman container
 - [ ] WebSocket proxy handles upgrade correctly

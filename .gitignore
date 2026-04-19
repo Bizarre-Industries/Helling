@@ -1,0 +1,63 @@
+# Helling project docs (local only)
+helling.md
+helling-complete.md
+IMPLEMENTATION-PLAN.md
+
+# Claude Code
+.claude/
+.remember/
+
+# Go
+/bin/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work.sum
+
+# Generated API code
+apps/hellingd/api/*.gen.go
+apps/helling-cli/internal/client/*.gen.go
+web/src/api/generated/
+
+# Stray binaries at root
+/hellingd
+/helling-cli
+/helling-proxy
+/helling-agent
+
+# SvelteKit / Node
+web/node_modules/
+web/build/
+web/dist/
+web/package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage.out
+*.prof
+
+# Secrets
+*.secret
+*.key
+*.pem
+jwt.secret
+
+# Docker local
+.docker/
+
+refs/

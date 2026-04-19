@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build image
+        run: docker build -f deploy/Dockerfile -t helling-e2e .
+
+      - name: Start container
+        run: docker run -d --name helling-e2e -p 8006:8006 helling-e2e
+
+      - name: Wait for startup
+        run: sleep 12
+
+      - name: Run E2E tests
+        run: |
+          set -euo pipefail
+          API="https://localhost:8006/api/v1"
+
+          echo "--- Health ---"
+          curl -skf "$API/health" | jq -e '.status == "ok"'
+
+          echo "--- Setup ---"
+          curl -sk -X POST "$API/auth/setup" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"TestPass123!"}' \
+            -o /tmp/setup.json
+          jq -e '.access_token' /tmp/setup.json > /dev/null
+
+          echo "--- Login ---"
+          curl -sk -X POST "$API/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"TestPass123!"}' \
+            -o /tmp/login.json
+          TOKEN_FILE=/tmp/helling_token
+          jq -r '.access_token' /tmp/login.json > "$TOKEN_FILE"
+
+          AUTH_HEADER="Authorization: Bearer $(cat $TOKEN_FILE)"
+
+          # Test each endpoint — print name before to identify failures
+          test_ep() {
+            local path=$1 check=$2
+            echo -n "  $path ... "
+            BODY=$(curl -sk -H "$AUTH_HEADER" "$API$path" -w '\n%{http_code}' 2>&1)
+            CODE=$(echo "$BODY" | tail -1)
+            JSON=$(echo "$BODY" | sed '$d')
+            if [ "$CODE" != "200" ]; then
+              echo "FAIL (HTTP $CODE)"
+              echo "$JSON" | head -3
+              exit 1
+            fi
+            echo "$JSON" | jq -e "$check" > /dev/null 2>&1 && echo "OK" || { echo "FAIL (jq: $check)"; echo "$JSON" | head -3; exit 1; }
+          }
+
+          echo "--- Endpoints ---"
+          test_ep /system/info '.hostname'
+          test_ep /tasks 'type == "array"'
+          test_ep /containers 'type == "array"'
+          test_ep /images 'type == "array"'
+          test_ep /instances 'type == "array"'
+          test_ep /storage/pools 'type == "array"'
+          test_ep /networks 'type == "array"'
+          test_ep /firewall/rules 'type == "array"'
+          test_ep /kubernetes/clusters 'type == "array"'
+          test_ep /bmc 'type == "array"'
+          test_ep /backups 'type == "array"'
+          test_ep /backups/schedules 'type == "array"'
+          test_ep /notifications/channels 'type == "array"'
+          test_ep /users 'type == "array"'
+          test_ep /health-checks 'type == "array"'
+          test_ep /system/updates '.current_version'
+
+          echo "--- Unauth ---"
+          HTTP_CODE=$(curl -sk -o /dev/null -w '%{http_code}' "$API/system/info")
+          test "$HTTP_CODE" = "401"
+
+          echo "ALL E2E TESTS PASSED"
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f helling-e2e

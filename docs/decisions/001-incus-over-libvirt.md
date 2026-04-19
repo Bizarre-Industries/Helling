@@ -12,9 +12,7 @@ Use Incus (`lxc/incus/v6/client`) as the sole compute engine. Incus wraps QEMU/K
 
 ## Consequences
 
-- One Go client replaces 10 packages
-- VMs, system containers, and OCI containers through one API
-- Storage, networking, clustering, images, snapshots, backup, migration included
-- Locked to Incus release cadence and feature set
-- No raw QEMU access (use `raw.qemu` config key for edge cases)
-- Incus socket path varies by distro — must be configurable
+- One client replaces a fragmented stack of low-level VM/container packages.
+- VMs and system containers are managed through a unified Incus API.
+- QEMU features are accessed only through Incus config keys (`raw.qemu`, `raw.qemu.conf`). No direct QEMU process control and no libvirt API usage.
+- Incus socket path varies by distro and must remain configurable.

@@ -4,11 +4,11 @@ All compute operations go through the proxy to Incus and Podman (ADR-014). This 
 
 ## Three Workload Types
 
-| Type | Engine | Managed by | Dashboard page |
-| --- | --- | --- | --- |
-| VMs (QEMU/KVM) | Incus | `incus` CLI, Incus proxy | /instances |
-| System Containers (LXC) | Incus | `incus` CLI, Incus proxy | /instances |
-| App Containers (OCI) | Podman | `podman` CLI, Podman proxy | /containers |
+| Type                    | Engine | Managed by                 | Dashboard page |
+| ----------------------- | ------ | -------------------------- | -------------- |
+| VMs (QEMU/KVM)          | Incus  | `incus` CLI, Incus proxy   | /instances     |
+| System Containers (LXC) | Incus  | `incus` CLI, Incus proxy   | /instances     |
+| App Containers (OCI)    | Podman | `podman` CLI, Podman proxy | /containers    |
 
 MicroVM support is deferred from v0.1 (ADR-006).
 

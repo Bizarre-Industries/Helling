@@ -1,6 +1,6 @@
 # ADR-011: Proxy to Podman socket, no Go bindings
 
-> Status: Accepted (2026-04-15) — supersedes original ADR-011 (Podman native bindings over Docker client), replaced approach by ADR-014 (proxy over handlers)
+> Status: Superseded by ADR-035
 
 ## Context
 
@@ -17,7 +17,7 @@ WebSocket exec connections (101 Switching Protocols) are handled natively by `ht
 ## Consequences
 
 - Zero Podman-specific Go code in hellingd
-- `containers/podman/v5` removed from go.mod — six Go dependencies total
+- `containers/podman/v5` removed from go.mod
 - Full Podman libpod API available at `/api/podman/*` with no reimplementation
 - WebSocket exec (101 upgrades) handled natively — no manual upgrade code
 - New Podman API features available immediately without Helling changes

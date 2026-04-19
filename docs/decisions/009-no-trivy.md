@@ -1,4 +1,4 @@
-# ADR-009: No Trivy — Use Grype
+# ADR-009: Suspend Aqua Security Tooling
 
 > Status: Accepted
 
@@ -8,11 +8,15 @@ March 2026: Trivy/Aqua Security supply chain attack. 76 of 77 Docker tags poison
 
 ## Decision
 
-Never use Trivy or any Aqua Security GitHub Actions. Use Grype for container vulnerability scanning. Pin all GitHub Actions to full SHA hashes (not version tags — tags can be force-pushed, which is exactly how the Trivy attack worked).
+Suspend Trivy and other Aqua Security-hosted CI tooling in the Helling pipeline until trust and remediation criteria are explicitly re-evaluated.
+
+Use Grype as the default container vulnerability scanner during the suspension window.
+
+Permanent GitHub Action SHA pinning is tracked independently in ADR-026.
 
 ## Consequences
 
 - Grype provides equivalent vulnerability scanning
-- All CI actions pinned to SHA hashes (immune to tag-based attacks)
+- CI tooling policy separates temporary vendor suspension (this ADR) from permanent hardening policy (ADR-026)
 - Must verify any new CI action is not from Aqua Security
 - StepSecurity Harden-Runner recommended for detecting future supply chain attacks

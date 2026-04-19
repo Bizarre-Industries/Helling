@@ -10,7 +10,7 @@ Evaluated for K8s-on-microVMs (fast-start K8s nodes via Flintlock + Firecracker/
 
 ## Decision
 
-Reject CAPMVM and Flintlock. Use CAPN (Cluster API Provider for Incus) for K8s provisioning (ADR-005).
+Reject CAPMVM and Flintlock. Use k3s via cloud-init on Incus VMs for v0.1 provisioning (ADR-005, ADR-033).
 
 Reasons:
 
@@ -22,7 +22,7 @@ Reasons:
 
 ## Consequences
 
-- K8s nodes are always Incus VMs (CAPN) — no microVM-based K8s
+- K8s nodes are always Incus VMs in v0.1 — no microVM-based K8s
 - K8s on Cloud Hypervisor microVMs deferred until a maintained, proxyable solution exists
 - No gRPC dependency in hellingd
 - No containerd sidecar required

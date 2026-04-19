@@ -7,6 +7,7 @@ Rules for writing code in Helling. Not preferences. Standards. Violations are bu
 ## 1. Go Backend
 
 ### File Structure (per handler/service)
+
 ```
 internal/
   incus/
@@ -21,6 +22,7 @@ internal/
 No `utils/`, `helpers/`, `common/`, `misc/`. If a function doesn't have a home, the package structure is wrong.
 
 ### Error Handling
+
 ```go
 // RULE: Every error wraps with context. No naked returns.
 // BAD:
@@ -60,6 +62,7 @@ return fmt.Errorf("auth failed for user %q from %s", username, sourceIP)
 ```
 
 ### Shell-Out Conventions (ADR-018)
+
 ```
 For host operations (nft, smartctl, systemctl, lvs, zpool), shell out to CLI tools:
 - Always use exec.CommandContext with a timeout
@@ -69,6 +72,7 @@ For host operations (nft, smartctl, systemctl, lvs, zpool), shell out to CLI too
 ```
 
 ### systemd Timer Conventions (ADR-017)
+
 ```
 Scheduled operations write .timer + .service unit files to /etc/systemd/system/:
 - Timer names: helling-<type>-<resource>.timer
@@ -79,6 +83,7 @@ Scheduled operations write .timer + .service unit files to /etc/systemd/system/:
 ```
 
 ### Logging
+
 ```go
 // RULE: All logging via slog. No fmt.Println, no log.Println.
 // RULE: Structured fields, not string formatting.
@@ -109,6 +114,7 @@ slog.Info("config loaded", "db_password", slog.String("REDACTED"))
 ```
 
 ### Context
+
 ```go
 // RULE: context.Context is always the first parameter.
 func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest) (*Instance, error)
@@ -128,6 +134,7 @@ default:
 ```
 
 ### Concurrency
+
 ```go
 // RULE: Use errgroup for parallel operations with error handling.
 g, ctx := errgroup.WithContext(ctx)
@@ -148,6 +155,7 @@ if err := g.Wait(); err != nil {
 ```
 
 ### Input Validation
+
 ```go
 // RULE: Validate ALL input at the API handler layer.
 // RULE: Whitelist valid values, don't blacklist bad ones.
@@ -159,19 +167,19 @@ func (h *Handler) CreateInstance(w http.ResponseWriter, r *http.Request) {
         writeError(w, 400, "INVALID_JSON", "Request body is not valid JSON")
         return
     }
-    
+
     // Validate name: alphanumeric + hyphens, 1-63 chars
     if !isValidName(req.Name) {
         writeError(w, 400, "INVALID_NAME", "Name must be 1-63 alphanumeric characters or hyphens")
         return
     }
-    
+
     // Validate enum values against whitelist
     if !slices.Contains(validInstanceTypes, req.Type) {
         writeError(w, 400, "INVALID_TYPE", "Type must be one of: vm, container")
         return
     }
-    
+
     // Validate numeric ranges
     if req.CPU < 1 || req.CPU > 128 {
         writeError(w, 400, "INVALID_CPU", "CPU must be between 1 and 128")
@@ -191,6 +199,7 @@ if strings.Contains(path, "..") || !filepath.IsAbs(path) {
 ```
 
 ### Database
+
 ```go
 // RULE: All database access through GORM. No raw SQL except migrations.
 // RULE: Schema changes via numbered migration files, never ad-hoc ALTER TABLE.
@@ -210,6 +219,7 @@ err := db.Transaction(func(tx *gorm.DB) error {
 ```
 
 ### HTTP Security Headers
+
 ```go
 // RULE: Set on every response via middleware:
 func SecurityHeaders(next http.Handler) http.Handler {
@@ -227,13 +237,14 @@ func SecurityHeaders(next http.Handler) http.Handler {
 ```
 
 ### Handler Architecture (ADR-014)
+
 ```
 Most resources are proxied to Incus/Podman sockets (ADR-014). Only Helling-specific
 endpoints (~25) have handler implementations. These include: auth, users, settings,
 tasks, warnings, webhooks, audit, and metrics.
 
 Proxied requests:
-  - hellingd validates JWT, maps user → Incus project, forwards to Unix socket
+    - hellingd validates JWT, loads user Incus TLS identity, forwards to Unix socket
   - No handler code needed for standard Incus/Podman CRUD operations
   - Auth + audit middleware still runs on proxied requests
 
@@ -244,6 +255,7 @@ Helling-specific handlers:
 ```
 
 ### API Design
+
 ```go
 // RULE: All endpoints follow consistent naming:
 //   GET    /api/v1/{resource}          → List (paginated)
@@ -275,6 +287,7 @@ Helling-specific handlers:
 ## 2. React Frontend
 
 ### Component Rules
+
 ```tsx
 // RULE: Components in src/components/. Pages in src/pages/. Hooks in src/hooks/.
 // RULE: One component per file. File name matches component name.
@@ -291,8 +304,8 @@ const data: Instance[] = response.data;
 // RULE: Use antd components for ALL UI. No custom HTML for things antd provides.
 
 // RULE: Dynamic imports for heavy components:
-const VncConsole = React.lazy(() => import('./VncConsole'));
-const MonacoEditor = React.lazy(() => import('./MonacoEditor'));
+const VncConsole = React.lazy(() => import("./VncConsole"));
+const MonacoEditor = React.lazy(() => import("./MonacoEditor"));
 
 // RULE: No localStorage/sessionStorage for auth tokens. Use httpOnly cookies or
 // memory-only storage with refresh token flow.
@@ -302,17 +315,18 @@ const MonacoEditor = React.lazy(() => import('./MonacoEditor'));
 ```
 
 ### State Management
+
 ```tsx
 // RULE: React Query for server state. useState for UI state. No Redux.
 // RULE: Cache invalidation via React Query + SSE events.
 
 // Pattern: SSE invalidates React Query cache
 useEffect(() => {
-  const es = new EventSource('/api/v1/events');
+  const es = new EventSource("/api/v1/events");
   es.onmessage = (e) => {
     const event = JSON.parse(e.data);
-    if (event.type === 'instance.state_changed') {
-      queryClient.invalidateQueries({ queryKey: ['instances'] });
+    if (event.type === "instance.state_changed") {
+      queryClient.invalidateQueries({ queryKey: ["instances"] });
     }
   };
   return () => es.close();
@@ -320,6 +334,7 @@ useEffect(() => {
 ```
 
 ### Security (Frontend)
+
 ```tsx
 // RULE: Never render user input as HTML (XSS). React escapes by default.
 // RULE: Never use dangerouslySetInnerHTML except for sanitized markdown.
@@ -333,6 +348,7 @@ useEffect(() => {
 ## 3. Testing Standards
 
 ### Coverage Targets
+
 ```
 Go backend:
   Handlers:  80% line coverage minimum
@@ -347,6 +363,7 @@ React frontend:
 ```
 
 ### Test Patterns
+
 ```go
 // RULE: Table-driven tests for all functions with multiple cases.
 func TestValidateName(t *testing.T) {
@@ -396,6 +413,7 @@ func BenchmarkListInstances(b *testing.B) {
 ```
 
 ### Test Organization
+
 ```
 Unit tests:     Adjacent to code (*_test.go). Run with `make test`.
 Integration:    test/ directory. Require running services. Run with `make test-integration`.

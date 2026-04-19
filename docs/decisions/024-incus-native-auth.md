@@ -6,7 +6,7 @@
 
 Helling must enforce per-user isolation for proxied Incus operations from the first release.
 
-The previous stopgap model (JWT claim to `?project=` query parameter injection) creates a split-brain authorization model where Helling middleware decides scope while Incus executes requests. This is brittle and hard to audit.
+The previous stopgap model (JWT claim to project query-parameter injection) creates a split-brain authorization model where Helling middleware decides scope while Incus executes requests. This is brittle and hard to audit.
 
 Incus already supports trust-scoped client certificates and project restrictions, which can be used as the primary enforcement boundary.
 
@@ -20,7 +20,7 @@ From v0.1 onward, Helling uses per-user Incus client certificates.
 4. For every proxied Incus call, hellingd presents the calling user's certificate.
 5. Incus trust restrictions and project limits enforce resource visibility and allowed operations.
 
-Helling does not use `?project=` query parameter injection as an authorization mechanism.
+Helling does not use query-parameter project injection as an authorization mechanism.
 
 ## Consequences
 

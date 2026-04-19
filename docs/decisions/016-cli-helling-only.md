@@ -18,7 +18,7 @@ helling user list/create/delete        # Helling user management (PAM)
 helling schedule list/create/delete    # Backup scheduling (systemd timers)
 helling webhook list/create/delete     # Webhook management
 helling bmc scan/power/sensors         # BMC management (bmclib)
-helling k8s create/list/delete/kubeconfig  # K8s cluster provisioning (CAPN)
+helling k8s create/list/delete/kubeconfig  # K8s cluster provisioning (k3s via cloud-init)
 helling system info/upgrade/config     # System management
 helling firewall list/create/delete    # Host nftables rules
 helling version                        # Version info
@@ -26,6 +26,7 @@ helling completion bash/zsh/fish       # Shell completions
 ```
 
 For everything else:
+
 - `incus` for instances, storage, networks, profiles, projects, cluster, images
 - `podman` for containers, pods, images, volumes, networks, secrets, compose
 - `kubectl` for Kubernetes workloads (after `helling k8s kubeconfig`)
@@ -33,6 +34,7 @@ For everything else:
 ## Consequences
 
 **Easier:**
+
 - ~15 commands instead of ~392 — trivial to maintain
 - No CLI commands go stale when upstream adds features
 - Man page for `helling(1)` is concise and useful
@@ -40,6 +42,7 @@ For everything else:
 - Generated Go client is small (~3k lines instead of ~29k)
 
 **Harder:**
+
 - Users need to know three CLIs (but they're standard tools they likely already know)
 - `helling auth token` must produce a token that works with `incus` and `podman` (or users configure those separately)
 - No single unified CLI for all operations

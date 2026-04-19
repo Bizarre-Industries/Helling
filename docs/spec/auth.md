@@ -78,7 +78,7 @@ TOTP is supported in v0.1.
 
 ## 3. Incus Authorization Boundary
 
-### 3.1 No `?project=` Injection
+### 3.1 No Query-Parameter Project Injection
 
 Helling v0.1 does not rely on query parameter project scoping for authorization.
 

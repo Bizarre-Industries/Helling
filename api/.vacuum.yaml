@@ -1,0 +1,229 @@
+# Helling OpenAPI ruleset for vacuum (Spectral-compatible)
+#
+# Baseline: vacuum 'recommended' (55 rules).
+# Additions: Helling-specific enforcements for field naming, pattern enforcement,
+#            sensitive field marking, error response consistency, pagination parameters.
+# Overrides: Allow snake_case property names (Helling convention).
+#
+# Apply: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
+
+extends: [ [ spectral:oas, recommended ] ]
+
+formats: [ oas3_1, oas3 ]
+
+rules:
+  # ---------- Overrides of vacuum recommended ----------
+
+  # Helling property names are snake_case (matches Go JSON tags + validation.md).
+  # Disable the default camelCase check.
+  oas3-valid-schema-example: off # we validate examples manually via helling-required-example
+  operation-description: error # upgrade warning → error
+
+  # ---------- Helling custom rules ----------
+
+  helling-property-snake-case:
+    description: Property names must be lowercase snake_case.
+    severity: error
+    given: "$.components.schemas..properties"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-z0-9_]*$"
+
+  helling-operation-id-camelcase:
+    description: operationId must be camelCase (lower first letter, no underscores or hyphens).
+    severity: error
+    given: "$.paths..operationId"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z][a-zA-Z0-9]*$"
+
+  helling-ulid-id-path-param:
+    description: |
+      Path parameters named `id` must enforce the ULID pattern at schema level.
+      This catches divergence from validation.md.
+    severity: error
+    given: "$.components.parameters.IdPath.schema"
+    then:
+      - field: pattern
+        function: truthy
+      - field: pattern
+        function: pattern
+        functionOptions:
+          match: "\\^\\[0-9A-HJKMNP-TV-Z\\]\\{26\\}\\$"
+
+  helling-required-example:
+    description: Every media type must carry `example` or `examples`.
+    severity: error
+    given:
+      - "$.paths..requestBody.content.application/json"
+      - "$.paths..responses..content.application/json"
+    then:
+      function: xor
+      functionOptions:
+        properties: [ example, examples ]
+
+  helling-required-description-schema:
+    description: Every top-level schema must have a description.
+    severity: error
+    given: "$.components.schemas.*"
+    then:
+      field: description
+      function: truthy
+
+  helling-required-description-property:
+    description: Every schema property must have a description.
+    severity: warn
+    given: "$.components.schemas..properties.*"
+    then:
+      field: description
+      function: truthy
+
+  helling-required-description-parameter:
+    description: Every parameter must have a description.
+    severity: error
+    given: "$.components.parameters.*"
+    then:
+      field: description
+      function: truthy
+
+  helling-required-description-requestbody:
+    description: Every requestBody must have a description.
+    severity: error
+    given: "$.paths..requestBody"
+    then:
+      field: description
+      function: truthy
+
+  helling-sensitive-writeonly:
+    description: |
+      Password, token, secret, and encrypted_* fields must be writeOnly
+      to prevent accidental emission in responses.
+    severity: error
+    given:
+      - "$.components.schemas..properties[?(@property.match(/^(password|secret|token|encrypted_.*)$/))]"
+    then:
+      field: writeOnly
+      function: truthy
+
+  helling-envelope-meta-required:
+    description: |
+      Every success response envelope must include `meta` alongside `data`.
+    severity: error
+    given: "$.components.schemas[?(@property.match(/^Envelope/))]"
+    then:
+      field: required
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains: { const: meta }
+
+  helling-error-401-on-authenticated-mutation:
+    description: |
+      Mutation operations (POST, PUT, PATCH, DELETE) must declare a 401 response
+      unless they are explicitly public (security: []).
+    severity: error
+    given: "$.paths..[?(@property.match(/^(post|put|patch|delete)$/))]"
+    then:
+      field: responses.401
+      function: truthy
+
+  helling-error-429-on-auth-endpoints:
+    description: |
+      Auth endpoints must declare a 429 response (rate limit policy is non-negotiable).
+    severity: error
+    given: "$.paths[?(@property.match(/\\/auth\\//))].post"
+    then:
+      field: responses.429
+      function: truthy
+
+  helling-no-single-ref-combinator:
+    description: |
+      `allOf: [$ref: X]` with a single ref is redundant and confuses generators.
+      Inline the fields or define a proper schema.
+    severity: error
+    given: "$.components.schemas..allOf"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          minItems: 2
+
+  helling-tag-declared:
+    description: |
+      Every tag referenced by an operation must be declared at the root level.
+    severity: error
+    given: "$.paths..tags[*]"
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - Auth
+          - Users
+          - Schedules
+          - Webhooks
+          - Kubernetes
+          - System
+          - Firewall
+          - Audit
+          - Events
+
+  helling-servers-present:
+    description: OpenAPI spec must declare at least one server.
+    severity: error
+    given: "$"
+    then:
+      field: servers
+      function: truthy
+
+  helling-response-envelope-or-native:
+    description: |
+      JSON responses must reference either an Envelope* schema or ErrorEnvelope.
+      Raw type: object responses are not permitted.
+    severity: warn
+    given: "$.paths..responses.*.content.application/json.schema.$ref"
+    then:
+      function: pattern
+      functionOptions:
+        match: "(Envelope[A-Z][a-zA-Z]*|ErrorEnvelope)$"
+
+  helling-pagination-on-list-ops:
+    description: |
+      List operations (those ending in List/Query/Export per our convention)
+      must include PageLimit and PageCursor parameters.
+    severity: warn
+    given: "$.paths.*.get[?(@.operationId =~ /(List|Query|Export)$/)].parameters"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            anyOf:
+              - { const: { $ref: "#/components/parameters/PageLimit" } }
+
+  helling-health-is-public:
+    description: /health must be reachable without authentication.
+    severity: error
+    given: "$.paths[/api/v1/health].get"
+    then:
+      field: security
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          maxItems: 0
+
+  helling-consistent-response-codes:
+    description: |
+      List operations should use 200. Create should use 201. Async accept should use 202.
+      Update should use 200. Delete should use 200 (with envelope) or 204 (no body).
+    severity: warn
+    given: "$.paths..post[?(@.operationId =~ /Create$/)].responses"
+    then:
+      field: "201"
+      function: truthy

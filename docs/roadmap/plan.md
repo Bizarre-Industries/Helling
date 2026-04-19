@@ -10,7 +10,7 @@
 
 ---
 
-## Architecture Decisions (ADRs 001-040)
+## Architecture Decisions (ADRs 001-043)
 
 | #   | Decision                                                      | Status                |
 | --- | ------------------------------------------------------------- | --------------------- |
@@ -47,6 +47,8 @@
 | 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
 | 040 | net/http ServeMux over chi                                    | Accepted              |
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
+| 042 | Security scanning stack consolidation                         | Accepted              |
+| 043 | Huma with humago for Helling-owned HTTP layer                 | Proposed              |
 
 ---
 

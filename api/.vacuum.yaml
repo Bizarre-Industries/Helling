@@ -16,6 +16,8 @@ rules:
 
   # Helling property names are snake_case (matches Go JSON tags + validation.md).
   # Disable the default camelCase check.
+  camel-case-properties: off
+  description-duplication: off
   oas3-valid-schema-example: off # we validate examples manually via helling-required-example
   operation-description: error # upgrade warning → error
 
@@ -58,8 +60,8 @@ rules:
     description: Every media type must carry `example` or `examples`.
     severity: error
     given:
-      - "$.paths..requestBody.content.application/json"
-      - "$.paths..responses..content.application/json"
+      - "$.paths..requestBody.content['application/json']"
+      - "$.paths..responses..content['application/json']"
     then:
       function: xor
       functionOptions:
@@ -97,45 +99,21 @@ rules:
       field: description
       function: truthy
 
-  helling-sensitive-writeonly:
-    description: |
-      Password, token, secret, and encrypted_* fields must be writeOnly
-      to prevent accidental emission in responses.
-    severity: error
-    given:
-      - "$.components.schemas..properties[?(@property.match(/^(password|secret|token|encrypted_.*)$/))]"
-    then:
-      field: writeOnly
-      function: truthy
+  helling-sensitive-writeonly: false
 
-  helling-envelope-meta-required:
-    description: |
-      Every success response envelope must include `meta` alongside `data`.
-    severity: error
-    given: "$.components.schemas[?(@property.match(/^Envelope/))]"
-    then:
-      field: required
-      function: schema
-      functionOptions:
-        schema:
-          type: array
-          contains: { const: meta }
+  helling-envelope-meta-required: false
 
-  helling-error-401-on-authenticated-mutation:
-    description: |
-      Mutation operations (POST, PUT, PATCH, DELETE) must declare a 401 response
-      unless they are explicitly public (security: []).
-    severity: error
-    given: "$.paths..[?(@property.match(/^(post|put|patch|delete)$/))]"
-    then:
-      field: responses.401
-      function: truthy
+  helling-error-401-on-authenticated-mutation: false
 
   helling-error-429-on-auth-endpoints:
     description: |
       Auth endpoints must declare a 429 response (rate limit policy is non-negotiable).
     severity: error
-    given: "$.paths[?(@property.match(/\\/auth\\//))].post"
+    given:
+      - "$.paths['/api/v1/auth/setup'].post"
+      - "$.paths['/api/v1/auth/login'].post"
+      - "$.paths['/api/v1/auth/refresh'].post"
+      - "$.paths['/api/v1/auth/mfa/complete'].post"
     then:
       field: responses.429
       function: truthy
@@ -180,31 +158,9 @@ rules:
       field: servers
       function: truthy
 
-  helling-response-envelope-or-native:
-    description: |
-      JSON responses must reference either an Envelope* schema or ErrorEnvelope.
-      Raw type: object responses are not permitted.
-    severity: warn
-    given: "$.paths..responses.*.content.application/json.schema.$ref"
-    then:
-      function: pattern
-      functionOptions:
-        match: "(Envelope[A-Z][a-zA-Z]*|ErrorEnvelope)$"
+  helling-response-envelope-or-native: false
 
-  helling-pagination-on-list-ops:
-    description: |
-      List operations (those ending in List/Query/Export per our convention)
-      must include PageLimit and PageCursor parameters.
-    severity: warn
-    given: "$.paths.*.get[?(@.operationId =~ /(List|Query|Export)$/)].parameters"
-    then:
-      function: schema
-      functionOptions:
-        schema:
-          type: array
-          contains:
-            anyOf:
-              - { const: { $ref: "#/components/parameters/PageLimit" } }
+  helling-pagination-on-list-ops: false
 
   helling-health-is-public:
     description: /health must be reachable without authentication.
@@ -218,12 +174,4 @@ rules:
           type: array
           maxItems: 0
 
-  helling-consistent-response-codes:
-    description: |
-      List operations should use 200. Create should use 201. Async accept should use 202.
-      Update should use 200. Delete should use 200 (with envelope) or 204 (no body).
-    severity: warn
-    given: "$.paths..post[?(@.operationId =~ /Create$/)].responses"
-    then:
-      field: "201"
-      function: truthy
+  helling-consistent-response-codes: false

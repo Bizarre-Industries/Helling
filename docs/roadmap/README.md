@@ -11,8 +11,7 @@ This directory contains Helling's implementation roadmap and planning documents.
 
 **Contains:**
 
-- Architecture Decisions (ADRs 001-040)
-- Architecture Decisions (ADRs 001-041)
+- Architecture Decisions (ADRs 001-043)
 - Automation & Tooling Index (28 tools)
 - Version gates and feature lists for v0.1-v1.0
 - Post-v1 feature ideas

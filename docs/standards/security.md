@@ -10,7 +10,7 @@ Security requirements for Helling at every layer: application, infrastructure, s
 
 ### Authentication
 
-```
+```yaml
 Passwords:
   - User password verification: delegated to PAM
   - Helling-managed secret hashing: argon2id (NOT SHA-256, NOT MD5)
@@ -47,7 +47,7 @@ API Tokens:
 
 ### Proxy Auth Model (ADR-014)
 
-```
+```text
 The proxy validates JWT before forwarding. For Incus calls,
 the proxy presents the authenticated user's dedicated TLS client certificate. Incus
 trust restrictions enforce scope. Podman requests are forwarded over the Podman
@@ -69,7 +69,7 @@ Auth flow for Helling-specific endpoints:
 
 ### Session Security
 
-```
+```text
   - Session timeout: 30 minutes inactivity (configurable)
   - Concurrent sessions: unlimited (but viewable + individually revocable)
   - Session binding: tie to IP + User-Agent (warn on change, don't block)
@@ -79,20 +79,21 @@ Auth flow for Helling-specific endpoints:
 
 ### Request Security
 
-```
-  - CORS: restrict to dashboard origin only
-  - CSRF: SameSite=Strict cookies + custom X-Helling-Token header
-  - Request size: 10MB max body (configurable), 8KB max headers
-  - Request timeout: 30s default, 300s for uploads/backups
-  - Request ID: X-Request-ID generated per request, logged + returned
-  - TLS: minimum TLS 1.2, prefer TLS 1.3. No SSL 3.0, TLS 1.0, TLS 1.1.
-  - Cipher suites: AEAD only (AES-GCM, ChaCha20-Poly1305). No CBC.
-  - HSTS: max-age=63072000, includeSubDomains
+```yaml
+- CORS: restrict to dashboard origin only
+- CSRF: SameSite=Strict cookies + custom X-CSRF-Token header
+- X-Helling-Token is deprecated and must not be used in new code
+- Request size: 10MB max body (configurable), 8KB max headers
+- Request timeout: 30s default, 300s for uploads/backups
+- Request ID: X-Request-ID generated per request, logged + returned
+- TLS: minimum TLS 1.2, prefer TLS 1.3. No SSL 3.0, TLS 1.0, TLS 1.1.
+- Cipher suites: AEAD only (AES-GCM, ChaCha20-Poly1305). No CBC.
+- HSTS: max-age=63072000, includeSubDomains
 ```
 
 ### Data Security
 
-```
+```text
 At rest:
   - SQLite: file permissions 0600 (owner read/write only)
   - Secrets in DB: encrypted with age (`filippo.io/age`), key material external to DB
@@ -121,7 +122,7 @@ Sanitization:
 
 ### Host Hardening
 
-```
+```yaml
 Debian 13 base:
   - Automatic security updates: unattended-upgrades for security pocket
   - SSH: key-only authentication, no password login, no root login
@@ -136,7 +137,7 @@ Debian 13 base:
 
 ### systemd Hardening (hellingd)
 
-```
+```toml
 [Service]
 # Process isolation
 ProtectSystem=strict
@@ -180,7 +181,7 @@ RestartSec=5
 
 ### Container Security Defaults
 
-```
+```text
 Podman containers created via Helling:
   - Run as non-root by default (rootless Podman)
   - No --privileged unless explicitly enabled per container
@@ -204,7 +205,7 @@ Incus containers:
 
 ### Build Pipeline
 
-```
+```text
 SLSA Level 3 target:
   - Source: GitHub with branch protection, signed commits encouraged
   - Build: GitHub Actions (ephemeral runners, no self-hosted)
@@ -237,7 +238,7 @@ Production Helling deploys as a .deb package on bare metal (ISO install).
 
 ### Release Signing
 
-```
+```text
 Every release artifact is signed:
   - Go binaries: Cosign keyless signature + SLSA provenance
   - Container images: Cosign keyless signature
@@ -254,27 +255,36 @@ Every release artifact is signed:
 
 ### Scanning Pipeline
 
-```
+```text
 Every push:
   - govulncheck (Go vulnerability database)
   - gitleaks (secret detection in code)
   - golangci-lint with gosec (static security analysis)
+  - CodeQL (code scanning)
 
 Push to main:
   - Grype (container image vulnerability scan)
-  - Semgrep (SAST, pattern-based security rules)
-  - Bearer (API security + data flow analysis)
-  - osv-scanner (OSV vulnerability database)
-  - Snyk Container (additional container scanning)
+  - Dependency review and lockfile policy checks
 
 Weekly:
   - OpenSSF Scorecard (project security posture)
   - Full dependency audit
+
+Release gate:
+  - govulncheck: no unfixed high/critical findings
+  - Grype: no unfixed high/critical findings in release image
+  - gitleaks: no active secrets
+
+Removed from baseline (ADR-042 consolidation):
+  - Semgrep
+  - Bearer
+  - osv-scanner
+  - Snyk Container
 ```
 
 ### Vulnerability Response
 
-```
+```text
 SECURITY.md defines:
   - Report to: security@bizarre.industries
   - PGP key for encrypted reports
@@ -301,7 +311,7 @@ CVE process:
 
 ### In Helling Codebase
 
-```
+```text
   - No secrets in source code (gitleaks enforced)
   - No secrets in environment variables baked into container images
   - CI secrets: GitHub Secrets only, never in workflow files
@@ -312,7 +322,7 @@ CVE process:
 
 ### For Users
 
-```
+```text
   - Secrets in containers: Podman secrets API (not environment variables for sensitive data)
   - Secrets in K8s: Kubernetes Secrets (base64, not encrypted by default)
   - Recommend: encrypted etcd for K8s secrets, or external secrets operator
@@ -326,7 +336,7 @@ CVE process:
 
 ### Preparation
 
-```
+```text
   - Runbooks for common incidents documented in docs/runbooks/
   - Contact list for security team in SECURITY.md
   - Backup verification running (backup-verification feature)
@@ -336,7 +346,7 @@ CVE process:
 
 ### Detection
 
-```
+```text
 Helling detects and alerts on:
   - Failed login attempts (>5 from same IP)
   - Successful login from new IP/location
@@ -350,7 +360,7 @@ Helling detects and alerts on:
 
 ### Response
 
-```
+```text
   1. Detect: alert triggers via warning engine or external monitoring
   2. Contain: revoke compromised tokens, isolate affected resources
   3. Investigate: audit log analysis, system log review
@@ -386,7 +396,7 @@ tlsConfig := &tls.Config{
 
 ### API Security Middleware Stack
 
-```
+```text
 Request flow through middleware (order matters):
 
 1. Rate Limiter         → Block excessive requests
@@ -408,7 +418,7 @@ Request flow through middleware (order matters):
 
 ### What Helling enables (not implements itself)
 
-```
+```text
 SOC 2:
   - Audit logging → hellingd audit log
   - Access control → RBAC with PAM/LDAP/OIDC

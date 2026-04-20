@@ -40,12 +40,15 @@ Sidebar: node names visible in resource tree with status icons. Main panel: node
 ## States
 
 ### Empty State
+
 "Not clustered. This is a standalone node." [Create Cluster]. "Clustering enables live migration, high availability, and distributed storage."
 
 ### Loading State
+
 Node cards cached. SSE pushes status changes (node join, evacuate progress).
 
 ### Error State
+
 Node offline: card shows red Badge. Quorum lost: top-level Alert with recovery instructions. Evacuation failed: task log shows error with retry.
 
 ## User Actions

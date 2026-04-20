@@ -24,54 +24,52 @@
 ## Code Pattern
 
 ```tsx
-import { ProTable, type ProColumns } from '@ant-design/pro-components';
-import { Badge, Button, Dropdown, Popconfirm, Space, Tag, Typography } from 'antd';
-import { Play, Square, Terminal, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ProTable, type ProColumns } from "@ant-design/pro-components";
+import { Badge, Button, Dropdown, Popconfirm, Space, Tag, Typography } from "antd";
+import { Play, Square, Terminal, MoreHorizontal, Trash2 } from "lucide-react";
 
 const columns: ProColumns<Instance>[] = [
   {
-    title: 'Status',
-    dataIndex: 'status',
+    title: "Status",
+    dataIndex: "status",
     width: 100,
     filters: true,
     valueEnum: {
-      running: { text: 'Running', status: 'Success' },
-      stopped: { text: 'Stopped', status: 'Error' },
-      frozen: { text: 'Frozen', status: 'Warning' },
-    },
+      running: { text: "Running", status: "Success" },
+      stopped: { text: "Stopped", status: "Error" },
+      frozen: { text: "Frozen", status: "Warning" }
+    }
   },
   {
-    title: 'Name',
-    dataIndex: 'name',
+    title: "Name",
+    dataIndex: "name",
     sorter: true,
-    render: (_, record) => (
-      <a href={`/instances/${record.name}`}>{record.name}</a>
-    ),
+    render: (_, record) => <a href={`/instances/${record.name}`}>{record.name}</a>
   },
   {
-    title: 'Type',
-    dataIndex: 'type',
+    title: "Type",
+    dataIndex: "type",
     width: 80,
     filters: true,
-    valueEnum: { vm: { text: 'VM' }, container: { text: 'CT' } },
+    valueEnum: { vm: { text: "VM" }, container: { text: "CT" } }
   },
   {
-    title: 'CPU',
-    dataIndex: 'cpuPercent',
+    title: "CPU",
+    dataIndex: "cpuPercent",
     width: 80,
     sorter: true,
-    render: (val) => `${val}%`,
+    render: (val) => `${val}%`
   },
   {
-    title: 'RAM',
-    dataIndex: 'ramPercent',
+    title: "RAM",
+    dataIndex: "ramPercent",
     width: 80,
     sorter: true,
-    render: (val) => `${val}%`,
+    render: (val) => `${val}%`
   },
   {
-    title: 'IPs',
-    dataIndex: 'ips',
+    title: "IPs",
+    dataIndex: "ips",
     render: (_, record) => (
       <Space direction="vertical" size={0}>
         {record.ips.map((ip) => (
@@ -80,30 +78,29 @@ const columns: ProColumns<Instance>[] = [
           </Typography.Text>
         ))}
       </Space>
-    ),
+    )
   },
   {
-    title: 'Node',
-    dataIndex: 'node',
+    title: "Node",
+    dataIndex: "node",
     width: 100,
-    filters: true,
+    filters: true
   },
   {
-    title: 'Tags',
-    dataIndex: 'tags',
-    render: (_, record) =>
-      record.tags?.map((t) => <Tag key={t}>{t}</Tag>),
+    title: "Tags",
+    dataIndex: "tags",
+    render: (_, record) => record.tags?.map((t) => <Tag key={t}>{t}</Tag>)
   },
   {
-    title: 'Actions',
+    title: "Actions",
     width: 120,
-    valueType: 'option',
+    valueType: "option",
     render: (_, record) => [
       <Button
         key="start"
         type="text"
         size="small"
-        icon={record.status === 'running' ? <Square size={14} /> : <Play size={14} />}
+        icon={record.status === "running" ? <Square size={14} /> : <Play size={14} />}
         onClick={() => toggleInstance(record)}
       />,
       <Button
@@ -117,18 +114,18 @@ const columns: ProColumns<Instance>[] = [
         key="more"
         menu={{
           items: [
-            { key: 'snapshot', label: 'Snapshot' },
-            { key: 'backup', label: 'Backup' },
-            { key: 'migrate', label: 'Migrate' },
-            { type: 'divider' },
-            { key: 'delete', label: 'Delete', danger: true },
-          ],
+            { key: "snapshot", label: "Snapshot" },
+            { key: "backup", label: "Backup" },
+            { key: "migrate", label: "Migrate" },
+            { type: "divider" },
+            { key: "delete", label: "Delete", danger: true }
+          ]
         }}
       >
         <Button type="text" size="small" icon={<MoreHorizontal size={14} />} />
-      </Dropdown>,
-    ],
-  },
+      </Dropdown>
+    ]
+  }
 ];
 
 export function InstanceList() {
@@ -138,7 +135,7 @@ export function InstanceList() {
       request={fetchInstances}
       rowKey="name"
       rowSelection={{}}
-      search={{ filterType: 'light' }}
+      search={{ filterType: "light" }}
       options={{ density: true, setting: true }}
       pagination={{ defaultPageSize: 50, showTotal: (total) => `${total} instances` }}
       toolBarRender={(_, { selectedRowKeys }) => [
@@ -148,11 +145,15 @@ export function InstanceList() {
             <Button size="small">Stop Selected</Button>
             <Button size="small">Snapshot Selected</Button>
             <Popconfirm title="Delete selected instances?">
-              <Button size="small" danger>Delete Selected</Button>
+              <Button size="small" danger>
+                Delete Selected
+              </Button>
             </Popconfirm>
           </Space>
         ) : null,
-        <Button key="create" type="primary">Create Instance</Button>,
+        <Button key="create" type="primary">
+          Create Instance
+        </Button>
       ]}
       tableAlertOptionRender={({ selectedRowKeys, onCleanSelected }) => (
         <Space>

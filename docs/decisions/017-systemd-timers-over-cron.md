@@ -47,6 +47,7 @@ ExecStart=/usr/local/bin/helling schedule run backup vm-web-1
 The `helling schedule run` command calls the hellingd API, which triggers the Incus backup via the proxy.
 
 Schedule CRUD in hellingd:
+
 - `POST /api/v1/schedules` → writes timer+service unit files, enables timer
 - `GET /api/v1/schedules` → lists `helling-*.timer` units via `systemctl list-timers`
 - `DELETE /api/v1/schedules/{id}` → stops and removes timer+service units
@@ -55,6 +56,7 @@ Schedule CRUD in hellingd:
 ## Consequences
 
 **Easier:**
+
 - Schedules survive hellingd restarts (systemd manages them independently)
 - `systemctl list-timers` shows all schedules (standard Linux tooling)
 - `journalctl -u helling-backup-vm-web-1` shows execution history
@@ -63,6 +65,7 @@ Schedule CRUD in hellingd:
 - RandomizedDelaySec prevents thundering herd on cluster nodes
 
 **Harder:**
+
 - hellingd needs write access to /etc/systemd/system/ (it runs as root, so this is fine)
 - Schedule CRUD requires `systemctl daemon-reload` after writes
 - More complex than a single gocron.NewScheduler() call

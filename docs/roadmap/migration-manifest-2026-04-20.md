@@ -14,7 +14,9 @@ Single source of truth for migration after:
 
 ## TL;DR
 
-Helling pivots from docs-first OpenAPI authoring to code-first generation via Huma for Helling-owned routes. This removes manual remediation grind and spec drift as a recurring class of failure.
+Helling pivots from docs-first OpenAPI authoring to code-first generation via
+Huma for Helling-owned routes. This removes manual remediation grind and spec
+drift as a recurring class of failure.
 
 Frontend codegen pivots from orval to hey-api/openapi-ts. CLI codegen remains oapi-codegen client.
 
@@ -51,11 +53,11 @@ ADRs preserved: 014, 015, 040, 041.
 | ADR | Title                                         | Status   |
 | --- | --------------------------------------------- | -------- |
 | 043 | Huma with humago for Helling-owned HTTP layer | Accepted |
-| 044 | hey-api/openapi-ts for WebUI code generation  | Proposed |
-| 045 | APT repo tooling decision                     | Pending  |
-| 046 | ISO build tooling decision                    | Pending  |
-| 047 | Dark mode scope for v0.1                      | Pending  |
-| 048 | Mobile scope for v0.1                         | Pending  |
+| 044 | hey-api/openapi-ts for WebUI code generation  | Accepted |
+| 045 | APT repo tooling decision                     | Proposed |
+| 046 | ISO build tooling decision                    | Proposed |
+| 047 | Dark mode scope for v0.1                      | Proposed |
+| 048 | Mobile scope for v0.1                         | Proposed |
 
 ---
 
@@ -117,8 +119,8 @@ Acceptance:
 
 Tasks:
 
-- [ ] Land ADR-044 acceptance decision.
-- [ ] Add web/hey-api.config.ts.
+- [x] Land ADR-044 acceptance decision.
+- [x] Add web/hey-api.config.ts.
 - [ ] Add hey-api dependencies and gen script.
 - [ ] Remove orval/axios/refine generation path.
 - [ ] Regenerate web/src/api/generated.
@@ -135,29 +137,32 @@ Acceptance:
 
 Already drafted and expected to land:
 
-- [ ] Taskfile.yaml
-- [ ] lefthook.yml
-- [ ] .golangci.yaml
+- [x] Taskfile.yaml
+- [x] lefthook.yml
+- [x] .golangci.yaml
 
 Pending configs/scripts:
 
-- [ ] .markdownlint.yaml
-- [ ] .yamllint.yaml
-- [ ] .shellcheckrc
-- [ ] web/biome.json
-- [ ] .sqlfluff
-- [ ] typos.toml
-- [ ] lychee.toml
-- [ ] .prettierrc.yaml
-- [ ] scripts/check-coverage.sh
-- [ ] scripts/check-parity.sh
-- [ ] scripts/install-tools.sh
+- [x] .markdownlint.yaml
+- [x] .yamllint.yaml
+- [x] .shellcheckrc
+- [x] web/biome.json
+- [x] .sqlfluff
+- [x] typos.toml
+- [x] lychee.toml
+- [x] .prettierrc.yaml
+- [x] scripts/check-coverage.sh
+- [x] scripts/check-parity.sh
+- [x] scripts/install-tools.sh
+- [x] .github/workflows/quality.yml
+- [x] .github/workflows/codeql.yml
+- [x] .github/workflows/security.yml
 
 Acceptance:
 
-- [ ] task install works.
-- [ ] task hooks installs hooks.
-- [ ] task check passes locally.
+- [x] task install works.
+- [x] task hooks installs hooks.
+- [x] task check passes locally.
 
 ---
 
@@ -165,27 +170,31 @@ Acceptance:
 
 Priority Tier 0 mechanical fixes:
 
-- [ ] Rename docs/standards/standards-quality-assurance.md to docs/standards/quality-assurance.md.
-- [ ] Align docs/standards/coding.md rate-limit and pagination language with current specs.
-- [ ] Align docs/standards/security.md encryption/capability/scanning sections with ADR-039 and ADR-042.
-- [ ] Resolve docs/roadmap/implementation-guide.md stale architecture references (rewrite or delete).
+- [x] Rename docs/standards/standards-quality-assurance.md to docs/standards/quality-assurance.md.
+- [x] Align docs/standards/coding.md rate-limit and pagination language with current specs.
+- [x] Align docs/standards/security.md encryption/capability/scanning sections with ADR-039 and ADR-042.
+- [x] Resolve docs/roadmap/implementation-guide.md stale architecture references (rewrite or delete).
 
 Priority Tier 1 additions:
 
-- [ ] docs/spec/ci.md
-- [ ] docs/spec/local-dev.md
-- [ ] docs/spec/pre-commit.md
-- [ ] docs/standards/testing.md
-- [ ] docs/standards/release.md
-- [ ] docs/standards/versioning.md
+- [x] docs/spec/ci.md
+- [x] docs/spec/local-dev.md
+- [x] docs/spec/pre-commit.md
+- [x] docs/standards/testing.md
+- [x] docs/standards/release.md
+- [x] docs/standards/versioning.md
+- [x] docs/spec/accessibility.md
+- [x] docs/design/tokens.md
+- [x] docs/design/keyboard.md
 
 Priority Tier 2 rewrites:
 
 - [x] docs/design/openapi-pipeline.md
-- [ ] docs/spec/api.md generated-artifact note
-- [ ] docs/design/tools-and-frameworks.md stack updates
-- [ ] CONTRIBUTING.md expansion
-- [ ] docs/standards/development-environment.md expansion
+- [x] docs/spec/api.md generated-artifact note
+- [x] docs/design/tools-and-frameworks.md stack updates
+- [x] CONTRIBUTING.md expansion
+- [x] docs/standards/development-environment.md expansion
+- [x] docs/roadmap/phase0-parity-exceptions.yaml
 
 ---
 
@@ -203,4 +212,6 @@ For each phase:
 
 ## Standup one-liner
 
-Pivoting backend to Huma and WebUI codegen to hey-api, while preserving ADR-014/015/040/041 and clearing outstanding standards drift via a phased checklist.
+Pivoting backend to Huma and WebUI codegen to hey-api, while preserving
+ADR-014/015/040/041 and clearing outstanding standards drift via a phased
+checklist.

@@ -26,31 +26,59 @@
 ### Instance Detail Page
 
 ```tsx
-import { Descriptions, Tabs, Badge, Button, Space, Progress, Tag, Typography } from 'antd';
-import { Play, Square, RotateCcw, Terminal, Camera, Download } from 'lucide-react';
+import { Descriptions, Tabs, Badge, Button, Space, Progress, Tag, Typography } from "antd";
+import { Play, Square, RotateCcw, Terminal, Camera, Download } from "lucide-react";
 
 export function InstanceDetail({ instance }: { instance: Instance }) {
   return (
     <>
       {/* Summary Header -- always visible */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16
+        }}
+      >
         <Space size="middle">
-          <Typography.Title level={4} style={{ margin: 0 }}>{instance.name}</Typography.Title>
-          <Badge status={instance.status === 'running' ? 'success' : 'error'} text={instance.status} />
-          <Tag>{instance.type === 'vm' ? 'VM' : 'CT'}</Tag>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {instance.name}
+          </Typography.Title>
+          <Badge
+            status={instance.status === "running" ? "success" : "error"}
+            text={instance.status}
+          />
+          <Tag>{instance.type === "vm" ? "VM" : "CT"}</Tag>
         </Space>
         <Space>
-          {instance.status === 'running' ? (
+          {instance.status === "running" ? (
             <>
-              <Button icon={<Square size={14} />} onClick={() => stopInstance(instance.name)}>Stop</Button>
-              <Button icon={<RotateCcw size={14} />} onClick={() => restartInstance(instance.name)}>Restart</Button>
-              <Button icon={<Terminal size={14} />} onClick={() => openConsole(instance.name)}>Console</Button>
+              <Button icon={<Square size={14} />} onClick={() => stopInstance(instance.name)}>
+                Stop
+              </Button>
+              <Button icon={<RotateCcw size={14} />} onClick={() => restartInstance(instance.name)}>
+                Restart
+              </Button>
+              <Button icon={<Terminal size={14} />} onClick={() => openConsole(instance.name)}>
+                Console
+              </Button>
             </>
           ) : (
-            <Button type="primary" icon={<Play size={14} />} onClick={() => startInstance(instance.name)}>Start</Button>
+            <Button
+              type="primary"
+              icon={<Play size={14} />}
+              onClick={() => startInstance(instance.name)}
+            >
+              Start
+            </Button>
           )}
-          <Button icon={<Camera size={14} />} onClick={() => snapshot(instance.name)}>Snapshot</Button>
-          <Button icon={<Download size={14} />} onClick={() => backup(instance.name)}>Backup</Button>
+          <Button icon={<Camera size={14} />} onClick={() => snapshot(instance.name)}>
+            Snapshot
+          </Button>
+          <Button icon={<Download size={14} />} onClick={() => backup(instance.name)}>
+            Backup
+          </Button>
         </Space>
       </div>
 
@@ -58,14 +86,14 @@ export function InstanceDetail({ instance }: { instance: Instance }) {
       <Tabs
         defaultActiveKey="summary"
         items={[
-          { key: 'summary', label: 'Summary', children: <InstanceSummary instance={instance} /> },
-          { key: 'console', label: 'Console', children: <ConsoleTab instance={instance} /> },
-          { key: 'hardware', label: 'Hardware', children: <HardwareTab instance={instance} /> },
-          { key: 'snapshots', label: 'Snapshots', children: <SnapshotsTab instance={instance} /> },
-          { key: 'backup', label: 'Backup', children: <BackupTab instance={instance} /> },
-          { key: 'firewall', label: 'Firewall', children: <FirewallTab instance={instance} /> },
-          { key: 'guest', label: 'Guest', children: <GuestTab instance={instance} /> },
-          { key: 'options', label: 'Options', children: <OptionsTab instance={instance} /> },
+          { key: "summary", label: "Summary", children: <InstanceSummary instance={instance} /> },
+          { key: "console", label: "Console", children: <ConsoleTab instance={instance} /> },
+          { key: "hardware", label: "Hardware", children: <HardwareTab instance={instance} /> },
+          { key: "snapshots", label: "Snapshots", children: <SnapshotsTab instance={instance} /> },
+          { key: "backup", label: "Backup", children: <BackupTab instance={instance} /> },
+          { key: "firewall", label: "Firewall", children: <FirewallTab instance={instance} /> },
+          { key: "guest", label: "Guest", children: <GuestTab instance={instance} /> },
+          { key: "options", label: "Options", children: <OptionsTab instance={instance} /> }
         ]}
       />
     </>
@@ -78,12 +106,12 @@ export function InstanceDetail({ instance }: { instance: Instance }) {
 ```tsx
 function InstanceSummary({ instance }: { instance: Instance }) {
   return (
-    <Descriptions
-      column={{ xxl: 4, xl: 3, lg: 2, md: 1 }}
-      size="small"
-    >
+    <Descriptions column={{ xxl: 4, xl: 3, lg: 2, md: 1 }} size="small">
       <Descriptions.Item label="Status">
-        <Badge status={instance.status === 'running' ? 'success' : 'error'} text={instance.status} />
+        <Badge
+          status={instance.status === "running" ? "success" : "error"}
+          text={instance.status}
+        />
       </Descriptions.Item>
       <Descriptions.Item label="Uptime">{instance.uptime}</Descriptions.Item>
       <Descriptions.Item label="Node">{instance.node}</Descriptions.Item>
@@ -91,11 +119,19 @@ function InstanceSummary({ instance }: { instance: Instance }) {
 
       <Descriptions.Item label="CPU">
         {instance.cpuCores} cores
-        <Progress percent={instance.cpuPercent} size="small" style={{ width: 100, marginLeft: 8 }} />
+        <Progress
+          percent={instance.cpuPercent}
+          size="small"
+          style={{ width: 100, marginLeft: 8 }}
+        />
       </Descriptions.Item>
       <Descriptions.Item label="RAM">
         {instance.ramUsed} / {instance.ramTotal}
-        <Progress percent={instance.ramPercent} size="small" style={{ width: 100, marginLeft: 8 }} />
+        <Progress
+          percent={instance.ramPercent}
+          size="small"
+          style={{ width: 100, marginLeft: 8 }}
+        />
       </Descriptions.Item>
       <Descriptions.Item label="Disk" span={2}>
         {instance.disks.map((d) => (
@@ -109,26 +145,34 @@ function InstanceSummary({ instance }: { instance: Instance }) {
       <Descriptions.Item label="IPs" span={2}>
         <Space direction="vertical" size={0}>
           {instance.ips.map((ip) => (
-            <Typography.Text key={ip} copyable code style={{ fontSize: 12 }}>{ip}</Typography.Text>
+            <Typography.Text key={ip} copyable code style={{ fontSize: 12 }}>
+              {ip}
+            </Typography.Text>
           ))}
         </Space>
       </Descriptions.Item>
       <Descriptions.Item label="MACs" span={2}>
         <Space direction="vertical" size={0}>
           {instance.macs.map((mac) => (
-            <Typography.Text key={mac} copyable code style={{ fontSize: 12 }}>{mac}</Typography.Text>
+            <Typography.Text key={mac} copyable code style={{ fontSize: 12 }}>
+              {mac}
+            </Typography.Text>
           ))}
         </Space>
       </Descriptions.Item>
 
       <Descriptions.Item label="OS">{instance.os}</Descriptions.Item>
       <Descriptions.Item label="Boot">{instance.bootOrder}</Descriptions.Item>
-      <Descriptions.Item label="Profiles">{instance.profiles.join(', ')}</Descriptions.Item>
+      <Descriptions.Item label="Profiles">{instance.profiles.join(", ")}</Descriptions.Item>
       <Descriptions.Item label="Created">{instance.createdAt}</Descriptions.Item>
 
       <Descriptions.Item label="Tags" span={4}>
-        {instance.tags?.map((t) => <Tag key={t}>{t}</Tag>)}
-        <Button type="dashed" size="small" style={{ marginLeft: 4 }}>+ Add</Button>
+        {instance.tags?.map((t) => (
+          <Tag key={t}>{t}</Tag>
+        ))}
+        <Button type="dashed" size="small" style={{ marginLeft: 4 }}>
+          + Add
+        </Button>
       </Descriptions.Item>
     </Descriptions>
   );
@@ -140,18 +184,13 @@ function InstanceSummary({ instance }: { instance: Instance }) {
 ```tsx
 function HardwareConfig({ instance }: { instance: Instance }) {
   return (
-    <Descriptions
-      bordered
-      column={2}
-      size="small"
-      title="CPU Configuration"
-    >
+    <Descriptions bordered column={2} size="small" title="CPU Configuration">
       <Descriptions.Item label="Cores">{instance.cpuCores}</Descriptions.Item>
       <Descriptions.Item label="Sockets">{instance.cpuSockets}</Descriptions.Item>
       <Descriptions.Item label="Type">{instance.cpuType}</Descriptions.Item>
-      <Descriptions.Item label="NUMA">{instance.numa ? 'Enabled' : 'Disabled'}</Descriptions.Item>
+      <Descriptions.Item label="NUMA">{instance.numa ? "Enabled" : "Disabled"}</Descriptions.Item>
       <Descriptions.Item label="Affinity">
-        <Typography.Text code>{instance.cpuAffinity || 'None'}</Typography.Text>
+        <Typography.Text code>{instance.cpuAffinity || "None"}</Typography.Text>
       </Descriptions.Item>
       <Descriptions.Item label="Priority">{instance.cpuPriority}</Descriptions.Item>
     </Descriptions>

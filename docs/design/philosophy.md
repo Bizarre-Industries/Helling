@@ -34,7 +34,7 @@ Proxmox is ugly. ExtJS, cramped fonts, grey everything. But admins who manage 20
 
 ### Rule 1: Tables by Default, Cards by Exception
 
-```
+```text
 Tables for:
   - Instance list (VMs, CTs, containers)
   - Snapshot list
@@ -58,7 +58,7 @@ Cards ONLY for:
 
 ### Rule 2: Information Density
 
-```
+```text
 DO:
   - Show 20+ rows per table without scrolling (compact row height)
   - Show key stats inline in list rows (CPU%, RAM%, IP, status)
@@ -76,7 +76,7 @@ DON'T:
 
 ### Rule 3: Zero Unnecessary Animation
 
-```
+```text
 ALLOWED animations:
   - Progress bars (backup progress, migration progress)
   - Spinner on buttons while action is processing (subtle, not full-page)
@@ -96,7 +96,7 @@ BANNED animations:
 
 ### Rule 4: Everything Selectable and Copyable
 
-```
+```text
 All technical values must be plain text, selectable:
   - IP addresses
   - MAC addresses
@@ -117,7 +117,7 @@ Add a tiny copy button (📋) next to values users frequently copy:
 
 ### Rule 5: Data Loads Instantly or Shows Why It Can't
 
-```
+```text
 Target: <100ms for any page transition with data visible
 
 How:
@@ -136,7 +136,7 @@ NEVER:
 
 ### Rule 6: Summary Tab Shows Everything
 
-```
+```text
 Instance detail → Summary tab must show (without scrolling on 1080p):
   - Status badge + uptime
   - CPU: allocated / usage gauge
@@ -153,7 +153,7 @@ All on ONE SCREEN. No scrolling for basic info.
 
 ### Rule 7: Two-Click Maximum for Any Action
 
-```
+```text
 Action                          Clicks from any page
 ─────────────────────────────── ─────────────────────
 Start a VM                      2 (click VM in tree → click Start)
@@ -172,7 +172,7 @@ NEVER: more than 4 clicks for any operation
 
 ### Rule 8: Responsive ≠ Mobile-First
 
-```
+```text
 Design for 1920x1080 first. This is a server management tool.
 Most users sit at a desk with a real monitor.
 
@@ -188,7 +188,7 @@ Phone (<768px): Single-panel, navigation drawer, big action buttons
 
 ### Rule 9: No JavaScript Framework Bloat
 
-```
+```text
 Current: 340KB main chunk (86KB gzipped). This is the ceiling, not the floor.
 
 Every new dependency must justify its bundle size:
@@ -210,7 +210,7 @@ Dynamic imports for heavy components:
 
 ### Rule 10: Consistent Visual Language
 
-```
+```text
 Status colors (same everywhere):
   Green  (#22c55e) = Running, Healthy, Success, Connected
   Red    (#ef4444) = Stopped, Error, Failed, Disconnected

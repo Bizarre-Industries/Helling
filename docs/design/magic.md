@@ -10,7 +10,7 @@ Features that make people stop and say "no other hypervisor does this." Not more
 
 Like Time Machine. Before any risky change, Helling auto-snapshots with no user action.
 
-```
+```text
 User clicks "Resize disk from 30GB → 50GB"
   → hellingd auto-creates snapshot "pre-resize-2026-04-13-14:22"
   → Performs resize
@@ -43,7 +43,7 @@ Status: deferred from v0.1 scope; keep as post-v0.1 design direction.
 
 The resource tree and instance list show a tiny screenshot of what's currently on each VM's display. You can SEE which VM has the Windows login screen, which one is running htop, which one is showing an error — without opening any console.
 
-```
+```text
 Resource tree:
   💻 VMs
     🟢 windows-dev    [🖼 tiny screenshot showing desktop]
@@ -68,7 +68,7 @@ No other hypervisor does this. vSphere has console previews but they require the
 
 Before any config change is applied, show exactly what will change and what the consequences are.
 
-```
+```text
 User changes VM config: CPU 2→4, RAM 4GB→8GB
 
 Dashboard shows diff BEFORE applying:
@@ -107,7 +107,7 @@ Every change shows: what changes, what stays the same, side effects, warnings, w
 
 Don't just back up. Periodically prove the backup is restorable.
 
-```
+```text
 Scheduled (weekly by default):
   1. Pick latest backup of each instance tagged "verify"
   2. Restore to temporary instance (name: "verify-{original}-{timestamp}")
@@ -138,7 +138,7 @@ No other hypervisor does automatic backup verification. Proxmox can back up. Vee
 
 Every resource gets a 0-100 health score. Dashboard shows aggregate score.
 
-```
+```text
 vm-web-1: Health 92/100
   ✓ Running (uptime: 14d)         +20
   ✓ Backup: 2 hours ago           +20
@@ -245,7 +245,7 @@ Dashboard: /blueprints page with deploy/status/destroy/clone. "Save current sele
 
 For physical servers in a cluster. Server is powered off (saves electricity) → user needs a VM → Helling wakes the server → server boots → VM starts.
 
-```
+```text
 Cluster node status:
   node-1: 🟢 Online (4 VMs running)
   node-2: 🟢 Online (2 VMs running)
@@ -273,7 +273,7 @@ Implementation: WoL via `bmclib` or raw magic packet. Sleep via IPMI shutdown. R
 
 Git-like history of every config change to every resource. Diff between any two points in time.
 
-```
+```bash
 helling changelog vm-web-1
   2026-04-13 14:22  admin   config  cpu.cores: 2 → 4, memory: 4GB → 8GB
   2026-04-12 09:15  admin   start   instance started
@@ -303,7 +303,7 @@ Implementation: every config change stored in SQLite audit table with before/aft
 
 Import from other platforms. Not just disk images — configs, networks, firewall rules.
 
-```
+```bash
 helling import proxmox --host 192.168.1.100 --user root --token xxx
   Scanning Proxmox server...
   Found: 12 VMs, 5 CTs, 3 storage pools, 4 networks
@@ -335,7 +335,7 @@ Sources: Proxmox (API), VMware (OVA/OVF), Docker (compose stacks), raw disk imag
 
 Cmd+K opens a command palette that understands natural language AND structured commands.
 
-```
+```text
 Cmd+K: "show vms using more than 4gb ram"
   → Filters instance list: RAM > 4GB
 
@@ -369,7 +369,7 @@ Implementation: antd Command palette (cmdk-style). Natural language parsed local
 
 Estimate per-VM power consumption based on CPU/RAM usage. Track total infrastructure power.
 
-```
+```text
 Dashboard widget:
   ⚡ Power Consumption
   Total: ~340W (estimated)
@@ -401,7 +401,7 @@ Implementation: BMC reports actual power draw (via IPMI/Redfish sensor data). Fo
 
 Clone not just one VM but an entire environment: VMs, containers, networks, firewall rules, volumes.
 
-```
+```sql
 Select multiple resources → "Clone as Environment":
   Source: production-stack (vm-web, vm-db, container-redis, net-prod, 3 firewall rules)
 

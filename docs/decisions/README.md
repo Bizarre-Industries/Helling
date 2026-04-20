@@ -44,4 +44,8 @@
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 | 042 | Security scanning stack consolidation                         | Accepted              |
 | 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |
-| 044 | hey-api/openapi-ts for WebUI code generation                  | Proposed              |
+| 044 | hey-api/openapi-ts for WebUI code generation                  | Accepted              |
+| 045 | APT repository tooling decision                               | Proposed              |
+| 046 | ISO build tooling decision                                    | Proposed              |
+| 047 | Dark mode scope for v0.1                                      | Proposed              |
+| 048 | Mobile scope for v0.1                                         | Proposed              |

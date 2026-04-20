@@ -1,54 +1,211 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Dependabot configuration for Helling.
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ACTIVATION STATE
+# ─────────────────────────────────────────────────────────────────────────────
+#   Active:   github-actions (workflows exist today)
+#   Inactive: gomod, npm, docker — templates commented below.
+#             Uncomment the relevant block when:
+#             - gomod:  apps/hellingd (or any go.mod) lands
+#             - npm:    web/package.json lands
+#             - docker: Dockerfiles land (deploy/ or elsewhere)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CONVENTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# - All schedules fire weekly on Monday 05:00 Asia/Dubai (Suhail's tz).
+#   Batched runs minimize context-switching vs spreading across the week.
+# - Major version bumps are IGNORED globally. Majors need human review;
+#   auto-bumping v4 → v5 of actions/checkout regularly breaks assumptions.
+#   Dependabot insights tab will still surface them — you just won't get a PR.
+# - Grouping keeps PR count manageable. Default expectation: 3-5 PRs/week once
+#   Go and npm are active, not 30.
+# - Commit messages use conventional commits (lefthook commit-msg enforces
+#   the same pattern — see docs/spec/pre-commit.md).
+
 version: 2
+
 updates:
-  - package-ecosystem: gomod
-    directory: /apps/hellingd
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
-    labels:
-      - dependencies
-      - go
 
-  - package-ecosystem: gomod
-    directory: /apps/helling-cli
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - go
-
-  - package-ecosystem: gomod
-    directory: /apps/helling-proxy
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - go
-
-  - package-ecosystem: npm
-    directory: /web
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
-    labels:
-      - dependencies
-      - javascript
-
-  - package-ecosystem: docker
-    directory: /deploy
-    schedule:
-      interval: weekly
-    labels:
-      - dependencies
-      - docker
-
+  # ══════════════════════════════════════════════════════════════════════════
+  # GitHub Actions — ACTIVE
+  # ══════════════════════════════════════════════════════════════════════════
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Asia/Dubai
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - ci
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      # actions/* and github/* are tightly coupled (setup-go, checkout,
+      # codeql-action all move together). Grouping cuts CI noise.
+      github-official:
+        patterns:
+          - "actions/*"
+          - "github/*"
+      # Security scanners — anchore (grype/syft), gitleaks, OpenSSF Scorecard,
+      # crate-ci/typos. Security updates are rarer; batching is safe.
+      security-scanners:
+        patterns:
+          - "anchore/*"
+          - "gitleaks/*"
+          - "ossf/*"
+          - "crate-ci/*"
+      # Linter and build-adjacent actions — less frequent, group together.
+      linters-and-build:
+        patterns:
+          - "golangci/*"
+          - "DavidAnson/*"
+          - "lycheeverse/*"
+          - "oven-sh/*"
+    ignore:
+      # Major version bumps need human review. They usually require
+      # input/output contract changes that auto-bumps don't handle.
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-major" ]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Go modules — INACTIVE (uncomment when apps/ go.mod files land)
+  # ══════════════════════════════════════════════════════════════════════════
+  # Uses `directories:` (plural) to apply one config to all workspace modules.
+  # If you switch to a single go.mod at root, reduce `directories:` to [/].
+  #
+  # - package-ecosystem: gomod
+  #   directories:
+  #     - /                        # root go.mod (if using single-module layout)
+  #     - /apps/hellingd
+  #     - /apps/helling-cli
+  #     - /apps/helling-proxy
+  #     - /apps/helling-agent
+  #     - /tools/openapi-dump
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #     time: "05:00"
+  #     timezone: Asia/Dubai
+  #   open-pull-requests-limit: 10
+  #   labels:
+  #     - dependencies
+  #     - go
+  #   commit-message:
+  #     prefix: build
+  #     include: scope
+  #   groups:
+  #     # golang.org/x/* packages release together, group them.
+  #     golang-x:
+  #       patterns:
+  #         - "golang.org/x/*"
+  #     # Huma + humago adapter move in lockstep.
+  #     huma:
+  #       patterns:
+  #         - "github.com/danielgtaylor/huma*"
+  #     # OpenAPI codegen toolchain (oapi-codegen + kin-openapi).
+  #     openapi-codegen:
+  #       patterns:
+  #         - "github.com/oapi-codegen/*"
+  #         - "github.com/getkin/kin-openapi"
+  #     # Test libraries.
+  #     testing:
+  #       patterns:
+  #         - "github.com/stretchr/*"
+  #         - "github.com/google/go-cmp"
+  #     # Observability / logging / metrics.
+  #     observability:
+  #       patterns:
+  #         - "github.com/prometheus/*"
+  #         - "go.opentelemetry.io/*"
+  #     # Catch-all for patch and minor updates not otherwise grouped.
+  #     go-patch-and-minor:
+  #       applies-to: version-updates
+  #       update-types: ["patch", "minor"]
+  #   ignore:
+  #     - dependency-name: "*"
+  #       update-types: ["version-update:semver-major"]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # npm / bun — INACTIVE (uncomment when web/package.json lands)
+  # ══════════════════════════════════════════════════════════════════════════
+  # Dependabot supports bun.lock and package-lock.json. Bun-only lockfiles
+  # (no package-lock.json) are recognized as of late 2024.
+  #
+  # - package-ecosystem: npm
+  #   directory: /web
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #     time: "05:00"
+  #     timezone: Asia/Dubai
+  #   open-pull-requests-limit: 10
+  #   labels:
+  #     - dependencies
+  #     - javascript
+  #   commit-message:
+  #     prefix: build
+  #     include: scope
+  #   groups:
+  #     # React ecosystem — react, react-dom, types all bump together.
+  #     react-ecosystem:
+  #       patterns:
+  #         - "react"
+  #         - "react-*"
+  #         - "@types/react*"
+  #     # Ant Design component suite.
+  #     antd-ecosystem:
+  #       patterns:
+  #         - "antd"
+  #         - "@ant-design/*"
+  #     # Build and dev tooling.
+  #     build-tools:
+  #       patterns:
+  #         - "vite"
+  #         - "vite-*"
+  #         - "typescript"
+  #         - "@biomejs/*"
+  #     # Frontend API codegen (orval OR hey-api, depending on ADR-044 outcome).
+  #     api-codegen:
+  #       patterns:
+  #         - "orval"
+  #         - "@hey-api/*"
+  #     # Catch-all for patch and minor updates.
+  #     js-patch-and-minor:
+  #       applies-to: version-updates
+  #       update-types: ["patch", "minor"]
+  #   ignore:
+  #     - dependency-name: "*"
+  #       update-types: ["version-update:semver-major"]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Docker — INACTIVE (ADR-004: Helling ships as .deb, not containers)
+  # ══════════════════════════════════════════════════════════════════════════
+  # Activate only if Dockerfiles land for dev/test environments
+  # (e.g., a CI builder image or Lima bootstrap container).
+  # Production is bare-metal .deb per ADR-004 and infrastructure.md.
+  #
+  # - package-ecosystem: docker
+  #   directory: /deploy
+  #   schedule:
+  #     interval: monthly
+  #     day: monday
+  #     time: "05:00"
+  #     timezone: Asia/Dubai
+  #   open-pull-requests-limit: 5
+  #   labels:
+  #     - dependencies
+  #     - docker
+  #   commit-message:
+  #     prefix: build
+  #     include: scope
+  #   ignore:
+  #     - dependency-name: "*"
+  #       update-types: ["version-update:semver-major"]

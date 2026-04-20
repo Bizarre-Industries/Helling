@@ -8,7 +8,7 @@ How Helling is deployed, monitored, backed up, and operated. Based on SRE princi
 
 ### Incus Transport Listener Policy
 
-```
+```text
 RULE: Delegated-user Incus operations must use the local HTTPS listener with mTLS identity.
 
 Requirements:
@@ -24,7 +24,7 @@ Verify:
 
 ### Build Reproducibility
 
-```
+```yaml
 RULE: Any commit on main produces identical artifacts regardless of who builds it.
 
 Requirements:
@@ -41,7 +41,7 @@ Verify: `make build` on fresh clone produces byte-identical binaries
 
 ### Release Process
 
-```
+```text
 1. Feature freeze: merge window closes
 2. Release branch: cut from main
 3. Version bump: update version constant, changelog
@@ -65,7 +65,7 @@ Tooling:
 
 ### Upgrade Safety
 
-```
+```bash
 RULE: Upgrades must be safe, reversible, and non-destructive.
 RULE: Primary upgrade path is APT-based: apt-get update && apt-get upgrade helling
 
@@ -107,7 +107,7 @@ columns are ignored). This allows rollback without schema rollback.
 
 ### Golden Signals (Google SRE)
 
-```
+```yaml
 Monitor these four signals for hellingd:
 
 1. Latency: time to serve API requests
@@ -132,7 +132,7 @@ Monitor these four signals for hellingd:
 
 ### USE Method (Brendan Gregg) for Infrastructure
 
-```
+```text
 For every resource (CPU, RAM, disk, network):
 
 Utilization: percentage of resource used
@@ -153,16 +153,16 @@ Errors: error count
 
 ### RED Method for API Endpoints
 
-```
+```yaml
 For every API endpoint:
 
-Rate:      Requests per second
+Rate: Requests per second
   helling_api_requests_total{method, path}
 
-Errors:    Failed requests per second
+Errors: Failed requests per second
   helling_api_errors_total{method, path, status}
 
-Duration:  Time per request
+Duration: Time per request
   helling_api_request_duration_seconds{method, path}
 ```
 
@@ -201,7 +201,7 @@ Fields:
 
 ### 3-2-1 Rule
 
-```
+```text
 3 copies of data
 2 different storage types
 1 offsite copy
@@ -214,7 +214,7 @@ Helling's implementation:
 
 ### Backup Schedule Default
 
-```
+```yaml
 Instances (VMs + CTs):
   Daily: 01:00 AM, retain 7
   Weekly: Sunday 02:00 AM, retain 4
@@ -230,7 +230,7 @@ Verification: weekly automatic restore test
 
 ### Recovery Time Objectives
 
-```
+```text
 RTO (Recovery Time Objective):
   hellingd crash:     < 30 seconds (systemd auto-restart)
   Node failure (HA):  < 5 minutes (HA failover + VM restart)
@@ -249,7 +249,7 @@ RPO (Recovery Point Objective):
 
 ### Resource Thresholds
 
-```
+```text
 Green (healthy):     < 70% utilization
 Yellow (warning):    70-85% utilization
 Orange (critical):   85-95% utilization
@@ -265,7 +265,7 @@ Actions:
 
 ### Growth Tracking
 
-```
+```bash
 hellingd tracks 30-day trends for:
   - Total CPU allocation across all instances
   - Total RAM allocation
@@ -285,7 +285,7 @@ Report: Monthly capacity report (email, PDF)
 
 ### Change Categories
 
-```
+```text
 Standard (no approval needed):
   - Start/stop/restart instances
   - Create snapshots
@@ -316,7 +316,7 @@ Emergency (double confirmation + audit alert):
 
 ### Maintenance Windows
 
-```
+```text
 Scheduled maintenance:
   - Define recurring windows in /settings
   - Notifications sent 24h before
@@ -336,7 +336,7 @@ Unscheduled maintenance:
 
 ### SLOs (Service Level Objectives)
 
-```
+```yaml
 Helling platform SLOs:
 
 API Availability:
@@ -361,7 +361,7 @@ Tracking enables data-driven improvement decisions.
 
 ### Error Budgets
 
-```
+```text
 99.9% availability = 0.1% error budget = 8.7 hours/year
 
 When error budget is consumed:
@@ -378,7 +378,7 @@ When error budget is healthy:
 
 ### Incident Severity Levels
 
-```
+```yaml
 P1 (Critical): Platform completely down, all users affected
   Response: Immediate (< 15 min), all-hands
   Examples: hellingd won't start, database corruption, security breach
@@ -398,7 +398,7 @@ P4 (Low): Cosmetic or minor inconvenience
 
 ### Post-Incident Review
 
-```
+```yaml
 After every P1/P2 incident:
 
 Document:
@@ -422,7 +422,7 @@ Principles:
 
 Track these four metrics (from Accelerate research by Forsgren, Humble, Kim):
 
-```
+```yaml
 Deployment Frequency:
   Target: Multiple times per week (Elite performance)
   Measurement: GitHub releases per month
@@ -449,7 +449,7 @@ Not exposed to users — internal quality metric.
 
 ### Code Documentation
 
-```
+```text
 Go:
   - Package comment on every package (// Package X provides...)
   - Exported function comment on every exported function
@@ -463,7 +463,7 @@ React:
 
 ### User Documentation
 
-```
+```text
 Structure (docs/ or documentation site):
   Getting Started:
     - Quick start (ISO install or try-it container)
@@ -498,7 +498,7 @@ RULE: Screenshots are real (not mockups) and updated with each release.
 
 ### API Documentation
 
-```
+```text
 OpenAPI spec (api/openapi.yaml) is the source of truth.
 
 Requirements:

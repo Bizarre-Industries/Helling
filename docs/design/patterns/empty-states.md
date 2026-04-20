@@ -24,8 +24,8 @@
 ### Standard Empty State
 
 ```tsx
-import { Empty, Button, Typography, Space } from 'antd';
-import { Plus, BookOpen, Upload } from 'lucide-react';
+import { Empty, Button, Typography, Space } from "antd";
+import { Plus, BookOpen, Upload } from "lucide-react";
 
 const { Text, Link } = Typography;
 
@@ -37,14 +37,16 @@ function EmptyInstances() {
         <Space direction="vertical" size={4}>
           <Text>No virtual machines or system containers yet.</Text>
           <Text type="secondary">
-            New to Helling? Create your first virtual machine in 60 seconds.{' '}
+            New to Helling? Create your first virtual machine in 60 seconds.{" "}
             <Link href="/docs/quick-start">Quick Start</Link>
           </Text>
         </Space>
       }
     >
       <Space>
-        <Button type="primary" icon={<Plus size={14} />}>Create Instance</Button>
+        <Button type="primary" icon={<Plus size={14} />}>
+          Create Instance
+        </Button>
         <Button icon={<BookOpen size={14} />}>Deploy from Template</Button>
       </Space>
     </Empty>

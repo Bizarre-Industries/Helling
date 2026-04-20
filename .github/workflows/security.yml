@@ -1,0 +1,90 @@
+name: Security
+
+# Weekly Grype scan + OpenSSF Scorecard.
+# Action pins resolved 2026-04-20 per ADR-026.
+
+on:
+  push:
+    branches: [ main, 'release/**' ]
+  schedule:
+    - cron: '0 4 * * 1' # Monday 04:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  grype:
+    name: Grype — artifact + SBOM vulnerability scan
+    runs-on: ubuntu-24.04
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.26"
+      - name: Build artifacts
+        run: |
+          if [ -f go.mod ]; then
+            mkdir -p dist
+            for cmd in apps/hellingd apps/helling-cli apps/helling-proxy apps/helling-agent; do
+              if [ -d "$cmd" ]; then
+                name=$(basename "$cmd")
+                go build -trimpath -ldflags='-s -w' -o "dist/$name" "./$cmd"
+              fi
+            done
+          fi
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: ./dist
+          format: cyclonedx-json
+          output-file: dist/sbom.cdx.json
+      - name: Scan SBOM with Grype
+        uses: anchore/scan-action@64a33b277ea7a1215a3c142735a1091341939ff5 # v4.1.2
+        id: grype
+        with:
+          sbom: dist/sbom.cdx.json
+          fail-build: true
+          severity-cutoff: high
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@865f5f5c36632f18690a3d569fa0a764f2da0c3e # v3
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      # ossf/scorecard-action has no floating v2 tag; pin to a specific v2.x.x
+      - uses: ossf/scorecard-action@99c09fe975337306107572b4fdf4db224cf8e2f2 # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: github/codeql-action/upload-sarif@865f5f5c36632f18690a3d569fa0a764f2da0c3e # v3
+        with:
+          sarif_file: results.sarif
+      - name: Gate on score
+        run: |
+          score=$(jq -r '.runs[0].properties.score // 0' results.sarif)
+          echo "Scorecard: $score"
+          ok=$(awk -v a="$score" 'BEGIN { print (a+0 >= 7.0) ? 1 : 0 }')
+          if [ "$ok" != "1" ]; then
+            echo "::error::OpenSSF Scorecard $score below 7.0 floor"
+            exit 1
+          fi

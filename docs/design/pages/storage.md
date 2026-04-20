@@ -42,12 +42,15 @@ Sidebar: "Storage" selected. Main panel: pool cards at top, then volume ProTable
 ## States
 
 ### Empty State
+
 "No storage pools configured." [Create Pool]. "Storage pools provide disk space for your VMs, containers, and backups."
 
 ### Loading State
+
 Cached pool cards shown. Volume list loads on pool selection.
 
 ### Error State
+
 Pool degraded (ZFS): red Badge with status (degraded, resilvering). Show scrub results and repair actions. Pool full: warning banner with link to resize or clean up.
 
 ## User Actions

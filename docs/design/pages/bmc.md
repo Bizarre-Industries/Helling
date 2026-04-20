@@ -27,6 +27,7 @@ Sidebar: "BMC" selected. List view: server cards (<=8 servers) or ProTable. Deta
 ## Components
 
 ### List (`/bmc`)
+
 - `Card` (per server) -- hostname, model, power state Badge, health Badge (temps, fans). Quick power buttons. Connection status indicator.
 - `ModalForm` -- Add BMC (IP/hostname, username, password, protocol Select: IPMI/Redfish/auto)
 
@@ -51,12 +52,15 @@ Sidebar: "BMC" selected. List view: server cards (<=8 servers) or ProTable. Deta
 ## States
 
 ### Empty State
+
 "No BMC endpoints configured." [Add BMC]. "Connect to server baseboard management controllers for out-of-band management."
 
 ### Loading State
+
 Server cards cached. Sensor data refreshes on interval (30s).
 
 ### Error State
+
 BMC unreachable: connection status Badge red. Sensors show last known values with "(stale)".
 
 ## User Actions

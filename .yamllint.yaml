@@ -1,0 +1,40 @@
+# yamllint configuration for Helling.
+# Strict-ish: warnings are still failures (-s flag in CI).
+
+extends: default
+
+ignore: |
+  node_modules/
+  web/node_modules/
+  .task/
+  dist/
+  bin/
+  api/openapi.yaml
+  api/.vacuum.yaml
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  document-start: disable
+
+  truthy:
+    check-keys: false # allow `on:` in GitHub Actions workflows
+
+  comments:
+    min-spaces-from-content: 1
+
+  comments-indentation: disable
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  braces:
+    max-spaces-inside: 1
+
+  brackets:
+    max-spaces-inside: 1

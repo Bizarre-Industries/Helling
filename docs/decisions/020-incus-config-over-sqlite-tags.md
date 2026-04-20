@@ -23,6 +23,7 @@ Incus natively supports arbitrary key-value metadata on every resource via `user
 Tags are stored as `user.tag.<name>=<color>` config keys on Incus resources. No SQLite tag tables.
 
 Tag a resource:
+
 ```bash
 incus config set vm-web-1 user.tag.production=blue
 incus config set vm-web-1 user.tag.critical=red
@@ -33,6 +34,7 @@ List tags on a resource: read `user.tag.*` keys from the resource config (availa
 List all unique tags: query Incus for all resources with `user.tag.*` keys (available via Incus API filtering).
 
 For Podman resources: Podman supports labels on containers, images, volumes. Tags map to labels with a `helling.tag.` prefix:
+
 ```bash
 podman container label add mycontainer helling.tag.production=blue
 ```
@@ -44,6 +46,7 @@ Helling-specific tag operations (bulk tagging, tag management UI) send requests 
 ## Consequences
 
 **Easier:**
+
 - One source of truth (the resource itself carries its tags)
 - Tags survive migration, backup, restore, cluster operations
 - No sync bugs between SQLite and Incus
@@ -52,6 +55,7 @@ Helling-specific tag operations (bulk tagging, tag management UI) send requests 
 - Cluster-wide tag consistency guaranteed by Incus
 
 **Harder:**
+
 - Querying "all resources with tag X" requires filtering Incus API responses (Incus supports `?filter=config.user.tag.X` but it's not as fast as a SQL index)
 - Tag colors/metadata are limited to what fits in the config value string
 - Podman label API is different from Incus config API (frontend handles both)

@@ -1,0 +1,212 @@
+# .golangci.yaml
+#
+# Go linter configuration for Helling.
+# golangci-lint version: v1.61+ (pin in install script).
+# Run: golangci-lint run --timeout 5m
+
+run:
+  timeout: 5m
+  go: "1.26"
+  tests: true
+  allow-parallel-runners: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
+
+linters:
+  disable-all: true
+  enable:
+    # --- Correctness ---
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - gocheckcompilerdirectives
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - musttag
+    - nilerr
+    - nilnil
+    - noctx
+    - predeclared
+    - reassign
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - staticcheck
+    - testifylint
+    - thelper
+    - tparallel
+    - unused
+    - usestdlibvars
+    - wastedassign
+
+    # --- Complexity / quality ---
+    - dupl
+    - goconst
+    - gocritic
+    - gocyclo
+    - nakedret
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+
+    # --- Style / formatting ---
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - misspell
+    - whitespace
+
+    # --- Policy ---
+    - forbidigo
+
+linters-settings:
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 150
+
+  gosec:
+    severity: low
+    confidence: low
+
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
+      - name: package-comments
+      - name: exported
+      - name: var-naming
+      - name: indent-error-flow
+      - name: if-return
+      - name: superfluous-else
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Bizarre-Industries/Helling)
+
+  goimports:
+    local-prefixes: github.com/Bizarre-Industries/Helling
+
+  forbidigo:
+    analyze-types: true
+    forbid:
+      - p: ^fmt\.Print.*$
+        msg: "use slog for logging, not fmt.Print*"
+      - p: ^log\.(Print|Printf|Println|Fatal|Fatalf|Fatalln|Panic)
+        msg: "use slog for logging, not log package"
+      - p: ^panic\(
+        msg: "handle errors; don't panic (tests and main bootstrap excepted)"
+      - p: ^os\.Exit\(
+        msg: "return errors from main; don't os.Exit from library code"
+      - p: ^time\.Now\(\)$
+        msg: "inject a clock for testability (exempt in cmd/main and _test.go)"
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  gosimple:
+    checks: [ "all" ]
+
+  staticcheck:
+    checks:
+      - all
+      - "-SA1019"
+
+  sloglint:
+    kv-only: false
+    attr-only: true
+    no-global: all
+    context: scope
+
+  testifylint:
+    enable-all: true
+
+  nolintlint:
+    require-explanation: true
+    require-specific: true
+    allow-unused: false
+
+  misspell:
+    locale: US
+    ignore-words:
+      - helling
+      - hellingd
+      - hellingprox
+      - incusd
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - paramTypeCombine
+      - whyNoLint
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  exclude-use-default: false
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gocyclo
+        - gosec
+        - goconst
+        - forbidigo
+        - revive
+
+    - path: cmd/.*/main\.go
+      linters:
+        - forbidigo
+
+    - path: apps/.*/cmd/.*/main\.go
+      linters:
+        - forbidigo
+
+    - path: \.gen\.go$
+      linters:
+        - all
+
+    - path: internal/db/queries/.*\.go$
+      linters:
+        - all
+
+severity:
+  default-severity: warning
+  rules:
+    - severity: error
+      linters:
+        - gosec
+        - errcheck
+        - staticcheck
+        - govet
+        - bodyclose
+        - sqlclosecheck
+        - rowserrcheck

@@ -52,12 +52,15 @@ Sidebar: "Settings" selected (admin-only). Main panel: 5 Tabs. Each tab uses Pro
 ## States
 
 ### Empty State
+
 Settings always have defaults. Notifications tab: "No notification channels. [Add Channel] to get alerts for critical events."
 
 ### Loading State
+
 Settings cached. Update check runs in background.
 
 ### Error State
+
 ACME failure: inline Alert with error. Notification test failure: toast with reason.
 
 ## User Actions

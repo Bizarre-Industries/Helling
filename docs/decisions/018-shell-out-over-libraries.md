@@ -12,15 +12,15 @@ The tools themselves (`nft`, `smartctl`, `systemctl`, `apt`) are already install
 
 For infrequent host operations, shell out to CLI tools instead of importing Go libraries:
 
-| Operation | Tool | Output format |
-|---|---|---|
-| Host firewall rules | `nft --json list ruleset` | JSON |
-| SMART disk health | `smartctl --json --all /dev/sdX` | JSON |
-| systemd timer management | `systemctl` | text/JSON |
-| Package updates | `apt` | text |
-| ZFS pool status | `zpool status -p` | text |
-| LVM details | `lvs --reportformat json` | JSON |
-| Disk wiping | `wipefs` | text |
+| Operation                | Tool                             | Output format |
+| ------------------------ | -------------------------------- | ------------- |
+| Host firewall rules      | `nft --json list ruleset`        | JSON          |
+| SMART disk health        | `smartctl --json --all /dev/sdX` | JSON          |
+| systemd timer management | `systemctl`                      | text/JSON     |
+| Package updates          | `apt`                            | text          |
+| ZFS pool status          | `zpool status -p`                | text          |
+| LVM details              | `lvs --reportformat json`        | JSON          |
+| Disk wiping              | `wipefs`                         | text          |
 
 Implementation pattern:
 
@@ -41,12 +41,14 @@ func (s *FirewallService) ListRules() ([]Rule, error) {
 ## Consequences
 
 **Easier:**
+
 - Fewer Go dependencies (remove `google/nftables`, avoid `coreos/go-systemd`)
 - Debuggable: `nft --json list ruleset` works identically from shell and from Go
 - Stable interfaces: CLI tools have stronger backward-compatibility guarantees than Go libraries
 - hellingd go.mod stays at 6 dependencies
 
 **Harder:**
+
 - Error handling requires parsing stderr in addition to exit codes
 - Performance: exec.Command has more overhead than a library call (but these are infrequent operations)
 - Testing: must mock or have real tools available in test environment

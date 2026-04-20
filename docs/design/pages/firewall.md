@@ -47,12 +47,15 @@ Sidebar: "Firewall" selected. Main panel: 4 Tabs. Each tab contains a ProTable.
 ## States
 
 ### Empty State
+
 "No firewall rules. All traffic is allowed to all instances." [Create Rule] [Apply Default Policy]. "Recommended: start with deny-all and add specific allow rules."
 
 ### Loading State
+
 Cached rules shown immediately. Reorder updates optimistically.
 
 ### Error State
+
 nftables unavailable: banner with link to system logs. Rules shown as read-only "(stale)".
 
 ## User Actions

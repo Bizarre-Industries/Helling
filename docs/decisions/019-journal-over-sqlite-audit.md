@@ -31,6 +31,7 @@ slog.Info("api.mutation",
 ```
 
 Query audit logs:
+
 ```bash
 journalctl -t hellingd --output json-pretty \
     SYSLOG_IDENTIFIER=hellingd \
@@ -41,11 +42,13 @@ journalctl -t hellingd --output json-pretty \
 The dashboard audit page queries the journal via hellingd (which shells out to `journalctl` with filters). CSV export pipes journal JSON through a formatter.
 
 Dashboard API:
+
 - `GET /api/v1/audit?user=admin&since=2026-04-01&until=2026-04-15` → hellingd runs `journalctl` with matching filters, returns parsed entries
 
 ## Consequences
 
 **Easier:**
+
 - No SQLite audit table, no custom rotation, no retention management
 - `journalctl` provides filtering, full-text search, time ranges, JSON output for free
 - Audit entries survive hellingd crashes (journal is managed by systemd)
@@ -54,6 +57,7 @@ Dashboard API:
 - Syslog-compatible forwarding to external SIEM systems
 
 **Harder:**
+
 - Journal storage is per-node (no built-in cross-node query without remote journal)
 - Query performance for large time ranges depends on journal indexing
 - Dashboard audit page requires parsing journal JSON (different format than a simple SQL query)

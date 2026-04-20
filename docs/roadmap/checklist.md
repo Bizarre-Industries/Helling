@@ -45,7 +45,7 @@
 
 - [ ] `npx @redocly/cli lint api/openapi.yaml` or `vacuum lint api/openapi.yaml` — zero errors
 - [ ] Every Helling endpoint has operationId, request/response schemas, error responses
-- [ ] Every list endpoint has pagination params (page, per_page, sort, order)
+- [ ] Every list endpoint follows cursor pagination contract (`limit`, `cursor`, `meta.page`)
 
 ### Dashboard
 
@@ -54,7 +54,7 @@
 - [ ] Container list page loads real Podman data
 - [ ] Storage page loads pool data
 - [ ] Network page loads network data
-- [ ] No raw `fetch()` in pages (all through orval hooks or typed proxy clients)
+- [ ] No raw `fetch()` in pages (all through hey-api generated hooks/SDK or typed proxy clients)
 - [ ] No `VncConsole.tsx` exists
 - [ ] No stale noVNC-only console path assumptions remain
 

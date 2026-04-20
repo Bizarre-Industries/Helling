@@ -20,13 +20,13 @@ Podman volume operations go through the Podman proxy.
 
 Helling manages backup schedules via systemd timers (ADR-017). When a timer fires, it triggers an Incus backup via the proxy.
 
-```
+```text
 POST /api/v1/schedules → creates systemd timer + service unit
 ```
 
 The timer's service unit runs:
 
-```
+```text
 ExecStart=/usr/local/bin/helling schedule run backup <instance-name>
 ```
 
@@ -44,7 +44,7 @@ Retention enforcement: a cleanup timer runs daily, deleting backups/snapshots ol
 
 Helling reads disk SMART data by shelling out to `smartctl --json` (ADR-018). Displayed in the storage page and system diagnostics.
 
-```
+```text
 GET /api/v1/system/hardware → includes SMART data per disk
 ```
 

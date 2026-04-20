@@ -20,7 +20,7 @@ HMAC-SHA256 signed event delivery to external URLs.
 
 Helling listens to the Incus event stream (via the proxy) and emits webhook deliveries for configured events:
 
-```
+```text
 instance.created, instance.deleted, instance.started, instance.stopped
 container.created, container.deleted, container.started, container.stopped
 storage.pool.warning
@@ -37,7 +37,7 @@ backup.completed, backup.failed
 
 ### API
 
-```
+```text
 GET    /api/v1/webhooks
 POST   /api/v1/webhooks
 GET    /api/v1/webhooks/{id}
@@ -65,7 +65,7 @@ IPMI/Redfish management via bmclib.
 
 ### API
 
-```
+```text
 GET    /api/v1/bmc
 POST   /api/v1/bmc
 GET    /api/v1/bmc/{id}
@@ -83,7 +83,7 @@ BMC credentials stored in SQLite (encrypted at rest).
 
 ### System Info
 
-```
+```text
 GET /api/v1/system/info → hostname, OS, kernel, CPU, RAM, uptime, Helling version
 GET /api/v1/system/hardware → disks (SMART), NICs, GPUs
 ```
@@ -92,14 +92,14 @@ Hardware info gathered via shell-out and system files (`smartctl --json`, `lspci
 
 ### System Config
 
-```
+```text
 GET /api/v1/system/config → current helling.yaml values
 PUT /api/v1/system/config → update config (writes file, triggers reload)
 ```
 
 ### System Upgrade
 
-```
+```text
 POST /api/v1/system/upgrade → check APT repo, download + install .deb, restart
 ```
 
@@ -107,7 +107,7 @@ See docs/spec/upgrades.md for the normative upgrade sequence and rollback behavi
 
 ### Diagnostics
 
-```
+```text
 GET /api/v1/system/diagnostics → self-test results
 ```
 
@@ -125,7 +125,7 @@ nftables rules for host-level and Podman networking. See docs/spec/networking.md
 
 Every API mutation logged to systemd journal (ADR-019). See docs/spec/architecture.md.
 
-```
+```text
 GET /api/v1/audit → query journal with filters (user, since, until, method, path)
 GET /api/v1/audit/export → CSV or JSON export
 ```
@@ -157,7 +157,7 @@ Deliver warnings and events to external channels.
 
 Channel types: Discord webhook, Slack webhook, SMTP, Gotify, ntfy, generic webhook.
 
-```
+```text
 GET    /api/v1/notifications/channels
 POST   /api/v1/notifications/channels
 DELETE /api/v1/notifications/channels/{id}

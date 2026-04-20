@@ -24,7 +24,7 @@ Podman network operations go through the Podman proxy.
 
 For host-level rules and Podman container networking, Helling manages nftables rules by shelling out to `nft --json` (ADR-018). Incus Network ACLs handle VM/CT firewalling (ADR-012).
 
-```
+```text
 GET    /api/v1/firewall/host         → nft --json list table inet helling
 POST   /api/v1/firewall/host         → nft add rule inet helling ...
 DELETE /api/v1/firewall/host/{id}    → nft delete rule inet helling ...

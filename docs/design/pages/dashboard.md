@@ -43,12 +43,15 @@ Sidebar: "Dashboard" selected in resource tree. Main panel: full-width grid of s
 ## States
 
 ### Empty State
+
 "No virtual machines or containers yet." Two buttons: [Create Instance] [Deploy from Template]. Popular templates listed below (Jellyfin, Gitea, Uptime Kuma, Pi-hole).
 
 ### Loading State
+
 Show cached data immediately via React Query. Background refresh via SSE. No full-page spinner.
 
 ### Error State
+
 Banner: "Connection lost. Showing cached data." All data shows stale timestamp. Action buttons disabled with tooltip.
 
 ## User Actions

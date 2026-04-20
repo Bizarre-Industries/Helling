@@ -24,36 +24,36 @@
 ### React Query Configuration
 
 ```tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,       // 30s before considered stale
-      gcTime: 5 * 60_000,     // 5min cache retention
+      staleTime: 30_000, // 30s before considered stale
+      gcTime: 5 * 60_000, // 5min cache retention
       refetchOnWindowFocus: true,
       retry: 3,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
-    },
-  },
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000)
+    }
+  }
 });
 
 // SSE event handler invalidates relevant queries
 function useSSEInvalidation() {
   useEffect(() => {
-    const es = new EventSource('/api/v1/events');
+    const es = new EventSource("/api/v1/events");
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
-        case 'instance':
-          queryClient.invalidateQueries({ queryKey: ['instances'] });
-          queryClient.invalidateQueries({ queryKey: ['instance', data.name] });
+        case "instance":
+          queryClient.invalidateQueries({ queryKey: ["instances"] });
+          queryClient.invalidateQueries({ queryKey: ["instance", data.name] });
           break;
-        case 'operation':
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        case "operation":
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
           break;
-        case 'storage':
-          queryClient.invalidateQueries({ queryKey: ['storage'] });
+        case "storage":
+          queryClient.invalidateQueries({ queryKey: ["storage"] });
           break;
       }
     };
@@ -65,8 +65,8 @@ function useSSEInvalidation() {
 ### Connection Status Banner
 
 ```tsx
-import { Alert, Button, Typography } from 'antd';
-import { useEffect, useState, useRef } from 'react';
+import { Alert, Button, Typography } from "antd";
+import { useEffect, useState, useRef } from "react";
 
 const { Text } = Typography;
 
@@ -77,7 +77,7 @@ export function ConnectionBanner() {
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
-    const es = new EventSource('/api/v1/events');
+    const es = new EventSource("/api/v1/events");
 
     es.onopen = () => {
       setConnected(true);
@@ -139,8 +139,12 @@ function IncusStatusBanner({ incusAvailable }: { incusAvailable: boolean }) {
       banner
       action={
         <Space>
-          <Button size="small" href="/logs?source=incus">View System Logs</Button>
-          <Button size="small" onClick={() => restartIncus()}>Restart Incus</Button>
+          <Button size="small" href="/logs?source=incus">
+            View System Logs
+          </Button>
+          <Button size="small" onClick={() => restartIncus()}>
+            Restart Incus
+          </Button>
         </Space>
       }
     />
@@ -151,16 +155,16 @@ function IncusStatusBanner({ incusAvailable }: { incusAvailable: boolean }) {
 ### Data Fetching with Graceful Loading
 
 ```tsx
-import { useQuery } from '@tanstack/react-query';
-import { Skeleton, Alert, Button } from 'antd';
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton, Alert, Button } from "antd";
 
 function useInstances() {
   return useQuery({
-    queryKey: ['instances'],
+    queryKey: ["instances"],
     queryFn: fetchInstances,
     staleTime: 30_000,
     // Return empty array instead of error when Incus is down
-    placeholderData: [],
+    placeholderData: []
   });
 }
 
@@ -182,7 +186,11 @@ export function InstanceList() {
           type="warning"
           showIcon
           closable
-          action={<Button size="small" onClick={() => refetch()}>Retry</Button>}
+          action={
+            <Button size="small" onClick={() => refetch()}>
+              Retry
+            </Button>
+          }
           style={{ marginBottom: 16 }}
         />
         <InstanceTable data={data} stale />
@@ -198,7 +206,11 @@ export function InstanceList() {
         description={error.message}
         type="error"
         showIcon
-        action={<Button size="small" onClick={() => refetch()}>Retry</Button>}
+        action={
+          <Button size="small" onClick={() => refetch()}>
+            Retry
+          </Button>
+        }
       />
     );
   }
@@ -206,7 +218,7 @@ export function InstanceList() {
   return (
     <InstanceTable
       data={data}
-      loading={isFetching}  // subtle spinner in table, not blocking
+      loading={isFetching} // subtle spinner in table, not blocking
     />
   );
 }
@@ -215,7 +227,7 @@ export function InstanceList() {
 ### Actionable Error Toast
 
 ```tsx
-import { notification, Button, Space } from 'antd';
+import { notification, Button, Space } from "antd";
 
 function showOperationError(error: OperationError) {
   notification.error({
@@ -224,8 +236,10 @@ function showOperationError(error: OperationError) {
       <Space direction="vertical" size={4}>
         <span>{error.detail}</span>
         <Space>
-          {error.action === 'storage_full' && (
-            <Button size="small" type="link" href="/storage">View Storage</Button>
+          {error.action === "storage_full" && (
+            <Button size="small" type="link" href="/storage">
+              View Storage
+            </Button>
           )}
           <Button size="small" type="link" onClick={() => retryOperation(error.operationId)}>
             Retry
@@ -233,7 +247,7 @@ function showOperationError(error: OperationError) {
         </Space>
       </Space>
     ),
-    duration: 0, // stay until dismissed for errors
+    duration: 0 // stay until dismissed for errors
   });
 }
 
@@ -249,17 +263,23 @@ function showOperationError(error: OperationError) {
 ### Disabled Actions While Offline
 
 ```tsx
-import { Button, Tooltip } from 'antd';
+import { Button, Tooltip } from "antd";
 
 function ActionButton({ connected, onClick, children, ...props }: ActionButtonProps) {
   if (!connected) {
     return (
       <Tooltip title="Reconnect to perform actions">
-        <Button {...props} disabled>{children}</Button>
+        <Button {...props} disabled>
+          {children}
+        </Button>
       </Tooltip>
     );
   }
-  return <Button {...props} onClick={onClick}>{children}</Button>;
+  return (
+    <Button {...props} onClick={onClick}>
+      {children}
+    </Button>
+  );
 }
 ```
 

@@ -15,12 +15,14 @@ Not features. Not endpoints. Not pages. The identity, the product layer, and the
 **The anti-belief:** "It's just a homelab, it doesn't need to be reliable." That attitude is why people lose data. Helling assumes everything you run matters to someone.
 
 **What Helling is NOT:**
+
 - Not a NAS OS (TrueNAS exists)
 - Not a container orchestrator (Portainer exists)
 - Not a cloud platform (OpenStack exists)
 - Not an enterprise product (Proxmox/VMware exist)
 
 **What Helling IS:**
+
 - The hypervisor for people who care about their infrastructure but don't have a team to manage it
 - Auto-snapshots before changes because your time is worth more than disk space
 - Backup verification because "backup succeeded" means nothing if restore fails
@@ -35,7 +37,9 @@ Not features. Not endpoints. Not pages. The identity, the product layer, and the
 This is the entire product experience compressed. If these 5 minutes are bad, nothing else matters.
 
 ### Minute 0: Discovery
+
 User finds Helling on GitHub or bizarre.industries. README shows:
+
 - One-line description
 - Screenshot of the dashboard (the REAL dashboard, not a mockup)
 - ISO download link + flash instructions
@@ -43,8 +47,10 @@ User finds Helling on GitHub or bizarre.industries. README shows:
 - "How is this different from Proxmox?" section: honest comparison table
 
 ### Minute 1: First Run (ISO boot)
+
 User boots the Helling ISO on hardware or a VM. The setup wizard runs:
-```
+
+```yaml
 Welcome to Helling.
 
 Hostname:  [helling         ]
@@ -54,22 +60,28 @@ Confirm:        [••••••••••      ]
 
 [Install →]
 ```
+
 One screen. A few fields. No email, no organization name, no "agree to terms." Respect the user's time.
 
 ### Minute 2: Setup Complete
+
 Installation finishes, system reboots. User opens https://<hostname>:8006 and logs in.
 
 ### Minute 3: Dashboard (first load)
+
 Dashboard shows REAL data from the host:
-```
+
+```yaml
 System: 8 cores, 32GB RAM, 500GB disk (42% used)
 Instances: 0 running
 Containers: 0 running
 ```
 
 ### Minute 4: First Action
+
 The dashboard empty state for "no user-created containers" shows:
-```
+
+```text
 No containers yet.
 
 [🚀 Deploy from Template]    [📦 Create Container]
@@ -80,8 +92,10 @@ Popular templates: Jellyfin · Gitea · Uptime Kuma · Pi-hole
 User clicks "Jellyfin" → template form with 3 fields (name, port, data path) → Deploy → container starts in 2 seconds → port link clickable → Jellyfin is running.
 
 ### Minute 5: "Aha" Moment
+
 User sees the health score widget appear on dashboard:
-```
+
+```text
 Infrastructure Health: 65/100
   ⚠ jellyfin: No backup configured (-30)
   ⚠ jellyfin: No description (-2)
@@ -106,7 +120,7 @@ Helling ships as an ISO and installs directly onto hardware (ADR-021). Both Incu
 
 ### Empty States (per page)
 
-```
+```text
 /instances (zero instances):
   "No virtual machines or system containers yet."
   [Create Instance]  [Deploy from Template]
@@ -139,7 +153,8 @@ Helling ships as an ISO and installs directly onto hardware (ADR-021). Both Incu
 Every empty state has: what this page is for, primary action button, secondary action or help link. Never just "No data."
 
 ### Loading States
-```
+
+```yaml
 Rule: Show cached data immediately. Refresh in background via SSE/React Query.
 
 First load (no cache): Show skeleton for <500ms. If data arrives within 500ms, skip skeleton entirely.
@@ -150,7 +165,8 @@ NEVER: Full-page spinner. NEVER: "Loading..." text for more than 500ms.
 ```
 
 ### Error States
-```
+
+```text
 API unreachable:
   Banner (not modal): "Connection lost. Reconnecting..."
   Data: show last cached data with "(stale)" indicator
@@ -172,7 +188,8 @@ Operation failed:
 ```
 
 ### Offline Behavior
-```
+
+```text
 Browser loses connection to hellingd:
   - Banner: "Connection lost. Showing cached data."
   - All data shows "(stale)" timestamp
@@ -188,7 +205,8 @@ Browser loses connection to hellingd:
 Not just warnings in the dashboard. A complete notification system.
 
 ### Channels
-```
+
+```text
 Built-in:
   Dashboard notifications (bell icon with badge count)
   SSE-pushed toasts for real-time events
@@ -204,7 +222,8 @@ Configurable external:
 ```
 
 ### Event → Channel Routing
-```
+
+```text
 Settings → Notifications:
   "Critical events" → Discord + Email
   "Warnings" → Discord only
@@ -217,7 +236,8 @@ Event categories:
 ```
 
 ### Quiet Hours
-```
+
+```text
 "Don't send external notifications between 11 PM and 7 AM unless Critical"
 ```
 
@@ -293,7 +313,7 @@ No user data, passwords, or private keys are included.
 
 Instances automatically get DNS names resolvable from the host and from other instances.
 
-```
+```text
 Instance "web-server" created:
   → Automatically registered: web-server.helling.local
   → Resolvable from: host, all other instances, all containers
@@ -315,7 +335,7 @@ Users can access VMs by name instead of remembering IPs. `ssh ubuntu@web-server.
 
 Access your instances from anywhere without port forwarding or exposing services to the internet.
 
-```
+```text
 Settings → Remote Access:
   [Enable Tailscale Integration]
   OR
@@ -341,7 +361,8 @@ This solves the #1 homelab problem: "How do I access my stuff from outside my ho
 ## Update Experience
 
 ### In-Dashboard Update Notification
-```
+
+```text
 After upgrade, first login shows:
 ┌──────────────────────────────────────────────────────────────┐
 │ 🎉 Helling v0.2.0                                            │
@@ -357,7 +378,8 @@ After upgrade, first login shows:
 ```
 
 ### Update Check
-```
+
+```bash
 hellingd checks bizarre.industries/api/latest daily (opt-out in helling.yaml).
 Settings → Updates shows:
   Current: v0.1.0
@@ -372,7 +394,7 @@ Security patches show a banner on ALL pages:
 
 ## Session Management
 
-```
+```text
 Settings → Security → Active Sessions:
   | Device | IP | Location | Last Active | |
   | Chrome/Mac | 192.168.1.10 | Local | Now (current) | |
@@ -383,7 +405,8 @@ Settings → Security → Active Sessions:
 ```
 
 ### Session Timeout
-```
+
+```text
 JWT expires → modal overlay (not redirect):
   "Your session has expired."
   [Password: ________] [Re-authenticate]
@@ -396,7 +419,7 @@ NEVER throw away user's work because of session timeout.
 
 ## Dashboard Branding
 
-```
+```text
 Settings → Appearance:
   Logo: [Upload]  (replaces Helling logo in top bar)
   Accent color: [Color picker]  (primary button color, active tab, badges)
@@ -415,24 +438,24 @@ Companies/power users can brand the dashboard without forking the code.
 
 ## Weekly Digest Email
 
-```
+```yaml
 Opt-in: Settings → Notifications → "Weekly infrastructure digest"
 
 Subject: "Helling Weekly: 12 instances healthy, 2 warnings"
 
 Body:
   Infrastructure Health: 78/100 (↑3 from last week)
-  
+
   Running: 12 instances, 8 containers
   Stopped: 2 instances (vm-old: 95 days, ct-legacy: 12 days)
-  
+
   Backups: 10/14 instances backed up this week
   ⚠ Missing: vm-dev, ct-test, container-redis, container-temp
-  
+
   Storage: default 72% (↑5%), fast-pool 45% (↓2%)
-  
+
   Top event: vm-build-server restarted 3 times (check logs)
-  
+
   Power: ~340W average, ~245 kWh estimated, ~$35/month
 ```
 
@@ -444,17 +467,17 @@ You don't need to log in to know your infrastructure is healthy.
 
 These aren't features. They're the product layer that separates "a dashboard that wraps Incus" from "a product that manages my infrastructure."
 
-| Category | What it does | Why it matters |
-|----------|-------------|---------------|
-| First 5 minutes | Discovery → Docker run → Setup → First container → Aha moment | Users decide in 5 minutes |
-| Runtime environment | Incus + Podman from first boot, no mode gating | No confusion about what's available |
-| Empty states | Every zero-data page guides, not blocks | New users never feel lost |
-| Loading/error states | Cached data, graceful degradation, actionable errors | Never a blank page |
-| Notification system | 7 channels, event routing, quiet hours | Problems reach you, not just the dashboard |
-| Self-diagnostics | `helling doctor`, support bundle | Self-service troubleshooting |
-| Self-service DNS | instance.helling.local | Stop memorizing IPs |
-| Remote access | Built-in VPN (Tailscale/WireGuard) | Access from anywhere |
-| Update experience | In-dashboard changelog, security banners | Users stay current |
-| Session management | Active sessions, revoke, graceful timeout | Security without frustration |
-| Branding | Logo, colors, login message | Make it yours |
-| Weekly digest | Email summary of infrastructure health | Peace of mind without logging in |
+| Category             | What it does                                                  | Why it matters                             |
+| -------------------- | ------------------------------------------------------------- | ------------------------------------------ |
+| First 5 minutes      | Discovery → Docker run → Setup → First container → Aha moment | Users decide in 5 minutes                  |
+| Runtime environment  | Incus + Podman from first boot, no mode gating                | No confusion about what's available        |
+| Empty states         | Every zero-data page guides, not blocks                       | New users never feel lost                  |
+| Loading/error states | Cached data, graceful degradation, actionable errors          | Never a blank page                         |
+| Notification system  | 7 channels, event routing, quiet hours                        | Problems reach you, not just the dashboard |
+| Self-diagnostics     | `helling doctor`, support bundle                              | Self-service troubleshooting               |
+| Self-service DNS     | instance.helling.local                                        | Stop memorizing IPs                        |
+| Remote access        | Built-in VPN (Tailscale/WireGuard)                            | Access from anywhere                       |
+| Update experience    | In-dashboard changelog, security banners                      | Users stay current                         |
+| Session management   | Active sessions, revoke, graceful timeout                     | Security without frustration               |
+| Branding             | Logo, colors, login message                                   | Make it yours                              |
+| Weekly digest        | Email summary of infrastructure health                        | Peace of mind without logging in           |

@@ -14,7 +14,7 @@ Reject CAPMVM and Flintlock. Use k3s via cloud-init on Incus VMs for v0.1 provis
 
 Reasons:
 
-- **Weaveworks bankrupt (February 2024):** Flintlock was the primary Weaveworks project. The bankrupcy left Flintlock and CAPMVM without active maintainers.
+- **Weaveworks bankrupt (February 2024):** Flintlock was the primary Weaveworks project. The bankruptcy left Flintlock and CAPMVM without active maintainers.
 - **Flintlock is unmaintained:** Last meaningful commit before this decision. Alpha quality, no stable release.
 - **gRPC-based:** Flintlock exposes a gRPC API, not HTTP. `httputil.ReverseProxy` cannot proxy gRPC. Adding gRPC transport breaks the proxy-first architecture (ADR-014).
 - **Requires containerd sidecar:** Flintlock requires a separate containerd process alongside it. Additional daemon, additional attack surface.

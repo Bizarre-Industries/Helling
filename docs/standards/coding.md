@@ -10,7 +10,7 @@ Rules for writing code in Helling. Not preferences. Standards. Violations are bu
 
 ### File Structure (per handler/service)
 
-```
+```text
 internal/
   incus/
     incus.go          # Client wrapper, connection management
@@ -65,7 +65,7 @@ return fmt.Errorf("auth failed for user %q from %s", username, sourceIP)
 
 ### Shell-Out Conventions (ADR-018)
 
-```
+```text
 For host operations (nft, smartctl, systemctl, lvs, zpool), shell out to CLI tools:
 - Always use exec.CommandContext with a timeout
 - Parse JSON output where available (nft --json, smartctl --json, lvs --reportformat json)
@@ -75,7 +75,7 @@ For host operations (nft, smartctl, systemctl, lvs, zpool), shell out to CLI too
 
 ### systemd Timer Conventions (ADR-017)
 
-```
+```text
 Scheduled operations write .timer + .service unit files to /etc/systemd/system/:
 - Timer names: helling-<type>-<resource>.timer
 - Service names: helling-<type>-<resource>.service
@@ -246,9 +246,9 @@ func SecurityHeaders(next http.Handler) http.Handler {
 
 ### Handler Architecture (ADR-014)
 
-```
+```text
 Most resources are proxied to Incus/Podman sockets (ADR-014). Only Helling-specific
-endpoints (approximately 40) have handler implementations. These include: auth, users, settings,
+endpoints (approximately 34) have handler implementations. These include: auth, users, settings,
 tasks, warnings, webhooks, audit, and metrics.
 
 Proxied requests:
@@ -258,9 +258,22 @@ Proxied requests:
   - Auth + audit middleware still runs on proxied requests
 
 Helling-specific handlers:
-    - Implement approximately 40 Helling-specific handlers. All Incus/Podman operations go through the proxy (ADR-014).
+        - Implement approximately 34 Helling-specific handlers. All Incus/Podman operations go through the proxy (ADR-014).
   - Call service layer, never access DB directly
   - Follow the patterns below for API design, validation, and error handling
+```
+
+### HTTP Handlers (Huma)
+
+```go
+// RULE: Register Helling-owned endpoints with Huma operations on top of ServeMux.
+// RULE: Input/output contracts are typed structs with validation tags.
+// RULE: Business logic lives in services; handlers only map transport to service calls.
+// RULE: Success envelope is centralized with Envelope[T] and meta.request_id.
+// RULE: Error envelope is centralized through huma.NewError transformer.
+
+// BAD: Duplicating envelope or validation logic in each endpoint.
+// GOOD: Reuse shared envelope/error adapters and keep endpoint functions thin.
 ```
 
 ### API Design
@@ -278,12 +291,12 @@ Helling-specific handlers:
 // Success: { "data": {...}, "meta": { "request_id": "...", "page": { "has_next": true, "next_cursor": "...", "limit": 50 } } }
 // Error:   { "error": "msg", "code": "CODE", "action": "...", "doc_link": "..." }
 
-// RULE: Pagination via query params: ?limit=50&cursor=opaque&sort=created_at&order=desc
+// RULE: Pagination contract is cursor-based. See docs/spec/pagination.md.
 // RULE: Filtering via query params: ?status=running&type=vm&tags=production
 // RULE: Offset/page pagination is not supported for v0.1 API contracts.
 
 // RULE: Rate limiting on all endpoints:
-//   Auth endpoints: 5 failed attempts per 15 minutes per IP + username
+//   Auth endpoints: 5 failed attempts per 15 minutes per IP and per username
 //   Write endpoints: 30 req/min per user
 //   Read endpoints: 120 req/min per user
 
@@ -358,17 +371,17 @@ useEffect(() => {
 
 ### Coverage Targets
 
-```
+```yaml
 Go backend:
-  Handlers:  80% line coverage minimum
-  Services:  90% line coverage minimum
-  Clients:   70% line coverage minimum (external dependencies mocked)
-  Overall:   80% minimum, 90% goal
+  Handlers: 80% line coverage minimum
+  Services: 90% line coverage minimum
+  Clients: 70% line coverage minimum (external dependencies mocked)
+  Overall: 80% minimum, 90% goal
 
 React frontend:
   Components: 60% minimum (test interactions, not rendering)
-  Hooks:      80% minimum
-  Utils:      90% minimum
+  Hooks: 80% minimum
+  Utils: 90% minimum
 ```
 
 ### Test Patterns
@@ -423,13 +436,13 @@ func BenchmarkListInstances(b *testing.B) {
 
 ### Test Organization
 
-```
-Unit tests:     Adjacent to code (*_test.go). Run with `make test`.
-Integration:    test/ directory. Require running services. Run with `make test-integration`.
-E2E:            test/e2e/. Full API tests against running hellingd. Run in CI only.
-Fuzz:           In *_test.go files. Run with `go test -fuzz`.
-Benchmarks:     In *_test.go files. Run with `go test -bench`.
-Load tests:     test/load/. k6 or hey scripts. Run manually.
+```yaml
+Unit tests: Adjacent to code (*_test.go). Run with `make test`.
+Integration: test/ directory. Require running services. Run with `make test-integration`.
+E2E: test/e2e/. Full API tests against running hellingd. Run in CI only.
+Fuzz: In *_test.go files. Run with `go test -fuzz`.
+Benchmarks: In *_test.go files. Run with `go test -bench`.
+Load tests: test/load/. k6 or hey scripts. Run manually.
 ```
 
 ---
@@ -438,7 +451,7 @@ Load tests:     test/load/. k6 or hey scripts. Run manually.
 
 Every PR must pass all items:
 
-```
+```text
 Correctness:
   [ ] Does what the ticket/issue says
   [ ] Edge cases handled (empty input, max values, concurrent access)
@@ -472,7 +485,7 @@ Standards:
 
 ## 5. Dependency Management
 
-```
+```text
 RULE: Every new dependency requires justification in PR description.
 RULE: Prefer stdlib over third-party. Justify why stdlib is insufficient.
 RULE: Pin exact versions. No floating (^, ~, latest).
@@ -484,12 +497,15 @@ RULE: govulncheck in CI. Zero known vulnerabilities at release time.
 
 Approved dependencies (no justification needed):
   bmc-toolbox/bmclib        — BMC management (core functionality)
+    danielgtaylor/huma/v2     — HTTP operation framework + OpenAPI generation
   net/http (stdlib)         — HTTP routing baseline
   sqlc + database/sql       — Typed query generation + persistence
   goose                     — SQL migrations
+    msteinert/pam             — PAM authentication bridge
+    filippo.io/age            — Secret envelope encryption
   pquerna/otp          — TOTP 2FA
-  go-webauthn/webauthn — WebAuthn
-  prometheus/client    — Metrics
+    go-webauthn/webauthn — WebAuthn (v0.5+)
+    prometheus/client    — Metrics (v0.3+)
   golang-jwt/jwt       — JWT
   spf13/cobra          — CLI framework
   gopkg.in/yaml.v3     — Configuration

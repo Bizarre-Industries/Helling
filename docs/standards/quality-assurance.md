@@ -18,7 +18,7 @@ Version: vacuum ≥ 0.26.0 pinned in CI.
 
 ### 1.2 Score Policy
 
-```
+```text
 Target score:      100 / 100
 Minimum to merge:  100 / 100
 CI gate:           fails if overallScore < 100
@@ -49,7 +49,7 @@ See `api/.vacuum.yaml` for the normative ruleset.
 
 ### 1.4 CI command
 
-```
+```bash
 vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 ```
 
@@ -261,15 +261,15 @@ AuthLoginRequest:
 
 Linter: `markdownlint-cli2` with `.markdownlint.yaml` at repo root.
 
-```
+```yaml
 # .markdownlint.yaml baseline
 default: true
-MD013: false         # line length (prose-wrap is noisy)
-MD033: false         # inline HTML allowed (needed for <!-- markdownlint-disable -->)
-MD041: false         # first-line-h1 (some files start with frontmatter)
-MD040: true          # fenced code blocks must have a language
+MD013: false # line length (prose-wrap is noisy)
+MD033: false # inline HTML allowed (needed for <!-- markdownlint-disable -->)
+MD041: false # first-line-h1 (some files start with frontmatter)
+MD040: true # fenced code blocks must have a language
 MD024:
-  siblings_only: true  # heading duplicates allowed across sections
+  siblings_only: true # heading duplicates allowed across sections
 ```
 
 CI command: `markdownlint-cli2 '**/*.md' '#node_modules'`. Exit non-zero on any violation.
@@ -284,7 +284,7 @@ Applies to: every `.md` file in the repo.
 
 Linter: `yamllint` with `.yamllint.yaml`.
 
-```
+```yaml
 # .yamllint.yaml baseline
 extends: default
 rules:
@@ -293,7 +293,7 @@ rules:
     level: warning
   document-start: disable
   truthy:
-    check-keys: false    # 'on:' in GitHub Actions
+    check-keys: false # 'on:' in GitHub Actions
   comments:
     min-spaces-from-content: 1
   indentation:
@@ -310,7 +310,7 @@ Applies to: `.yaml`, `.yml` files except `api/openapi.yaml` (vacuum handles that
 
 Linter: `shellcheck`.
 
-```
+```text
 CI command: find . -type f \( -name '*.sh' -o -name '*.bash' \) \
   -not -path './node_modules/*' -not -path './.git/*' \
   -print0 | xargs -0 shellcheck -S style -e SC1091
@@ -433,11 +433,11 @@ issues:
 
 ### 5.2 Coverage gates
 
-```
-Handlers:  80% line coverage minimum (enforced at merge)
-Services:  90% line coverage minimum
-Clients:   70% line coverage minimum (external deps mocked)
-Overall:   80% minimum, with 90% goal tracked but not gated
+```yaml
+Handlers: 80% line coverage minimum (enforced at merge)
+Services: 90% line coverage minimum
+Clients: 70% line coverage minimum (external deps mocked)
+Overall: 80% minimum, with 90% goal tracked but not gated
 ```
 
 CI uses `go test -coverprofile=cover.out ./...` plus `go tool cover -func=cover.out` parsed by a small script that fails if any package under `internal/handlers/`, `internal/services/`, `internal/clients/` is below its threshold.
@@ -479,7 +479,7 @@ Linter: `biome lint` with `biome.json` at `web/`.
 Additional gates:
 
 - `tsc --noEmit` must pass.
-- `orval` generation must be idempotent: `bun run gen:api && git diff --exit-code web/src/api/generated`.
+- `hey-api/openapi-ts` generation must be idempotent: `bun run gen:api && git diff --exit-code web/src/api/generated`.
 - `bun test` must pass (vitest).
 - Component coverage: 60% min. Hooks: 80% min. Utils: 90% min.
 
@@ -509,7 +509,7 @@ Most strict settings are on by default in `strict`, but `noUncheckedIndexedAcces
 
 Linter: `sqlfluff` with dialect `sqlite`.
 
-```
+```bash
 # .sqlfluff baseline
 [sqlfluff]
 dialect = sqlite
@@ -648,7 +648,7 @@ repos:
 
 security.md §3 (Supply Chain Security) keeps its structure but replaces the `Scanning Pipeline` block:
 
-```
+```text
 Every push:
   - CodeQL (security-extended + security-and-quality)
   - govulncheck

@@ -8,7 +8,7 @@
 
 ## Global Flags
 
-```
+```text
 --api URL         hellingd API endpoint (default: from config)
 --token TOKEN     API token (default: from config)
 --output FORMAT   Output format: table (default), json, yaml
@@ -19,7 +19,7 @@
 
 ### Auth
 
-```
+```bash
 helling auth login                     # Interactive PAM login, stores JWT
 helling auth logout                    # Clear stored tokens
 helling auth token create NAME         # Create API token
@@ -29,7 +29,7 @@ helling auth token revoke ID           # Revoke API token
 
 ### Users
 
-```
+```bash
 helling user list                      # List users
 helling user create USERNAME           # Create user (PAM)
 helling user delete USERNAME           # Delete user (PAM)
@@ -38,7 +38,7 @@ helling user set-scope USER SCOPE  # Assign user trust scope
 
 ### Schedules
 
-```
+```bash
 helling schedule list                  # List backup/snapshot schedules
 helling schedule create                # Create schedule (interactive)
 helling schedule delete ID             # Delete schedule
@@ -47,7 +47,7 @@ helling schedule run ID                # Trigger schedule now
 
 ### Webhooks
 
-```
+```bash
 helling webhook list                   # List webhooks
 helling webhook create URL             # Create webhook
 helling webhook delete ID              # Delete webhook
@@ -56,7 +56,7 @@ helling webhook test ID                # Send test delivery
 
 ### BMC
 
-```
+```bash
 helling bmc list                       # List managed BMC endpoints
 helling bmc add IP                     # Add BMC endpoint
 helling bmc remove ID                  # Remove BMC endpoint
@@ -66,7 +66,7 @@ helling bmc sensors ID                 # Read sensor data
 
 ### Kubernetes
 
-```
+```bash
 helling k8s list                       # List K8s clusters
 helling k8s create NAME                # Create cluster (k3s via cloud-init wizard)
 helling k8s delete NAME                # Delete cluster
@@ -77,7 +77,7 @@ helling k8s kubeconfig NAME            # Download kubeconfig
 
 ### System
 
-```
+```bash
 helling system info                    # System info (hostname, version, uptime)
 helling system upgrade                 # Check + apply system upgrade
 helling system config get KEY          # Read config value
@@ -87,7 +87,7 @@ helling system diagnostics             # Self-test
 
 ### Host Firewall
 
-```
+```bash
 helling firewall list                  # List host nftables rules
 helling firewall add RULE              # Add host firewall rule
 helling firewall remove ID             # Remove host firewall rule
@@ -95,14 +95,14 @@ helling firewall remove ID             # Remove host firewall rule
 
 ### Utilities
 
-```
+```bash
 helling version                        # Version, go version, git commit
 helling completion bash|zsh|fish       # Shell completions
 ```
 
 ## Shell Completions
 
-```
+```bash
 helling completion bash > /etc/bash_completion.d/helling
 helling completion zsh > ~/.zfunc/_helling
 helling completion fish > ~/.config/fish/completions/helling.fish

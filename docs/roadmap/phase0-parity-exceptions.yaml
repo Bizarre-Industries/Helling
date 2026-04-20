@@ -1,0 +1,261 @@
+# Phase 0 parity exceptions.
+#
+# Operations listed here are NOT yet implemented in CLI or WebUI.
+# Each entry must declare which surface is missing and a target version.
+# Remove the entry once the surface is implemented and tested.
+#
+# Fields:
+#   operation_id  — operationId from api/openapi.yaml
+#   missing       — "cli", "webui", or "both"
+#   reason        — why the exception exists
+#   target_version — first release that should close the gap
+
+exceptions:
+  # ── Auth ───────────────────────────────────────────────────────────────────
+  - operation_id: authSetup
+    missing: both
+    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authLogin
+    missing: both
+    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authRefresh
+    missing: both
+    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authLogout
+    missing: both
+    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authMfaComplete
+    missing: both
+    reason: "Phase 0 — CLI and WebUI MFA flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTotpSetup
+    missing: both
+    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTotpVerify
+    missing: both
+    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTotpDisable
+    missing: both
+    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTokenList
+    missing: both
+    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTokenCreate
+    missing: both
+    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
+    target_version: "v0.3.0"
+
+  - operation_id: authTokenRevoke
+    missing: both
+    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
+    target_version: "v0.3.0"
+
+  # ── Users ──────────────────────────────────────────────────────────────────
+  - operation_id: userList
+    missing: both
+    reason: "Phase 0 — user management surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: userCreate
+    missing: both
+    reason: "Phase 0 — user management surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: userGet
+    missing: both
+    reason: "Phase 0 — user management surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: userUpdate
+    missing: both
+    reason: "Phase 0 — user management surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: userDelete
+    missing: both
+    reason: "Phase 0 — user management surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  # ── Schedules ──────────────────────────────────────────────────────────────
+  - operation_id: scheduleList
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: scheduleCreate
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: scheduleGet
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: scheduleUpdate
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: scheduleDelete
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: scheduleRunNow
+    missing: both
+    reason: "Phase 0 — schedule surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  # ── Webhooks ───────────────────────────────────────────────────────────────
+  - operation_id: webhookList
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: webhookCreate
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: webhookGet
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: webhookUpdate
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: webhookDelete
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: webhookTest
+    missing: both
+    reason: "Phase 0 — webhook surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  # ── Kubernetes ─────────────────────────────────────────────────────────────
+  - operation_id: kubernetesList
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesCreate
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesGet
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesDelete
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesScale
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesUpgrade
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  - operation_id: kubernetesKubeconfig
+    missing: both
+    reason: "Phase 0 — Kubernetes surfaces not yet implemented"
+    target_version: "v0.6.0"
+
+  # ── System ─────────────────────────────────────────────────────────────────
+  - operation_id: systemInfo
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: systemHardware
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: systemConfigGet
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: systemConfigPut
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: systemUpgrade
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  - operation_id: systemDiagnostics
+    missing: both
+    reason: "Phase 0 — system surfaces not yet implemented"
+    target_version: "v0.4.0"
+
+  # ── Firewall ───────────────────────────────────────────────────────────────
+  - operation_id: firewallHostList
+    missing: both
+    reason: "Phase 0 — firewall surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: firewallHostCreate
+    missing: both
+    reason: "Phase 0 — firewall surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: firewallHostDelete
+    missing: both
+    reason: "Phase 0 — firewall surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  # ── Audit ──────────────────────────────────────────────────────────────────
+  - operation_id: auditQuery
+    missing: both
+    reason: "Phase 0 — audit surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  - operation_id: auditExport
+    missing: both
+    reason: "Phase 0 — audit surfaces not yet implemented"
+    target_version: "v0.5.0"
+
+  # ── Health / Events ────────────────────────────────────────────────────────
+  - operation_id: healthGet
+    missing: both
+    reason: "Phase 0 — health endpoint is internal; no CLI/WebUI surface needed"
+    target_version: "v0.3.0"
+
+  - operation_id: eventsSse
+    missing: both
+    reason: "Phase 0 — SSE consumed internally by WebUI; no standalone CLI surface"
+    target_version: "v0.4.0"

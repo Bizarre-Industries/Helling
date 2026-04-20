@@ -21,7 +21,7 @@ Helling v0.1 is a proxy-first Debian platform for Incus and Podman, with a focus
 
 ## System Diagram
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────┐
 │                         Web Browser                           │
 │                     React dashboard UI                         │

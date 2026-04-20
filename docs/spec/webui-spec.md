@@ -4,12 +4,12 @@
 
 ## Stack
 
-```
+```text
 React 19 + Vite (SPA, no SSR)
 antd 6                          → Core components
 @ant-design/pro-components      → ProTable, ProForm, StepsForm, ProLayout, Descriptions
 @ant-design/charts              → Charts (G2-based, antd theme integrated)
-@tanstack/react-query           → Data fetching (via orval-generated hooks for Helling API)
+@tanstack/react-query           → Data fetching (via hey-api/openapi-ts generated hooks/options for Helling API)
 react-router-dom v7             → Routing
 xterm.js                        → Terminal (serial console, exec, logs)
 spice-html5                     → VM VGA console (SPICE protocol path, ADR-010)
@@ -22,13 +22,13 @@ fetch wrapper                   → Shared request wrapper with JWT injection + 
 
 The dashboard uses three API clients:
 
-- **hellingClient** — Helling-specific endpoints (`/api/v1/*`). Uses orval-generated hooks. Envelope format: `{data, meta}`.
+- **hellingClient** — Helling-specific endpoints (`/api/v1/*`). Uses hey-api/openapi-ts generated SDK/hooks. Envelope format: `{data, meta}`.
 - **incusClient** — Incus proxy endpoints (`/api/incus/*`). Typed fetch wrapper. Native Incus response format.
 - **podmanClient** — Podman proxy endpoints (`/api/podman/*`). Typed fetch wrapper. Native Podman response format.
 
 All three include the JWT token in the Authorization header via a shared fetch wrapper.
 
-Pages that show Incus resources (instances, storage, networks, images, cluster) fetch from the Incus proxy. Pages that show Podman resources (containers, pods, volumes) fetch from the Podman proxy. Pages for Helling features (users, schedules, webhooks, audit, BMC, K8s, settings) use orval-generated hooks from the Helling API.
+Pages that show Incus resources (instances, storage, networks, images, cluster) fetch from the Incus proxy. Pages that show Podman resources (containers, pods, volumes) fetch from the Podman proxy. Pages for Helling features (users, schedules, webhooks, audit, BMC, K8s, settings) use hey-api/openapi-ts generated SDK/hooks from the Helling API.
 
 ## Design Rules
 
@@ -64,7 +64,7 @@ Function over beauty. See docs/design/philosophy.md for full 10 rules.
 
 ## Layout (ProLayout)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │ Top: Logo │ Global Search (Cmd+K) │ Warnings Badge │ User   │
 ├────────────┬─────────────────────────────────────────────────┤
@@ -190,10 +190,7 @@ Image update detection: `<Badge dot>` on container row when newer digest availab
   grid={{ column: 4 }}
   dataSource={templates}
   renderItem={(t) => (
-    <Card
-      cover={<img src={t.logo} />}
-      actions={[<Button type="primary">Deploy</Button>]}
-    >
+    <Card cover={<img src={t.logo} />} actions={[<Button type="primary">Deploy</Button>]}>
       <Card.Meta title={t.title} description={t.description} />
       <Tag>{t.category}</Tag>
     </Card>

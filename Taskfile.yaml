@@ -1,0 +1,481 @@
+# Taskfile.yaml
+#
+# Helling local task runner. Mirrors CI exactly.
+# Install Task: https://taskfile.dev/installation/
+#
+# Primary commands:
+#   task check        — run every quality gate
+#   task fmt          — auto-format everything fixable
+#   task gen          — regenerate openapi.yaml from Huma + downstream codegen
+#   task test         — run Go + frontend tests
+#   task install      — install all tools
+#   task hooks        — install lefthook git hooks
+
+version: '3'
+silent: true
+output: 'interleaved'
+
+vars:
+  REPO: '{{.TASKFILE_DIR}}'
+  GO_PKG: ./...
+  COVERAGE_OUT: coverage.out
+  OPENAPI_FILE: api/openapi.yaml
+  VACUUM_RULESET: api/.vacuum.yaml
+  MIN_VACUUM_SCORE: 100
+
+env:
+  GOFLAGS: -mod=readonly
+
+tasks:
+
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  # ============================================================
+  # Top-level entry points
+  # ============================================================
+
+  check:
+    desc: Run every quality gate (same as CI). Do this before every push.
+    deps:
+      - check:openapi
+      - check:markdown
+      - check:yaml
+      - check:shell
+      - check:go
+      - check:frontend
+      - check:sql
+      - check:secrets
+      - check:spelling
+      - check:links
+      - check:parity
+    cmds:
+      - echo ""
+      - echo "✓ All quality gates passed. Safe to push."
+
+  fmt:
+    desc: Auto-format everything fixable.
+    deps:
+      - fmt:go
+      - fmt:markdown
+      - fmt:shell
+      - fmt:frontend
+    cmds:
+      - echo "✓ Formatting done. Review diffs before committing."
+
+  test:
+    desc: Run all tests (no lint gates).
+    deps:
+      - test:go
+      - test:frontend
+
+  gen:
+    desc: Regenerate openapi.yaml from Huma + all downstream codegen.
+    cmds:
+      - task: gen:openapi
+      - task: gen:go:cli
+      - task: gen:frontend
+      - task: gen:sqlc
+
+  install:
+    desc: Install every tool `task check` needs.
+    cmds:
+      - bash scripts/install-tools.sh
+
+  hooks:
+    desc: Install lefthook git hooks.
+    cmds:
+      - lefthook install
+      - echo "✓ Git hooks installed. Pre-commit runs on every commit; pre-push runs task check."
+
+  clean:
+    desc: Remove build artifacts, coverage, caches.
+    cmds:
+      - rm -rf bin/ dist/ {{.COVERAGE_OUT}} .task/
+      - find . -name '*.test' -not -path './.git/*' -delete 2>/dev/null || true
+      - find . -name '*.prof' -not -path './.git/*' -delete 2>/dev/null || true
+
+  # ============================================================
+  # OpenAPI generation + lint
+  # ============================================================
+
+  gen:openapi:
+    desc: Regenerate api/openapi.yaml from Huma operation definitions.
+    cmds:
+      - |
+        if [ ! -d apps/hellingd ]; then
+          echo "apps/hellingd not present yet (pre-Huma-spike). Skipping openapi regeneration."
+          exit 0
+        fi
+        go run ./tools/openapi-dump > {{.OPENAPI_FILE}}.tmp
+        mv {{.OPENAPI_FILE}}.tmp {{.OPENAPI_FILE}}
+        echo "✓ {{.OPENAPI_FILE}} regenerated"
+    sources:
+      - apps/hellingd/**/*.go
+      - tools/openapi-dump/**/*.go
+
+  check:openapi:
+    desc: Lint api/openapi.yaml with vacuum (must score 100/100 against our ruleset).
+    cmds:
+      - vacuum lint --ruleset {{.VACUUM_RULESET}} --fail-severity info {{.OPENAPI_FILE}}
+      - |
+        # vacuum report uses the default ruleset unless -r is passed.
+        # We must pass -r so the score reflects our ruleset, matching `vacuum lint` above.
+        score=$(vacuum report --stdout -r {{.VACUUM_RULESET}} {{.OPENAPI_FILE}} | jq -r '.statistics.overallScore // .overallScore // 0')
+        echo "openapi score (against custom ruleset): ${score}/100"
+        if [ "${score}" -lt {{.MIN_VACUUM_SCORE}} ]; then
+          echo "FAIL: openapi score ${score}/100 below minimum {{.MIN_VACUUM_SCORE}}/100"
+          exit 1
+        fi
+    sources:
+      - '{{.OPENAPI_FILE}}'
+      - '{{.VACUUM_RULESET}}'
+
+  check:openapi:generated:
+    desc: Verify committed api/openapi.yaml matches what Huma would generate now.
+    cmds:
+      - |
+        if [ ! -d apps/hellingd ]; then
+          echo "apps/hellingd not present yet. Skipping generated drift check."
+          exit 0
+        fi
+        go run ./tools/openapi-dump > {{.OPENAPI_FILE}}.tmp
+        if ! diff -q {{.OPENAPI_FILE}} {{.OPENAPI_FILE}}.tmp >/dev/null; then
+          echo "FAIL: committed {{.OPENAPI_FILE}} differs from Huma-generated output."
+          echo "Run: task gen:openapi && git add {{.OPENAPI_FILE}}"
+          diff -u {{.OPENAPI_FILE}} {{.OPENAPI_FILE}}.tmp | head -80
+          rm -f {{.OPENAPI_FILE}}.tmp
+          exit 1
+        fi
+        rm -f {{.OPENAPI_FILE}}.tmp
+
+  openapi:report:
+    desc: Show vacuum category breakdown against our ruleset.
+    cmds:
+      - |
+        vacuum report --stdout -r {{.VACUUM_RULESET}} {{.OPENAPI_FILE}} | \
+          jq -r '.statistics | "Overall: \(.overallScore)/100  warnings=\(.totalWarnings)  errors=\(.totalErrors // 0)", "",
+                  (.categoryStatistics[] | "  \(.categoryName | . + "                              " | .[0:30]) score=\(.score)  issues=\(.numIssues)")'
+
+  openapi:dashboard:
+    desc: Open interactive vacuum dashboard.
+    cmds:
+      - vacuum dashboard --ruleset {{.VACUUM_RULESET}} {{.OPENAPI_FILE}}
+
+  # ============================================================
+  # Markdown — excludes refs/
+  # ============================================================
+
+  check:markdown:
+    cmds:
+      # Quote glob so shell doesn't expand; pass negations in markdownlint-cli2 format.
+      - markdownlint-cli2 "#**/*.md" "#!node_modules" "#!web/node_modules" "#!.task" "#!refs"
+      - prettier --check "**/*.md" --ignore-path .gitignore
+
+  fmt:markdown:
+    cmds:
+      - markdownlint-cli2 --fix "#**/*.md" "#!node_modules" "#!web/node_modules" "#!.task" "#!refs" || true
+      - prettier --write "**/*.md" --ignore-path .gitignore
+
+  # ============================================================
+  # YAML — excludes refs/ and api/openapi.yaml
+  # ============================================================
+
+  check:yaml:
+    cmds:
+      - |
+        # yamllint -s means strict (warnings count as failures).
+        # Pass specific directories, not ".", to avoid refs/ and node_modules/.
+        yamllint -s . --no-warnings=false 2>/dev/null || \
+          yamllint -s $(find . -maxdepth 4 -type f \( -name '*.yaml' -o -name '*.yml' \) \
+            -not -path './.git/*' \
+            -not -path './refs/*' \
+            -not -path './node_modules/*' \
+            -not -path './web/node_modules/*' \
+            -not -path './.task/*' \
+            -not -path './dist/*')
+
+  # ============================================================
+  # Shell — excludes refs/
+  # ============================================================
+
+  check:shell:
+    cmds:
+      - |
+        files=$(find . -type f \( -name '*.sh' -o -name '*.bash' \) \
+          -not -path './.git/*' \
+          -not -path './refs/*' \
+          -not -path './node_modules/*' \
+          -not -path './web/node_modules/*' \
+          -not -path './.task/*')
+        if [ -z "$files" ]; then
+          echo "no shell scripts found"
+          exit 0
+        fi
+        echo "$files" | xargs shellcheck -S style
+        echo "$files" | xargs shfmt -d -i 2 -ci -bn
+
+  fmt:shell:
+    cmds:
+      - |
+        find . -type f \( -name '*.sh' -o -name '*.bash' \) \
+          -not -path './.git/*' \
+          -not -path './refs/*' \
+          -not -path './node_modules/*' \
+          -not -path './web/node_modules/*' \
+          -not -path './.task/*' \
+          -print0 | xargs -0 shfmt -w -i 2 -ci -bn
+
+  # ============================================================
+  # Go
+  # ============================================================
+
+  check:go:
+    desc: Go build + vet + lint + vuln + tidy + test + coverage gate.
+    deps:
+      - check:go:build
+      - check:go:vet
+      - check:go:lint
+      - check:go:vuln
+      - check:go:modtidy
+      - check:go:test
+      - check:go:coverage
+
+  check:go:build:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then echo "no go.mod yet; skipping"; exit 0; fi
+        go build {{.GO_PKG}}
+
+  check:go:vet:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        go vet {{.GO_PKG}}
+
+  check:go:lint:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        golangci-lint run --timeout 5m
+
+  check:go:vuln:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        govulncheck {{.GO_PKG}}
+
+  check:go:modtidy:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        cp go.mod go.mod.bak; cp go.sum go.sum.bak 2>/dev/null || true
+        go mod tidy
+        if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum go.sum.bak >/dev/null 2>&1 ); then
+          mv go.mod.bak go.mod; mv go.sum.bak go.sum 2>/dev/null || true
+          echo "FAIL: go.mod or go.sum not tidy. Run: go mod tidy"
+          exit 1
+        fi
+        rm -f go.mod.bak go.sum.bak
+
+  check:go:test:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        go test -race -coverprofile={{.COVERAGE_OUT}} {{.GO_PKG}}
+
+  check:go:coverage:
+    cmds:
+      - |
+        if [ ! -f {{.COVERAGE_OUT}} ]; then echo "no coverage yet; skipping gate"; exit 0; fi
+        bash scripts/check-coverage.sh {{.COVERAGE_OUT}}
+
+  test:go:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        go test -race {{.GO_PKG}}
+
+  fmt:go:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then exit 0; fi
+        gofumpt -w .
+        goimports -w -local github.com/Bizarre-Industries/Helling .
+
+  # ============================================================
+  # Frontend
+  # ============================================================
+
+  check:frontend:
+    dir: web
+    cmds:
+      - |
+        if [ ! -f package.json ]; then echo "web/ not present; skipping"; exit 0; fi
+        bun install --frozen-lockfile
+        bunx biome check .
+        bunx tsc --noEmit
+    status:
+      - test ! -d web/
+
+  check:frontend:gen:
+    dir: web
+    desc: Verify generated API client matches committed output.
+    cmds:
+      - |
+        if [ ! -f package.json ]; then exit 0; fi
+        bun run gen:api
+        if ! git diff --quiet -- src/api/generated 2>/dev/null; then
+          echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
+          git diff --stat -- src/api/generated
+          exit 1
+        fi
+
+  fmt:frontend:
+    dir: web
+    cmds:
+      - |
+        if [ ! -f package.json ]; then exit 0; fi
+        bunx biome format --write .
+
+  test:frontend:
+    dir: web
+    cmds:
+      - |
+        if [ ! -f package.json ]; then exit 0; fi
+        bun test
+
+  # ============================================================
+  # SQL
+  # ============================================================
+
+  check:sql:
+    cmds:
+      - task: check:sql:lint
+      - task: check:sql:sqlc
+      - task: check:sql:goose
+
+  check:sql:lint:
+    cmds:
+      - |
+        if [ ! -d db/ ]; then exit 0; fi
+        sqlfluff lint db/
+
+  check:sql:sqlc:
+    cmds:
+      - |
+        if [ ! -f sqlc.yaml ]; then exit 0; fi
+        sqlc generate
+        if ! git diff --quiet -- internal/db/queries 2>/dev/null; then
+          echo "FAIL: sqlc-generated code out of sync. Run: sqlc generate"
+          git diff --stat -- internal/db/queries
+          exit 1
+        fi
+
+  check:sql:goose:
+    cmds:
+      - |
+        if [ ! -d db/migrations ]; then exit 0; fi
+        tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+        export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="$tmp/test.db"
+        goose -dir db/migrations up
+        goose -dir db/migrations down-to 0
+        goose -dir db/migrations up
+
+  # ============================================================
+  # Secrets, spelling, links, parity
+  # ============================================================
+
+  check:secrets:
+    desc: Gitleaks — respects .gitleaks.toml allowlist (excludes refs/).
+    cmds:
+      - |
+        if [ -f .gitleaks.toml ]; then
+          gitleaks detect --no-banner --redact --exit-code 1 --config .gitleaks.toml
+        else
+          gitleaks detect --no-banner --redact --exit-code 1
+        fi
+
+  check:spelling:
+    desc: typos — respects typos.toml exclusions.
+    cmds:
+      - typos
+
+  check:links:
+    cmds:
+      - lychee --offline --no-progress docs/ README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md
+
+  check:parity:
+    desc: API ↔ CLI ↔ WebUI parity check.
+    cmds:
+      - bash scripts/check-parity.sh
+
+  # ============================================================
+  # Security (not in default check)
+  # ============================================================
+
+  security:grype:
+    cmds:
+      - |
+        if [ ! -d dist/ ]; then
+          echo "No dist/ yet; run 'task build' first"
+          exit 0
+        fi
+        grype dir:dist/ --fail-on high
+
+  security:codeql:
+    cmds:
+      - |
+        if ! command -v codeql >/dev/null; then
+          echo "codeql CLI not installed; CodeQL runs in CI via GitHub Actions"
+          exit 0
+        fi
+        codeql database create .codeql-db --language=go --overwrite --source-root=.
+        codeql database analyze .codeql-db \
+          --format=sarif-latest \
+          --output=codeql-results.sarif \
+          codeql/go-queries:codeql-suites/go-security-extended.qls
+
+  # ============================================================
+  # Build
+  # ============================================================
+
+  build:
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then echo "no go.mod yet; nothing to build"; exit 0; fi
+        mkdir -p bin
+        for cmd in apps/hellingd apps/helling-cli apps/helling-proxy apps/helling-agent; do
+          if [ -d "$cmd" ]; then
+            name=$(basename "$cmd")
+            go build -trimpath -ldflags='-s -w' -o "bin/$name" "./$cmd"
+          fi
+        done
+
+  # ============================================================
+  # Generation sub-tasks
+  # ============================================================
+
+  gen:go:cli:
+    cmds:
+      - |
+        if [ -f apps/helling-cli/internal/client/oapi-codegen.yaml ]; then
+          oapi-codegen --config apps/helling-cli/internal/client/oapi-codegen.yaml {{.OPENAPI_FILE}}
+        fi
+
+  gen:frontend:
+    dir: web
+    cmds:
+      - |
+        if [ -f package.json ]; then
+          bun run gen:api
+        fi
+
+  gen:sqlc:
+    cmds:
+      - |
+        if [ -f sqlc.yaml ]; then
+          sqlc generate
+        fi

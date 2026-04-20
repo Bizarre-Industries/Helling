@@ -1,0 +1,142 @@
+# lefthook.yml
+#
+# Git hooks for Helling.
+# Install: task hooks   (or: lefthook install)
+# Skip once: LEFTHOOK=0 git commit ...
+# Skip specific hooks: LEFTHOOK_EXCLUDE=gitleaks,typos git commit ...
+# Bypass entirely: git commit --no-verify   (CI will still catch you)
+#
+# Philosophy:
+#   pre-commit  — fast (<10s), staged-files-only, auto-fix when safe
+#   pre-push    — thorough (~60-120s), mirrors CI exactly
+#   commit-msg  — conventional-commit enforcement
+
+# ============================================================
+# PRE-COMMIT — fast, staged-files-only
+# ============================================================
+pre-commit:
+  parallel: true
+  commands:
+
+    gitleaks:
+      tags: secrets fast
+      run: gitleaks protect --staged --no-banner --redact
+
+    gofmt:
+      tags: go format fast
+      glob: '*.go'
+      run: |
+        unformatted=$(gofmt -l {staged_files} 2>/dev/null)
+        if [ -n "$unformatted" ]; then
+          echo "formatting Go files: $unformatted"
+          gofmt -w $unformatted
+          git add $unformatted
+        fi
+
+    goimports:
+      tags: go format fast
+      glob: '*.go'
+      run: |
+        if ! command -v goimports >/dev/null; then exit 0; fi
+        goimports -w -local github.com/Bizarre-Industries/Helling {staged_files}
+        git add {staged_files}
+
+    markdownlint:
+      tags: markdown fast
+      glob: '*.md'
+      exclude: 'refs/.*'
+      # IMPORTANT: pass staged files ONLY, not a trailing glob. The prior
+      # form ("markdownlint-cli2 {staged_files}") caused lefthook to append
+      # the glob default, which made the linter scan every .md in the repo.
+      run: markdownlint-cli2 {staged_files}
+
+    prettier-md:
+      tags: markdown format fast
+      glob: '*.md'
+      exclude: 'refs/.*'
+      run: |
+        prettier --write {staged_files} 2>/dev/null
+        git add {staged_files}
+
+    yamllint:
+      tags: yaml fast
+      glob: '*.{yaml,yml}'
+      exclude: 'api/openapi\.yaml|refs/.*'
+      run: yamllint -s {staged_files}
+
+    shellcheck:
+      tags: shell fast
+      glob: '*.{sh,bash}'
+      exclude: 'refs/.*'
+      run: shellcheck -S style {staged_files}
+
+    shfmt:
+      tags: shell format fast
+      glob: '*.{sh,bash}'
+      exclude: 'refs/.*'
+      run: |
+        shfmt -w -i 2 -ci -bn {staged_files}
+        git add {staged_files}
+
+    vacuum:
+      tags: openapi
+      glob: 'api/openapi.yaml'
+      run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
+
+    typos:
+      tags: docs fast
+      glob: '*.md'
+      exclude: 'refs/.*'
+      run: typos {staged_files}
+
+# ============================================================
+# PRE-PUSH — full CI-equivalent gate
+# ============================================================
+pre-push:
+  parallel: false
+  commands:
+
+    banner:
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Running full quality gate before push. ~60-120s."
+        echo "Skip: git push --no-verify (CI will still catch you)"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    check:
+      run: task check
+
+# ============================================================
+# COMMIT-MSG — conventional commits
+# ============================================================
+commit-msg:
+  commands:
+    conventional:
+      run: |
+        msg_file="{1}"
+        first_line=$(head -n1 "$msg_file")
+
+        pattern='^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert|spec|adr)(\(.+\))?!?: .{1,}'
+
+        if ! echo "$first_line" | grep -qE "$pattern"; then
+          echo ""
+          echo "✗ Commit message does not follow Conventional Commits."
+          echo ""
+          echo "Got:      $first_line"
+          echo ""
+          echo "Expected: <type>(<scope>)?: <subject>"
+          echo "          <type>!: <subject>  (for breaking changes)"
+          echo ""
+          echo "Types:    feat fix chore docs style refactor perf test build ci revert spec adr"
+          echo ""
+          echo "Examples: feat(auth): add TOTP verification"
+          echo "          fix: handle nil response in webhook delivery"
+          echo "          docs(spec): document rate limit semantics"
+          echo "          refactor!: rename UserCreate -> userCreate for consistency"
+          echo ""
+          exit 1
+        fi
+
+        if [ ${#first_line} -gt 72 ]; then
+          echo "warn: commit subject is ${#first_line} chars (prefer <=72)"
+        fi

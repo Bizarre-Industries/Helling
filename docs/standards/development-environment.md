@@ -1,42 +1,82 @@
 # Development Environment Standard
 
-Recommended contributor environment for non-Linux hosts is a Lima VM running Debian.
+Standard local environment and workflow for Helling contributors.
 
 ## Scope
 
-This standard applies to macOS and Windows contributors who need Linux-native behavior for Incus, systemd, and socket-based workflows.
+Applies to all contributors. Linux-native development is supported. macOS/Windows should use Lima (ADR-034) for Linux-native Incus/systemd behavior.
 
-## Baseline
+## Required Toolchain
 
-- Host: macOS or Windows
+- Go 1.26
+- Bun
+- make
+- git
+- optional: task (Taskfile workflow)
+
+## Recommended Environments
+
+1. Linux host: develop directly on host.
+2. macOS/Windows: Lima Debian VM.
+
+## Lima Baseline (macOS/Windows)
+
 - VM manager: Lima
 - Guest OS: Debian stable
-- Toolchain in guest: Go, Bun, Make, git, Incus CLI
+- Sizing: enough CPU/RAM/disk for Go + web builds and local checks
 
-## Setup Outline
-
-1. Install Lima on host.
-2. Create Debian Lima instance with enough CPU/RAM/disk for local builds.
-3. Install required tooling inside VM.
-4. Clone repository in VM and run bootstrap commands.
-5. Use VS Code remote development attached to the Lima VM.
-
-## Commands (inside VM)
+Inside VM:
 
 ```bash
 sudo apt update
 sudo apt install -y build-essential git curl make
-# Install Go/Bun per project version requirements
 ```
+
+Install Go/Bun per repository requirements, then bootstrap project.
+
+## Standard Local Workflow
+
+See `docs/spec/local-dev.md` for normative step-by-step workflow.
+
+Common command sequence:
+
+```bash
+make dev-setup
+make generate
+make fmt-check
+make lint
+make test
+```
+
+Task workflow equivalent:
+
+```bash
+task install
+task hooks
+task check
+```
+
+## Hook Installation
+
+If lefthook is enabled in the repository:
+
+```bash
+task hooks
+```
+
+Expected behavior:
+
+- pre-commit runs fast checks
+- pre-push runs full checks
 
 ## Validation
 
-- `go version` matches project requirement
+- `go version` reports 1.26.x
 - `bun --version` is available
-- `make` is available
-- Incus socket/client operations function in VM
+- generation/lint/test commands run locally
+- Git hooks install and execute correctly
 
 ## Notes
 
 - This standard complements ADR-034.
-- Linux-native contributors may develop directly on host without Lima.
+- Environment details can evolve, but required checks/gates may not be skipped.

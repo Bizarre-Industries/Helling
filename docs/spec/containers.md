@@ -27,7 +27,7 @@ WebSocket exec sessions go through the proxy with WebSocket upgrade support. The
 
 Compose stack management shells out to `podman compose` (ADR-018). The Helling API provides stack tracking:
 
-```
+```text
 POST /api/v1/stacks          → writes compose file, runs podman compose up
 GET  /api/v1/stacks          → lists tracked stacks
 DELETE /api/v1/stacks/{name} → runs podman compose down, removes files

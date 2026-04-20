@@ -33,16 +33,12 @@ import {
   ProFormSlider,
   ProFormSwitch,
   ProFormDigit,
-  ProFormDependency,
+  ProFormDependency
 } from "@ant-design/pro-components";
 import { Descriptions, Segmented, Collapse, Alert } from "antd";
 import { useState } from "react";
 
-export function CreateInstanceWizard({
-  onFinish,
-}: {
-  onFinish: (values: any) => Promise<void>;
-}) {
+export function CreateInstanceWizard({ onFinish }: { onFinish: (values: any) => Promise<void> }) {
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
 
   return (
@@ -56,8 +52,8 @@ export function CreateInstanceWizard({
             { required: true },
             {
               pattern: /^[a-z0-9-]+$/,
-              message: "Lowercase, numbers, hyphens only",
-            },
+              message: "Lowercase, numbers, hyphens only"
+            }
           ]}
           tooltip="Instance hostname. Used for DNS: name.helling.local"
         />
@@ -125,7 +121,7 @@ export function CreateInstanceWizard({
                         { label: "kvm64 (safe default)", value: "kvm64" },
                         { label: "max (all host features)", value: "max" },
                         { label: "EPYC-Genoa", value: "EPYC-Genoa" },
-                        { label: "Skylake-Server", value: "Skylake-Server" },
+                        { label: "Skylake-Server", value: "Skylake-Server" }
                       ]}
                     />
                     <ProFormSwitch
@@ -139,7 +135,7 @@ export function CreateInstanceWizard({
                       tooltip="Pin to specific cores (e.g., 0-3 or 0,2,4,6). Use with NUMA."
                     />
                   </>
-                ),
+                )
               },
               {
                 key: "memory-advanced",
@@ -172,11 +168,11 @@ export function CreateInstanceWizard({
                       options={[
                         { label: "None", value: "none" },
                         { label: "2MB", value: "2MB" },
-                        { label: "1GB", value: "1GB" },
+                        { label: "1GB", value: "1GB" }
                       ]}
                     />
                   </>
-                ),
+                )
               },
               {
                 key: "system-advanced",
@@ -190,7 +186,7 @@ export function CreateInstanceWizard({
                       tooltip="OVMF (UEFI) recommended. SeaBIOS for legacy OS."
                       options={[
                         { label: "OVMF (UEFI)", value: "OVMF" },
-                        { label: "SeaBIOS (Legacy)", value: "SeaBIOS" },
+                        { label: "SeaBIOS (Legacy)", value: "SeaBIOS" }
                       ]}
                     />
                     <ProFormDependency name={["firmware"]}>
@@ -212,7 +208,7 @@ export function CreateInstanceWizard({
                       options={[
                         { label: "None", value: "none" },
                         { label: "v2.0 (recommended)", value: "2.0" },
-                        { label: "v1.2 (legacy)", value: "1.2" },
+                        { label: "v1.2 (legacy)", value: "1.2" }
                       ]}
                     />
                     <ProFormSwitch
@@ -222,8 +218,8 @@ export function CreateInstanceWizard({
                       tooltip="Enables freeze-on-backup and filesystem info."
                     />
                   </>
-                ),
-              },
+                )
+              }
             ]}
           />
         )}
@@ -246,7 +242,7 @@ export function CreateInstanceWizard({
               initialValue="virtio"
               options={[
                 { label: "VirtIO (best)", value: "virtio" },
-                { label: "e1000 (compatible)", value: "e1000" },
+                { label: "e1000 (compatible)", value: "e1000" }
               ]}
             />
             <ProFormDigit
@@ -292,18 +288,10 @@ export function CreateInstanceWizard({
 ### ModalForm (Quick Add)
 
 ```tsx
-import {
-  ModalForm,
-  ProFormText,
-  ProFormSelect,
-} from "@ant-design/pro-components";
+import { ModalForm, ProFormText, ProFormSelect } from "@ant-design/pro-components";
 import { Button } from "antd";
 
-export function AddFirewallRuleButton({
-  instanceName,
-}: {
-  instanceName: string;
-}) {
+export function AddFirewallRuleButton({ instanceName }: { instanceName: string }) {
   return (
     <ModalForm
       title="Add Firewall Rule"
@@ -320,7 +308,7 @@ export function AddFirewallRuleButton({
         options={[
           { label: "Accept", value: "accept" },
           { label: "Drop", value: "drop" },
-          { label: "Reject", value: "reject" },
+          { label: "Reject", value: "reject" }
         ]}
       />
       <ProFormSelect
@@ -329,7 +317,7 @@ export function AddFirewallRuleButton({
         rules={[{ required: true }]}
         options={[
           { label: "Inbound", value: "in" },
-          { label: "Outbound", value: "out" },
+          { label: "Outbound", value: "out" }
         ]}
       />
       <ProFormSelect
@@ -338,7 +326,7 @@ export function AddFirewallRuleButton({
         options={[
           { label: "TCP", value: "tcp" },
           { label: "UDP", value: "udp" },
-          { label: "ICMP", value: "icmp" },
+          { label: "ICMP", value: "icmp" }
         ]}
       />
       <ProFormText

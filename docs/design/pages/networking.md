@@ -41,12 +41,15 @@ Sidebar: "Network" selected. Main panel: Tabs for network types + topology view.
 ## States
 
 ### Empty State
+
 "No custom networks. Instances use the default bridge." [Create Network]. "Create isolated networks for different workloads."
 
 ### Loading State
+
 Cached network list shown. Lease/forward tables load on network selection.
 
 ### Error State
+
 Network interface down: status Badge shows error. Connected instances listed with warning.
 
 ## User Actions

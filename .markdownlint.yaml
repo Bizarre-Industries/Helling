@@ -1,0 +1,33 @@
+# markdownlint configuration for Helling.
+# Rules reference: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+# Line-length: noisy at fixed width. Prettier handles prose wrapping.
+MD013: false
+
+# Inline HTML allowed — needed for markdownlint-disable comments and tables.
+MD033: false
+
+# First-line-h1 not required — some files start with frontmatter/callouts.
+MD041: false
+
+# Fenced code blocks must declare a language (portability, syntax highlighting).
+MD040: true
+
+# Emphasis-as-heading: allow bold pseudo-headers in compact docs.
+MD036: false
+
+# Heading duplicates allowed across sibling sections.
+MD024:
+  siblings_only: true
+
+# Allow ':' in heading endings for "Context:" style subheads.
+MD026:
+  punctuation: ".,;!?"
+
+# MD060 (table-column-style): disabled because it conflicts with prettier's
+# table formatting. Prettier and markdownlint-cli2 disagree on whether pipes
+# should have inner spaces in compact tables. Since prettier is the formatter
+# of record, and MD060 is style (not correctness), we disable it.
+MD060: false

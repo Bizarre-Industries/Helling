@@ -10,7 +10,7 @@
 
 ---
 
-## Architecture Decisions (ADRs 001-043)
+## Architecture Decisions (ADRs 001-048)
 
 | #   | Decision                                                      | Status                |
 | --- | ------------------------------------------------------------- | --------------------- |
@@ -49,7 +49,11 @@
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 | 042 | Security scanning stack consolidation                         | Accepted              |
 | 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |
-| 044 | hey-api/openapi-ts for WebUI code generation                  | Proposed              |
+| 044 | hey-api/openapi-ts for WebUI code generation                  | Accepted              |
+| 045 | APT repository tooling decision                               | Proposed              |
+| 046 | ISO build tooling decision                                    | Proposed              |
+| 047 | Dark mode scope for v0.1                                      | Proposed              |
+| 048 | Mobile scope for v0.1                                         | Proposed              |
 
 ---
 
@@ -108,7 +112,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] Health endpoint
 - [ ] SSE events endpoint (aggregates Incus events)
 - [ ] OpenAPI spec: ~40 Helling endpoints with envelopes, pagination, error schemas
-- [ ] oapi-codegen strict-server generation from spec
+- [ ] Huma operation registration + generated OpenAPI from code
 - [ ] Delete legacy: manual router, all handlers\_\*.go, strict_handlers.go, response.go
 - [ ] Delete Docker mode: Dockerfile, devauth.go, entrypoint.sh
 - [ ] Remove unused Go deps (podman bindings, google/nftables, gocron)
@@ -116,7 +120,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 #### Frontend (Beta)
 
 - [ ] Three API clients: hellingClient, incusClient, podmanClient
-- [ ] orval hooks for Helling API
+- [ ] hey-api/openapi-ts generated SDK/hooks for Helling API
 - [ ] Dashboard page: system stats from Incus proxy
 - [ ] Instances page: list from Incus proxy
 - [ ] Containers page: list from Podman proxy

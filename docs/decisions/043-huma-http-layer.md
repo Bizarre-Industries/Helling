@@ -58,7 +58,9 @@ Implementation constraints:
 3. Keep vacuum contract policy as a regression gate:
    - Continue running `vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml` in CI.
    - Treat generated OpenAPI as source-of-truth artifact for review and drift detection.
-   - Retain custom intent rules (writeOnly, ULID patterns, envelope constraints, pagination shape) to catch accidental type/tag regressions.
+   - Retain custom intent rules (writeOnly, ULID patterns,
+     envelope constraints, pagination shape) to catch accidental
+     type/tag regressions.
 
 ## Implementation roadmap
 
@@ -89,7 +91,7 @@ If any criterion fails, stop rollout and remediate compatibility gaps before bro
 3. Generate and commit `api/openapi.yaml` from Huma during `make generate`.
 4. Keep downstream codegen unchanged:
    - `oapi-codegen` client for CLI
-   - `orval` hooks/models for frontend
+   - `hey-api/openapi-ts` hooks/models for frontend
 5. Enforce CI gates:
    - `make check-generated`
    - vacuum ruleset pass
@@ -109,7 +111,7 @@ Completion criteria:
 | Helling-owned handlers | Manual `net/http` + docs-first schema coupling | Migration target defined             | Huma operation handlers for all ~34 Helling endpoints          |
 | Spec quality gate      | Manual hygiene burden; drift-prone             | Code-first intent adopted            | 100/100 by construction + custom intent-rule regression checks |
 | CLI client generation  | `oapi-codegen` from hand-authored spec         | No tool change                       | `oapi-codegen` from generated `openapi.yaml`                   |
-| Frontend hooks/models  | `orval` from hand-authored spec                | No tool change                       | `orval` from generated `openapi.yaml`                          |
+| Frontend hooks/models  | `orval` from hand-authored spec                | Migration to hey-api planned         | `hey-api/openapi-ts` from generated `openapi.yaml`             |
 
 ## Consequences
 
@@ -128,6 +130,6 @@ Harder:
 ## Follow-up documents to update when this ADR is accepted
 
 - docs/design/openapi-pipeline.md
-- docs/standards/standards-quality-assurance.md (OpenAPI gate semantics)
+- docs/standards/quality-assurance.md (OpenAPI gate semantics)
 - docs/roadmap/implementation-guide.md
 - docs/roadmap/plan.md

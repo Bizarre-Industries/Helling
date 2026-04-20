@@ -11,7 +11,7 @@ This directory contains Helling's implementation roadmap and planning documents.
 
 **Contains:**
 
-- Architecture Decisions (ADRs 001-044)
+- Architecture Decisions (ADRs 001-048)
 - Automation & Tooling Index (28 tools)
 - Version gates and feature lists for v0.1-v1.0
 - Post-v1 feature ideas
@@ -101,9 +101,10 @@ Follow this sequence from [implementation-guide.md](./implementation-guide.md):
    - Define schemas, pagination, error responses
 
 2. **Code Generation** (Section 1.2) - CRITICAL
-   - Set up oapi-codegen for backend + CLI
-   - Set up orval for frontend
-   - Wire into Makefile
+   - Set up Huma generation for backend OpenAPI artifact
+   - Keep oapi-codegen for CLI client
+   - Set up hey-api/openapi-ts for frontend
+   - Wire into Makefile/Taskfile
 
 3. **Proxy Middleware** (Section 1.3) - CRITICAL
    - Implement core proxy in `internal/proxy/`
@@ -164,7 +165,7 @@ Follow this sequence from [implementation-guide.md](./implementation-guide.md):
 
 ---
 
-## Questions?
+## Questions
 
 - **Architecture questions:** See [docs/spec/architecture.md](../spec/architecture.md)
 - **API design:** See [docs/spec/api.md](../spec/api.md)

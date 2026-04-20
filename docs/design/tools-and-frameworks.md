@@ -7,23 +7,23 @@
 
 ## Backend (hellingd)
 
-| Concern                | Tool                           | What it does                   | Custom code                  |
-| ---------------------- | ------------------------------ | ------------------------------ | ---------------------------- |
-| HTTP routing           | `net/http` ServeMux            | Method/path matching in stdlib | ~100 lines (router wiring)   |
-| API types + validation | `oapi-codegen` (strict-server) | Types + router from spec       | Handler implementations only |
-| Auth (PAM)             | `msteinert/pam`                | PAM conversation               | ~100 lines                   |
-| Auth (JWT)             | `golang-jwt/jwt/v5`            | Token create/verify            | ~200 lines                   |
-| Auth (TOTP)            | `pquerna/otp`                  | QR generation, code verify     | ~100 lines                   |
-| Database               | `database/sql` + `sqlc`        | Helling state only (ADR-038)   | SQL files + generated code   |
-| Migrations             | `goose`                        | Forward-only SQL migrations    | Migration files              |
-| Config                 | `gopkg.in/yaml.v3`             | YAML + env vars                | Config loader                |
-| BMC                    | `bmc-toolbox/bmclib/v2`        | IPMI, Redfish                  | Thin wrapper                 |
-| Proxy                  | `net/http/httputil`            | Reverse proxy to Unix sockets  | ~300 lines                   |
-| Scheduling             | `systemd timers`               | Backup/snapshot cron (ADR-017) | Unit file generation         |
-| Audit                  | `log/slog` → journal           | Structured logging (ADR-019)   | Zero — slog is stdlib        |
-| Firewall               | `nft` CLI (shell out)          | Host nftables rules (ADR-018)  | exec.Command wrapper         |
-| Disk health            | `smartctl` CLI (shell out)     | SMART data (ADR-018)           | exec.Command wrapper         |
-| System info            | OS tools via shell-out         | CPU, RAM, disk, NICs           | exec.Command wrappers        |
+| Concern                | Tool                           | What it does                     | Custom code                  |
+| ---------------------- | ------------------------------ | -------------------------------- | ---------------------------- |
+| HTTP routing           | `net/http` ServeMux + `humago` | ServeMux baseline + Huma adapter | ~100 lines (router wiring)   |
+| API types + validation | `huma` operation structs/tags  | Validation + OpenAPI from code   | Handler implementations only |
+| Auth (PAM)             | `msteinert/pam`                | PAM conversation                 | ~100 lines                   |
+| Auth (JWT)             | `golang-jwt/jwt/v5`            | Token create/verify              | ~200 lines                   |
+| Auth (TOTP)            | `pquerna/otp`                  | QR generation, code verify       | ~100 lines                   |
+| Database               | `database/sql` + `sqlc`        | Helling state only (ADR-038)     | SQL files + generated code   |
+| Migrations             | `goose`                        | Forward-only SQL migrations      | Migration files              |
+| Config                 | `gopkg.in/yaml.v3`             | YAML + env vars                  | Config loader                |
+| BMC                    | `bmc-toolbox/bmclib/v2`        | IPMI, Redfish                    | Thin wrapper                 |
+| Proxy                  | `net/http/httputil`            | Reverse proxy to Unix sockets    | ~300 lines                   |
+| Scheduling             | `systemd timers`               | Backup/snapshot cron (ADR-017)   | Unit file generation         |
+| Audit                  | `log/slog` → journal           | Structured logging (ADR-019)     | Zero — slog is stdlib        |
+| Firewall               | `nft` CLI (shell out)          | Host nftables rules (ADR-018)    | exec.Command wrapper         |
+| Disk health            | `smartctl` CLI (shell out)     | SMART data (ADR-018)             | exec.Command wrapper         |
+| System info            | OS tools via shell-out         | CPU, RAM, disk, NICs             | exec.Command wrappers        |
 
 ### hellingd go.mod (target)
 
@@ -65,25 +65,28 @@ Target shape: a small dependency set centered on stdlib routing, auth/JWT, confi
 
 ## Frontend (web)
 
-| Concern          | Tool                                                |
-| ---------------- | --------------------------------------------------- |
-| Components       | `antd` v6                                           |
-| Admin components | `@ant-design/pro-components`                        |
-| Charts           | `@ant-design/charts`                                |
-| CRUD framework   | `@ant-design/pro-components`                        |
-| Data fetching    | `@tanstack/react-query` (via orval for Helling API) |
-| Terminal         | `@xterm/xterm`                                      |
-| VM VGA console   | `@canonical/spice-html5` (dynamic import)           |
-| Code editor      | `CodeMirror 6` (dynamic import)                     |
-| Routing          | `react-router-dom` v7                               |
-| HTTP             | `fetch` wrapper (JWT injection)                     |
-| Icons            | `lucide-react`                                      |
+| Concern          | Tool                                             |
+| ---------------- | ------------------------------------------------ |
+| Components       | `antd` v6                                        |
+| Admin components | `@ant-design/pro-components`                     |
+| Charts           | `@ant-design/charts`                             |
+| CRUD framework   | `@ant-design/pro-components`                     |
+| Data fetching    | `@tanstack/react-query` (via hey-api/openapi-ts) |
+| Terminal         | `@xterm/xterm`                                   |
+| VM VGA console   | `@canonical/spice-html5` (dynamic import)        |
+| Code editor      | `CodeMirror 6` (dynamic import)                  |
+| Routing          | `react-router-dom` v7                            |
+| HTTP             | `fetch` wrapper (JWT injection)                  |
+| Icons            | `lucide-react`                                   |
 
 ### Frontend does NOT import
 
 | Don't import                      | Use instead                               |
 | --------------------------------- | ----------------------------------------- |
 | Additional browser console stacks | SPICE browser console is the v0.1 default |
+| `axios` for generated API surface | Fetch client generated by hey-api         |
+| `orval`                           | `@hey-api/openapi-ts`                     |
+| `@refinedev/*`                    | Ant Design + React Query + generated SDK  |
 
 ---
 

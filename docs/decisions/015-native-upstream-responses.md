@@ -15,6 +15,7 @@ Proxied Incus and Podman responses pass through in their native format. No re-en
 - **Helling responses:** `{data, meta}` envelope for success, `{error, code, action, doc_link}` for errors — only on the ~25 Helling-specific endpoints
 
 The frontend maintains separate API clients:
+
 - `hellingClient` — speaks Helling envelope format, used for auth/users/schedules/etc.
 - `incusClient` — speaks Incus native format, used for instances/storage/networks/etc.
 - `podmanClient` — speaks Podman native format, used for containers/images/volumes/etc.
@@ -22,12 +23,14 @@ The frontend maintains separate API clients:
 ## Consequences
 
 **Easier:**
+
 - Zero overhead on proxied requests (pass-through)
 - No type synchronization between Helling and upstream response schemas
 - Upstream API documentation directly applicable to Helling proxy endpoints
 - Proxy implementation is trivial (~200 lines)
 
 **Harder:**
+
 - Frontend handles three response formats (requires three typed API clients)
 - Can't add metadata to proxied responses (e.g., Helling tags on Incus instances must be fetched separately or read from Incus `user.*` config keys)
 - Error format differs between Helling endpoints and proxied endpoints

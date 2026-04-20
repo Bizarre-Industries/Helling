@@ -1,0 +1,45 @@
+# typos configuration for Helling.
+# https://github.com/crate-ci/typos
+
+[files]
+# Never scan vendored reference projects.
+extend-exclude = [
+  "refs/**",
+  "node_modules/**",
+  "web/node_modules/**",
+  ".task/**",
+  "dist/**",
+  "bin/**",
+  "web/src/api/generated/**",
+  "*.min.js",
+  "*.min.css",
+]
+
+[default]
+# Project-specific jargon that typos would flag otherwise.
+extend-ignore-re = [
+  "hellingd?",
+  "hellingprox",
+  "helling_[a-z_]+",
+  "incusd?",
+  "incus-[a-z-]+",
+  "hellingagent",
+  "\\$ref",
+  "0x[0-9a-fA-F]+",
+]
+
+extend-ignore-identifiers-re = [
+  "[A-Z]{2,}_[A-Z_]+",  # constants like FOO_BAR_BAZ
+]
+
+[default.extend-words]
+# Domain acronyms typos otherwise flags as typos.
+# Format: wrong-guess = correct-value   (when both sides match, it's an exemption)
+RTO = "RTO"      # Recovery Time Objective
+RPO = "RPO"      # Recovery Point Objective
+ND = "ND"        # Neighbor Discovery / non-disclosure etc.
+OT = "OT"        # Operational Technology
+IST = "IST"      # Instance State / Iraq Standard Time etc.
+
+[default.extend-identifiers]
+# Identifiers that look like typos but aren't.

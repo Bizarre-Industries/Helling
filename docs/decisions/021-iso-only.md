@@ -33,6 +33,7 @@ First impressions for prospective users: documentation, screenshots, and a 2-min
 ## Consequences
 
 **Easier:**
+
 - One code path, not two
 - No mode detection, no conditional features, no nil checks on services
 - No Docker-specific files (Dockerfile, entrypoint.sh, devauth.go)
@@ -41,6 +42,7 @@ First impressions for prospective users: documentation, screenshots, and a 2-min
 - hellingd startup is simpler: connect to sockets, start serving
 
 **Harder:**
+
 - Can't "try before you install" (but a video demo + docs serve this purpose)
 - Development requires a VM with Incus (but Lima makes this trivial on macOS/Linux)
 - CI requires VM-based testing (but this catches real bugs that Docker testing misses)

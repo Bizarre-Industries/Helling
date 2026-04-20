@@ -1,0 +1,8 @@
+# shellcheck configuration for Helling shell scripts.
+# Run: shellcheck -S style <script>
+
+# Follow sourced files for lint context.
+external-sources=true
+
+# SC1091 — "Not following: file was not specified as input". Benign during install-time sourcing.
+disable=SC1091

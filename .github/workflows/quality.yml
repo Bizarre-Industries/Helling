@@ -1,0 +1,286 @@
+name: Quality
+
+# The merge gate. Mirrors `task check` exactly.
+# Action pins resolved 2026-04-20 per ADR-026.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  openapi:
+    name: OpenAPI lint (score ≥100)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Install vacuum
+        run: curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh
+      - name: Lint
+        run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
+      - name: Gate score at 100 (against our ruleset)
+        run: |
+          score=$(vacuum report --stdout -r api/.vacuum.yaml api/openapi.yaml | jq -r '.statistics.overallScore // .overallScore // 0')
+          echo "openapi score: ${score}/100"
+          if [ "${score}" -lt 100 ]; then
+            echo "::error::openapi score ${score}/100 below minimum 100/100"
+            exit 1
+          fi
+
+  openapi-generated:
+    name: OpenAPI drift check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: Verify committed openapi.yaml matches Huma output
+        run: |
+          if [ -d apps/hellingd ]; then
+            go run ./tools/openapi-dump > /tmp/openapi.gen.yaml
+            diff -u api/openapi.yaml /tmp/openapi.gen.yaml || {
+              echo "::error::api/openapi.yaml drifted from Huma output. Run: task gen:openapi"
+              exit 1
+            }
+          else
+            echo "apps/hellingd not yet present; skipping drift check"
+          fi
+
+  markdown:
+    name: Markdown lint + prettier
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: DavidAnson/markdownlint-cli2-action@b4c9feab76d8025d1e83c653fa3990936df0e6c8 # v16.0.0
+        with:
+          globs: |
+            **/*.md
+            !node_modules
+            !web/node_modules
+            !refs
+      - name: Prettier check
+        run: |
+          npm i -g prettier@latest
+          prettier --check '**/*.md' --ignore-path .gitignore
+
+  yaml:
+    name: YAML lint (strict)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: Lint
+        run: |
+          # Exclude refs/ and node_modules/ from walk.
+          find . -maxdepth 4 -type f \( -name '*.yaml' -o -name '*.yml' \) \
+            -not -path './.git/*' \
+            -not -path './refs/*' \
+            -not -path './node_modules/*' \
+            -not -path './web/node_modules/*' \
+            -not -path './.task/*' \
+            -not -path './dist/*' \
+            -print0 | xargs -0 yamllint -s
+
+  shell:
+    name: Shell lint + format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.26"
+      - name: Install shellcheck + shfmt
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+      - name: Lint + format check
+        run: |
+          files=$(find . -type f \( -name '*.sh' -o -name '*.bash' \) \
+            -not -path './.git/*' \
+            -not -path './refs/*')
+          if [ -n "$files" ]; then
+            echo "$files" | xargs shellcheck -S style -e SC1091
+            echo "$files" | xargs shfmt -d -i 2 -ci -bn
+          fi
+
+  go:
+    name: Go build / vet / lint / vuln / test / coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: Skip if no go.mod
+        id: skip
+        run: |
+          if [ ! -f go.mod ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build
+        if: steps.skip.outputs.skip != 'true'
+        run: go build ./...
+      - name: Vet
+        if: steps.skip.outputs.skip != 'true'
+        run: go vet ./...
+      - name: Mod tidy check
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || {
+            echo "::error::go.mod or go.sum not tidy. Run: go mod tidy"
+            exit 1
+          }
+      - name: golangci-lint
+        if: steps.skip.outputs.skip != 'true'
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+        with:
+          version: latest
+          args: --timeout 5m
+      - name: Test with race + coverage
+        if: steps.skip.outputs.skip != 'true'
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: Coverage gate
+        if: steps.skip.outputs.skip != 'true'
+        run: bash scripts/check-coverage.sh coverage.out
+      - name: govulncheck
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  frontend:
+    name: Frontend lint / tsc / codegen drift / tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Skip if no web/package.json
+        id: skip
+        working-directory: .
+        run: |
+          if [ ! -f web/package.json ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        if: steps.skip.outputs.skip != 'true'
+      - name: Install
+        if: steps.skip.outputs.skip != 'true'
+        run: bun install --frozen-lockfile
+      - name: Biome check
+        if: steps.skip.outputs.skip != 'true'
+        run: bunx biome check .
+      - name: tsc
+        if: steps.skip.outputs.skip != 'true'
+        run: bunx tsc --noEmit
+      - name: Codegen drift
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          bun run gen:api
+          git diff --exit-code -- src/api/generated || {
+            echo "::error::frontend generated code drifted. Run: (cd web && bun run gen:api)"
+            exit 1
+          }
+      - name: Tests
+        if: steps.skip.outputs.skip != 'true'
+        run: bun test
+
+  sql:
+    name: SQL lint / sqlc drift / goose round-trip
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.26"
+      - name: Skip if no db/
+        id: skip
+        run: |
+          if [ ! -d db ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: sqlfluff
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          pipx install sqlfluff
+          sqlfluff lint db/
+      - name: Install sqlc (binary — avoids go.mod replace directive issue)
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          ver=$(curl -sSL https://api.github.com/repos/sqlc-dev/sqlc/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          curl -fsSL "https://github.com/sqlc-dev/sqlc/releases/download/v${ver}/sqlc_${ver}_linux_amd64.tar.gz" \
+            | tar -xzC /usr/local/bin sqlc
+      - name: sqlc drift
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          if [ -f sqlc.yaml ]; then
+            sqlc generate
+            git diff --exit-code -- internal/db/queries || {
+              echo "::error::sqlc-generated code drifted"
+              exit 1
+            }
+          fi
+      - name: goose round-trip
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@latest
+          if [ -d db/migrations ]; then
+            tmp=$(mktemp -d)
+            export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="$tmp/test.db"
+            goose -dir db/migrations up
+            goose -dir db/migrations down-to 0
+            goose -dir db/migrations up
+          fi
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  spelling:
+    name: Spelling (typos)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: crate-ci/typos@93c857b593a98e94ba33871b7130363df8b5d51f # master @ 2026-04-20
+
+  links:
+    name: Link check (lychee, offline)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        with:
+          args: --offline --no-progress docs/ README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md
+
+  parity:
+    name: API ↔ CLI ↔ WebUI parity
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Run parity check
+        run: |
+          pip install pyyaml
+          bash scripts/check-parity.sh

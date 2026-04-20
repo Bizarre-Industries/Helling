@@ -40,12 +40,15 @@ Sidebar: "Backups" selected. Main panel: 2 Tabs (Backups, Schedules).
 ## States
 
 ### Empty State
+
 "No backups configured. Your data is not protected." [Configure Backup Schedule]. "Helling can automatically back up all your instances on a schedule."
 
 ### Loading State
+
 Cached backup list shown. Schedule status updates via SSE.
 
 ### Error State
+
 Backup failed: status Badge red with error message in expandable row. Toast: "Backup of vm-web-1 failed: storage pool 'default' is full (98%). [View Storage] [Retry Backup]"
 
 ## User Actions

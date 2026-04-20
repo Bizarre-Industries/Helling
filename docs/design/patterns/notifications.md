@@ -25,7 +25,7 @@
 ### Toast Patterns
 
 ```tsx
-import { message, notification, Button, Space } from 'antd';
+import { message, notification, Button, Space } from "antd";
 
 // Success: brief, auto-dismiss
 function onInstanceStarted(name: string) {
@@ -38,7 +38,7 @@ function onInstanceDeleted(name: string, snapshotId: string) {
   notification.success({
     key,
     message: `${name} deleted`,
-    description: 'Auto-snapshot preserved for 60 seconds.',
+    description: "Auto-snapshot preserved for 60 seconds.",
     duration: 10,
     btn: (
       <Button
@@ -52,7 +52,7 @@ function onInstanceDeleted(name: string, snapshotId: string) {
       >
         Undo
       </Button>
-    ),
+    )
   });
 }
 
@@ -75,7 +75,7 @@ function onBackupFailed(instanceName: string, reason: string, poolPath?: string)
         </Space>
       </Space>
     ),
-    duration: 0, // persistent until dismissed
+    duration: 0 // persistent until dismissed
   });
 }
 
@@ -90,7 +90,7 @@ function onInstanceStartedWithWarning(name: string, warnings: string[]) {
         ))}
       </Space>
     ),
-    duration: 8,
+    duration: 8
   });
 }
 ```
@@ -98,20 +98,20 @@ function onInstanceStartedWithWarning(name: string, warnings: string[]) {
 ### SSE Event Handler
 
 ```tsx
-import { message, notification } from 'antd';
-import { queryClient } from './queryClient';
+import { message, notification } from "antd";
+import { queryClient } from "./queryClient";
 
 interface HellingEvent {
-  type: 'instance' | 'container' | 'backup' | 'storage' | 'cluster' | 'system';
+  type: "instance" | "container" | "backup" | "storage" | "cluster" | "system";
   action: string;
-  severity: 'info' | 'warning' | 'error' | 'critical';
+  severity: "info" | "warning" | "error" | "critical";
   resource: string;
   message: string;
   detail?: string;
 }
 
 export function initSSENotifications() {
-  const es = new EventSource('/api/v1/events');
+  const es = new EventSource("/api/v1/events");
 
   es.onmessage = (event) => {
     const data: HellingEvent = JSON.parse(event.data);
@@ -127,22 +127,22 @@ export function initSSENotifications() {
 
     // Show toast based on severity
     switch (data.severity) {
-      case 'info':
+      case "info":
         message.success(data.message, 3);
         break;
-      case 'warning':
+      case "warning":
         notification.warning({
           message: data.message,
           description: data.detail,
-          duration: 8,
+          duration: 8
         });
         break;
-      case 'error':
-      case 'critical':
+      case "error":
+      case "critical":
         notification.error({
           message: data.message,
           description: data.detail,
-          duration: 0,
+          duration: 0
         });
         break;
     }
@@ -155,9 +155,9 @@ export function initSSENotifications() {
 ### Notification Center (Bell Icon)
 
 ```tsx
-import { Badge, Button, Dropdown, List, Typography, Space } from 'antd';
-import { Bell, Check } from 'lucide-react';
-import { useState } from 'react';
+import { Badge, Button, Dropdown, List, Typography, Space } from "antd";
+import { Bell, Check } from "lucide-react";
+import { useState } from "react";
 
 const { Text } = Typography;
 
@@ -165,7 +165,7 @@ interface NotificationItem {
   id: string;
   message: string;
   detail?: string;
-  severity: 'info' | 'warning' | 'error' | 'critical';
+  severity: "info" | "warning" | "error" | "critical";
   timestamp: string;
   read: boolean;
 }
@@ -181,17 +181,32 @@ export function NotificationBell() {
 
   const severityColor = {
     info: undefined,
-    warning: 'orange',
-    error: 'red',
-    critical: 'red',
+    warning: "orange",
+    error: "red",
+    critical: "red"
   };
 
   return (
     <Dropdown
-      trigger={['click']}
+      trigger={["click"]}
       dropdownRender={() => (
-        <div style={{ width: 400, background: 'var(--ant-color-bg-elevated)', border: '1px solid var(--ant-color-border)', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--ant-color-border)' }}>
+        <div
+          style={{
+            width: 400,
+            background: "var(--ant-color-bg-elevated)",
+            border: "1px solid var(--ant-color-border)",
+            borderRadius: 4,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "8px 12px",
+              borderBottom: "1px solid var(--ant-color-border)"
+            }}
+          >
             <Text strong>Notifications</Text>
             {unreadCount > 0 && (
               <Button type="link" size="small" icon={<Check size={14} />} onClick={markAllRead}>
@@ -201,12 +216,12 @@ export function NotificationBell() {
           </div>
           <List
             dataSource={notifications.slice(0, 20)}
-            style={{ maxHeight: 400, overflow: 'auto' }}
+            style={{ maxHeight: 400, overflow: "auto" }}
             renderItem={(item) => (
               <List.Item
                 style={{
-                  padding: '8px 12px',
-                  background: item.read ? undefined : 'var(--ant-color-bg-text-hover)',
+                  padding: "8px 12px",
+                  background: item.read ? undefined : "var(--ant-color-bg-text-hover)"
                 }}
               >
                 <List.Item.Meta
@@ -217,14 +232,20 @@ export function NotificationBell() {
                   }
                   description={
                     <Space direction="vertical" size={0}>
-                      {item.detail && <Text type="secondary" style={{ fontSize: 12 }}>{item.detail}</Text>}
-                      <Text type="secondary" style={{ fontSize: 11 }}>{item.timestamp}</Text>
+                      {item.detail && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {item.detail}
+                        </Text>
+                      )}
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        {item.timestamp}
+                      </Text>
                     </Space>
                   }
                 />
               </List.Item>
             )}
-            locale={{ emptyText: 'No notifications' }}
+            locale={{ emptyText: "No notifications" }}
           />
         </div>
       )}
@@ -240,8 +261,8 @@ export function NotificationBell() {
 ### Notification Settings (Event Routing)
 
 ```tsx
-import { ProForm, ProFormSelect } from '@ant-design/pro-components';
-import { Descriptions, Switch, TimePicker, Typography } from 'antd';
+import { ProForm, ProFormSelect } from "@ant-design/pro-components";
+import { Descriptions, Switch, TimePicker, Typography } from "antd";
 
 export function NotificationSettings() {
   return (
@@ -250,44 +271,62 @@ export function NotificationSettings() {
       <Typography.Title level={5}>Channels</Typography.Title>
       <Descriptions bordered column={1} size="small">
         <Descriptions.Item label="Dashboard">Always enabled</Descriptions.Item>
-        <Descriptions.Item label="Discord"><ProFormText name="discordWebhook" placeholder="Webhook URL" /></Descriptions.Item>
-        <Descriptions.Item label="Slack"><ProFormText name="slackWebhook" placeholder="Webhook URL" /></Descriptions.Item>
-        <Descriptions.Item label="Email"><ProFormText name="smtpServer" placeholder="SMTP server" /></Descriptions.Item>
-        <Descriptions.Item label="Ntfy"><ProFormText name="ntfyUrl" placeholder="Ntfy server URL" /></Descriptions.Item>
-        <Descriptions.Item label="Telegram"><ProFormText name="telegramToken" placeholder="Bot token" /></Descriptions.Item>
-        <Descriptions.Item label="Gotify"><ProFormText name="gotifyUrl" placeholder="Server URL" /></Descriptions.Item>
+        <Descriptions.Item label="Discord">
+          <ProFormText name="discordWebhook" placeholder="Webhook URL" />
+        </Descriptions.Item>
+        <Descriptions.Item label="Slack">
+          <ProFormText name="slackWebhook" placeholder="Webhook URL" />
+        </Descriptions.Item>
+        <Descriptions.Item label="Email">
+          <ProFormText name="smtpServer" placeholder="SMTP server" />
+        </Descriptions.Item>
+        <Descriptions.Item label="Ntfy">
+          <ProFormText name="ntfyUrl" placeholder="Ntfy server URL" />
+        </Descriptions.Item>
+        <Descriptions.Item label="Telegram">
+          <ProFormText name="telegramToken" placeholder="Bot token" />
+        </Descriptions.Item>
+        <Descriptions.Item label="Gotify">
+          <ProFormText name="gotifyUrl" placeholder="Server URL" />
+        </Descriptions.Item>
       </Descriptions>
 
       {/* Event routing */}
-      <Typography.Title level={5} style={{ marginTop: 24 }}>Event Routing</Typography.Title>
+      <Typography.Title level={5} style={{ marginTop: 24 }}>
+        Event Routing
+      </Typography.Title>
       <ProFormSelect
         name="criticalChannels"
         label="Critical events (crash, backup fail, disk failing, cert expired)"
         mode="multiple"
         options={channelOptions}
-        initialValue={['dashboard', 'discord', 'email']}
+        initialValue={["dashboard", "discord", "email"]}
       />
       <ProFormSelect
         name="warningChannels"
         label="Warnings (storage >85%, backup stale, cert expiring)"
         mode="multiple"
         options={channelOptions}
-        initialValue={['dashboard', 'discord']}
+        initialValue={["dashboard", "discord"]}
       />
       <ProFormSelect
         name="infoChannels"
         label="Info (started, stopped, backup complete, snapshot created)"
         mode="multiple"
         options={channelOptions}
-        initialValue={['dashboard']}
+        initialValue={["dashboard"]}
       />
 
       {/* Quiet hours */}
-      <Typography.Title level={5} style={{ marginTop: 24 }}>Quiet Hours</Typography.Title>
+      <Typography.Title level={5} style={{ marginTop: 24 }}>
+        Quiet Hours
+      </Typography.Title>
       <Space>
         <Switch checkedChildren="On" unCheckedChildren="Off" />
         <TimePicker.RangePicker format="HH:mm" />
-        <Typography.Text type="secondary">Critical events still delivered during quiet hours</Typography.Text>
+        <Typography.Text type="secondary">
+          Critical events still delivered during quiet hours
+        </Typography.Text>
       </Space>
     </ProForm>
   );

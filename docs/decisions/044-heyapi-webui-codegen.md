@@ -1,6 +1,6 @@
 # ADR-044: hey-api/openapi-ts for WebUI code generation
 
-> Status: Proposed (2026-04-20)
+> Status: Accepted (2026-04-20)
 
 ## Context
 
@@ -85,4 +85,4 @@ Harder:
 - docs/design/tools-and-frameworks.md
 - docs/design/openapi-pipeline.md
 - docs/standards/coding.md
-- docs/standards/standards-quality-assurance.md
+- docs/standards/quality-assurance.md

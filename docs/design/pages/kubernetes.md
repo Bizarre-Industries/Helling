@@ -27,6 +27,7 @@ Sidebar: K8s section in resource tree. List view: ProTable of clusters. Detail v
 ## Components
 
 ### List (`/kubernetes`)
+
 - `ProTable` -- columns: name, flavor Tag, nodes, K8s version, status Badge, resource usage Progress
 - `StepsForm` -- create wizard (6 steps: Flavor cards, Control Plane sliders, Worker Pools repeatable section with labels/taints, Networking CNI Select + CIDR inputs, Add-ons checkboxes, Review Descriptions)
 
@@ -59,12 +60,15 @@ Sidebar: K8s section in resource tree. List view: ProTable of clusters. Detail v
 ## States
 
 ### Empty State
+
 "No Kubernetes clusters yet." [Create Cluster]. "Helling creates K8s clusters from Incus VMs with full lifecycle management."
 
 ### Loading State
+
 Cached cluster list shown. SSE pushes status changes during provisioning.
 
 ### Error State
+
 Cluster unhealthy: status Badge shows degraded. Events tab highlights errors. API unreachable: "(stale)" indicator.
 
 ## User Actions

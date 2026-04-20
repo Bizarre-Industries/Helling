@@ -1,0 +1,35 @@
+# Gitleaks config for Helling.
+# Extends the default ruleset; adds path-based allowlist for vendored refs.
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+title = "Helling gitleaks config"
+
+# Extend the default embedded ruleset; don't redefine all rules here.
+[extend]
+useDefault = true
+
+# Global allowlist — applies to every rule.
+[allowlist]
+description = "Helling allowlist — vendored reference projects and test fixtures"
+
+# Never scan under refs/. Other projects' secrets are not Helling's problem.
+paths = [
+  '''(?i)^refs/.*''',
+  '''(?i)/node_modules/''',
+  '''(?i)/web/src/api/generated/''',
+  '''(?i)\.task/''',
+  # OpenAPI spec contains example/truncated tokens in schema examples — not real secrets.
+  '''(?i)^api/openapi\.yaml$''',
+  # Quality standards doc contains example JWT snippets for illustration.
+  '''(?i)^docs/standards/quality-assurance\.md$''',
+  # Agent/spec markdown files contain placeholder credentials for documentation purposes.
+  '''(?i)^\.github/agents/''',
+]
+
+# Paths that are explicitly fixtures (safe to contain test-only secrets).
+regexTarget = "match"
+regexes = [
+  '''-----BEGIN (TEST|SAMPLE|FAKE|EXAMPLE) PRIVATE KEY-----''',
+  # Truncated JWTs used as documentation examples end with "..." — not real tokens.
+  '''eyJ[A-Za-z0-9_-]+\.\.\.$''',
+]

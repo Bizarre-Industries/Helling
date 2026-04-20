@@ -1,0 +1,37 @@
+# lychee link checker configuration.
+# https://github.com/lycheeverse/lychee
+
+# Offline mode: validate internal links only by default (task check:links).
+# Full online check runs in CI on a schedule, not per-PR, to avoid flakiness from third-party sites.
+
+max_concurrency = 8
+max_redirects = 10
+timeout = 20
+retry_wait_time = 2
+
+# Cache results between runs.
+cache = true
+max_cache_age = "1d"
+
+# Accept these status codes as success.
+accept = [200, 204, 206, 301, 302, 429, 500]
+
+# Exclude domains that don't exist yet or are known-flaky.
+exclude = [
+  "^https?://bizarre\\.industries/docs/errors/",  # error docs URL not yet deployed
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  "^https?://example\\.com",
+  "^https?://helling\\.local",
+]
+
+# File globs to exclude.
+exclude_path = [
+  "node_modules",
+  "web/node_modules",
+  ".task",
+  "dist",
+  "bin",
+  "web/src/api/generated",
+	"refs",
+]

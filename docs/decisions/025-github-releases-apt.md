@@ -23,7 +23,7 @@ Repository requirements:
 
 ISO configures an APT source pointing to the GitHub Pages repository on first boot:
 
-```
+```text
 deb [signed-by=/usr/share/keyrings/helling-archive-keyring.gpg] https://bizarre-industries.github.io/helling bookworm main
 ```
 

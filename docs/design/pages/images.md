@@ -42,12 +42,15 @@ Sidebar: resource tree (Images not a top-level item; accessed via sidebar link o
 ## States
 
 ### Empty State
+
 "No local images. Pull an image from a remote server or upload one." [Browse Remote Images] [Upload Image]
 
 ### Loading State
+
 Local images cached. Remote image list fetches on tab switch with inline spinner.
 
 ### Error State
+
 Remote server unreachable: inline alert on Remote tab. Local images still shown.
 
 ## User Actions

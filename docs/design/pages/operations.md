@@ -45,12 +45,15 @@ Sidebar: "Operations" selected. Main panel: combined view of audit log, system l
 ## States
 
 ### Empty State
+
 Audit: "No audit entries yet. All API mutations will be logged here." Schedules: "No scheduled operations." [Create Schedule]
 
 ### Loading State
+
 Cached entries shown. New log entries pushed via SSE. Paginated for large datasets.
 
 ### Error State
+
 Log source unavailable: inline Alert per source. Other sources still functional.
 
 ## User Actions

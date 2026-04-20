@@ -12,7 +12,7 @@ Users already have `incus` and `podman` CLIs installed — they ship in the Hell
 
 The `helling` CLI covers only Helling-specific features that `incus`, `podman`, and `kubectl` don't provide:
 
-```
+```bash
 helling auth login/logout/token        # Helling JWT auth
 helling user list/create/delete        # Helling user management (PAM)
 helling schedule list/create/delete    # Backup scheduling (systemd timers)

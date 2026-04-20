@@ -1,0 +1,12 @@
+# Prettier config. Applies primarily to markdown.
+# Biome handles TS/JS in web/. Prettier is not used for Go, YAML, or shell.
+
+overrides:
+  - files: '*.md'
+    options:
+      printWidth: 100
+      proseWrap: preserve
+      tabWidth: 2
+      useTabs: false
+      trailingComma: 'none'
+      bracketSpacing: true

@@ -314,6 +314,7 @@ paths:
       tags: [Auth]
       operationId: authTokenRevoke
       summary: Revoke API token
+      description: Revokes an API token by id. The token is immediately invalidated and can no longer be used to authenticate requests.
       parameters:
         - $ref: "#/components/parameters/IdPath"
       responses:
@@ -323,6 +324,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeSimpleOk"
+              example:
+                data:
+                  ok: true
+                meta:
+                  request_id: req_01JZABC0123456789ABCDEFGJK
         "404":
           $ref: "#/components/responses/NotFoundError"
 
@@ -945,6 +951,7 @@ paths:
       tags: [Kubernetes]
       operationId: kubernetesKubeconfig
       summary: Download kubeconfig
+      description: Returns the kubeconfig YAML for the named Kubernetes cluster, suitable for use with kubectl.
       parameters:
         - $ref: "#/components/parameters/NamePath"
       responses:
@@ -1385,6 +1392,10 @@ components:
         page:
           type: object
           description: Cursor pagination metadata for list responses.
+          example:
+            has_next: false
+            next_cursor: null
+            limit: 50
           properties:
             has_next:
               type: boolean

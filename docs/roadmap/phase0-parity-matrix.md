@@ -14,19 +14,19 @@ Last reviewed against OpenAPI baseline: commit `201a2c7` (2026-04-20). Matrix re
 
 ## Domain Matrix
 
-| Domain     | API Operations (OpenAPI)                              | CLI Coverage (spec)                                               | WebUI Coverage (spec)                                | Parity Status  |
-| ---------- | ----------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- | -------------- |
-| Auth       | setup, login, refresh, logout, mfa/totp, tokens       | `helling auth ...` listed                                         | login/session flows + token-aware clients expected   | ✅ Covered     |
-| Users      | list, create, get, update, delete                     | `helling user list/create/get/update/delete`                      | `/users` page with ProTable + fixed-role read-only   | ✅ Covered     |
-| Schedules  | list, create, get, update, delete, run                | `helling schedule ...` listed                                     | `/schedules` page specified                          | ✅ Covered     |
-| Webhooks   | list, create, get, update, delete, test               | `helling webhook ...` listed                                      | Webhooks page in Helling feature set                 | ✅ Covered     |
-| Kubernetes | list, create, get, delete, scale, upgrade, kubeconfig | `helling k8s ...` listed                                          | `/kubernetes` and `/kubernetes/:id` specified        | ✅ Covered     |
-| System     | info, hardware, config get/put, upgrade, diagnostics  | `helling system ...` including `health` and `upgrade --rollback`  | Settings + dashboard system surfaces specified       | ✅ Covered     |
-| Firewall   | host list/create/delete                               | `helling firewall ...` listed                                     | `/firewall` page specified                           | ✅ Covered     |
-| Audit      | query, export                                         | `helling audit query`, `helling audit export`                     | `/audit` page with filters + CSV export              | ✅ Covered     |
-| Events     | SSE stream                                            | `helling events tail` (SSE follow)                                | task log / SSE consumed by app shell layout          | ✅ Covered     |
-| Health     | health check                                          | `helling system health`                                           | consumed internally by app shell for status banner   | ✅ Covered     |
-| Logs       | query (journal-backed)                                | `helling logs ...` listed                                         | `/logs` page specified                               | ✅ Covered     |
+| Domain     | API Operations (OpenAPI)                              | CLI Coverage (spec)                                              | WebUI Coverage (spec)                              | Parity Status |
+| ---------- | ----------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ------------- |
+| Auth       | setup, login, refresh, logout, mfa/totp, tokens       | `helling auth ...` listed                                        | login/session flows + token-aware clients expected | ✅ Covered    |
+| Users      | list, create, get, update, delete                     | `helling user list/create/get/update/delete`                     | `/users` page with ProTable + fixed-role read-only | ✅ Covered    |
+| Schedules  | list, create, get, update, delete, run                | `helling schedule ...` listed                                    | `/schedules` page specified                        | ✅ Covered    |
+| Webhooks   | list, create, get, update, delete, test               | `helling webhook ...` listed                                     | Webhooks page in Helling feature set               | ✅ Covered    |
+| Kubernetes | list, create, get, delete, scale, upgrade, kubeconfig | `helling k8s ...` listed                                         | `/kubernetes` and `/kubernetes/:id` specified      | ✅ Covered    |
+| System     | info, hardware, config get/put, upgrade, diagnostics  | `helling system ...` including `health` and `upgrade --rollback` | Settings + dashboard system surfaces specified     | ✅ Covered    |
+| Firewall   | host list/create/delete                               | `helling firewall ...` listed                                    | `/firewall` page specified                         | ✅ Covered    |
+| Audit      | query, export                                         | `helling audit query`, `helling audit export`                    | `/audit` page with filters + CSV export            | ✅ Covered    |
+| Events     | SSE stream                                            | `helling events tail` (SSE follow)                               | task log / SSE consumed by app shell layout        | ✅ Covered    |
+| Health     | health check                                          | `helling system health`                                          | consumed internally by app shell for status banner | ✅ Covered    |
+| Logs       | query (journal-backed)                                | `helling logs ...` listed                                        | `/logs` page specified                             | ✅ Covered    |
 
 ## Status Notes
 

@@ -235,7 +235,7 @@ The preseed automates the 3 setup questions (hostname, disk, admin password) and
 
 ### Layer 24: APT Repository
 
-**Tool:** `aptly` or `reprepro`
+**Tool:** `reprepro` (ADR-045)
 
 Serves .deb packages for `helling system upgrade`. GPG-signed packages. Hosted on GitHub Pages, S3, or self-hosted. The upgrade command checks this repo.
 

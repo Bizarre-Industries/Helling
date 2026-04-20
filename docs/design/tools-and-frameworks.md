@@ -7,26 +7,26 @@
 
 ## Backend (hellingd)
 
-| Concern                | Tool                                               | What it does                                         | ADR                                 |
-| ---------------------- | -------------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
-| HTTP routing           | `net/http` ServeMux + `huma/v2/humago`             | ServeMux baseline + Huma adapter                     | ADR-043                             |
-| API types + validation | `danielgtaylor/huma/v2`                            | Validation + OpenAPI 3.1 from Go struct tags         | ADR-043                             |
-| Auth (PAM)             | `msteinert/pam/v2`                                 | PAM conversation (cgo — libpam is C)                 | ADR-030                             |
-| Auth (JWT)             | `golang-jwt/jwt/v5`                                | Ed25519-signed access + refresh tokens               | ADR-031                             |
-| Auth (TOTP)            | `pquerna/otp`                                      | QR generation, code verify                           | —                                   |
-| Database               | `database/sql` + `sqlc`                            | Helling state only (SQLite)                          | ADR-038                             |
-| SQLite driver          | `mattn/go-sqlite3`                                 | cgo-backed SQLite — cgo already mandatory for libpam | ADR-038                             |
-| Migrations             | `goose`                                            | Forward-only SQL migrations                          | ADR-038                             |
-| Password hashing       | `golang.org/x/crypto/argon2`                       | argon2id (RFC 9106 / OWASP baseline)                 | ADR-030                             |
-| Config                 | `gopkg.in/yaml.v3`                                 | YAML + env vars                                      | —                                   |
-| BMC                    | `bmc-toolbox/bmclib/v2`                            | IPMI + Redfish (v0.4 feature)                        | —                                   |
-| HTTP proxy             | `net/http/httputil.ReverseProxy`                   | Proxies to Incus HTTPS and Podman Unix socket        | ADR-014, ADR-036                    |
-| systemd unit mgmt      | `godbus/dbus/v5` + SUID `helling-unit-link` helper | DBus-based unit management under non-root hellingd   | ADR-017, ADR-018 (amended), ADR-050 |
-| Journal emit           | `coreos/go-systemd/v22/journal`                    | Structured-field audit emission                      | ADR-018 (exception), ADR-019        |
-| Audit log reads        | `journalctl -o json` (shell-out)                   | Journal query path for audit API                     | ADR-018, ADR-019                    |
-| Firewall               | `nft --json` (shell-out)                           | Host nftables rules                                  | ADR-018                             |
-| Disk health            | `smartctl --json` (shell-out)                      | SMART data                                           | ADR-018                             |
-| System info            | OS CLI tools (shell-out)                           | CPU, RAM, disk, NICs                                 | ADR-018                             |
+| Concern                | Tool                                               | What it does                                                                                                                              | ADR                                 |
+| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| HTTP routing           | `net/http` ServeMux + `huma/v2/humago`             | ServeMux baseline + Huma adapter                                                                                                          | ADR-043                             |
+| API types + validation | `danielgtaylor/huma/v2`                            | Validation + OpenAPI 3.1 from Go struct tags                                                                                              | ADR-043                             |
+| Auth (PAM)             | `msteinert/pam/v2`                                 | PAM conversation (cgo — requires `libpam0g-dev` on Debian build host); see `docs/spec/pam.md` for the service-name / config-path contract | ADR-030                             |
+| Auth (JWT)             | `golang-jwt/jwt/v5`                                | Ed25519-signed access + refresh tokens                                                                                                    | ADR-031                             |
+| Auth (TOTP)            | `pquerna/otp`                                      | QR generation, code verify                                                                                                                | —                                   |
+| Database               | `database/sql` + `sqlc`                            | Helling state only (SQLite)                                                                                                               | ADR-038                             |
+| SQLite driver          | `mattn/go-sqlite3`                                 | cgo-backed SQLite — cgo already mandatory for libpam                                                                                      | ADR-038                             |
+| Migrations             | `goose`                                            | Forward-only SQL migrations                                                                                                               | ADR-038                             |
+| Password hashing       | `golang.org/x/crypto/argon2`                       | argon2id (RFC 9106 / OWASP baseline)                                                                                                      | ADR-030                             |
+| Config                 | `gopkg.in/yaml.v3`                                 | YAML + env vars                                                                                                                           | —                                   |
+| BMC                    | `bmc-toolbox/bmclib/v2`                            | IPMI + Redfish (v0.4 feature)                                                                                                             | —                                   |
+| HTTP proxy             | `net/http/httputil.ReverseProxy`                   | Proxies to Incus HTTPS and Podman Unix socket                                                                                             | ADR-014, ADR-036                    |
+| systemd unit mgmt      | `godbus/dbus/v5` + SUID `helling-unit-link` helper | DBus-based unit management under non-root hellingd                                                                                        | ADR-017, ADR-018 (amended), ADR-050 |
+| Journal emit           | `coreos/go-systemd/v22/journal`                    | Structured-field audit emission                                                                                                           | ADR-018 (exception), ADR-019        |
+| Audit log reads        | `journalctl -o json` (shell-out)                   | Journal query path for audit API                                                                                                          | ADR-018, ADR-019                    |
+| Firewall               | `nft --json` (shell-out)                           | Host nftables rules                                                                                                                       | ADR-018                             |
+| Disk health            | `smartctl --json` (shell-out)                      | SMART data                                                                                                                                | ADR-018                             |
+| System info            | OS CLI tools (shell-out)                           | CPU, RAM, disk, NICs                                                                                                                      | ADR-018                             |
 
 ### hellingd go.mod (target)
 
@@ -51,12 +51,12 @@ Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit opera
 
 ### Add when needed (later versions)
 
-| Dependency             | Introduced in | Purpose                          |
-| ---------------------- | ------------- | -------------------------------- |
-| `go-webauthn/webauthn` | v0.5+         | WebAuthn ceremony (ADR-033)      |
-| `go-ldap/ldap/v3`      | v0.5+         | LDAP bind, search, sync          |
-| `coreos/go-oidc/v3`    | v0.5+         | OIDC discovery, token verify     |
-| `filippo.io/age`       | v0.3+         | Encrypted backup blobs (ADR-039) |
+| Dependency             | Introduced in | Purpose                                          |
+| ---------------------- | ------------- | ------------------------------------------------ |
+| `go-webauthn/webauthn` | v0.5+         | WebAuthn ceremony (see `docs/spec/auth-v0.5.md`) |
+| `go-ldap/ldap/v3`      | v0.5+         | LDAP bind, search, sync                          |
+| `coreos/go-oidc/v3`    | v0.5+         | OIDC discovery, token verify                     |
+| `filippo.io/age`       | v0.3+         | Encrypted backup blobs (ADR-039)                 |
 
 ---
 

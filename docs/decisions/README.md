@@ -45,9 +45,9 @@
 | 042 | Security scanning stack consolidation                         | Accepted              |
 | 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |
 | 044 | hey-api/openapi-ts for WebUI code generation                  | Accepted              |
-| 045 | APT repository tooling decision                               | Proposed              |
-| 046 | ISO build tooling decision                                    | Proposed              |
-| 047 | Dark mode scope for v0.1                                      | Proposed              |
-| 048 | Mobile scope for v0.1                                         | Proposed              |
+| 045 | reprepro for APT repository tooling                           | Accepted              |
+| 046 | live-build for ISO build tooling                              | Accepted              |
+| 047 | v0.1 light-only, dark mode in v0.5+                           | Accepted              |
+| 048 | v0.1 responsive per philosophy.md Rule 8                      | Accepted              |
 | 049 | Vim mode and keymap surfacing                                 | Accepted              |
 | 050 | hellingd runs as non-root `helling` system user               | Accepted              |

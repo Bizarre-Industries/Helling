@@ -501,7 +501,7 @@ Approved dependencies (no justification needed):
   net/http (stdlib)         — HTTP routing baseline
   sqlc + database/sql       — Typed query generation + persistence
   goose                     — SQL migrations
-    msteinert/pam             — PAM authentication bridge
+    msteinert/pam/v2          — PAM authentication bridge
     filippo.io/age            — Secret envelope encryption
   pquerna/otp          — TOTP 2FA
     go-webauthn/webauthn — WebAuthn (v0.5+)

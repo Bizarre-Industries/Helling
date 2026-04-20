@@ -24,3 +24,8 @@
 
 - Restore previous PAM config from backup.
 - Revert related auth config changes and retest.
+
+## Related docs
+
+- `docs/spec/pam.md` — PAM contract (service name, config path, runtime key)
+- `docs/spec/auth.md` §2 — authentication flow

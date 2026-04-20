@@ -57,6 +57,25 @@ Click a target like `vm-web-1` → open `/instances/vm-web-1`. Click request ID 
 
 `Button` triggers `/export` with current query. Response streams; show `Progress` in a non-blocking `notification.info` with a cancel button. Max 50k rows per export — if exceeded, toast recommends narrower window.
 
+### Journal field mapping
+
+The audit table renders from the `/api/v1/audit/query` response, which is itself parsed from `journalctl --output=json`. Column-to-field mapping:
+
+| Column         | Journal field                                                 |
+| -------------- | ------------------------------------------------------------- |
+| Timestamp      | `__REALTIME_TIMESTAMP` (μs epoch)                             |
+| Actor          | `HELLING_ACTOR`                                               |
+| Role           | `HELLING_ROLE`                                                |
+| Action         | `HELLING_ACTION`                                              |
+| Outcome        | `HELLING_OUTCOME` (`success` / `failure` / `denied`)          |
+| Target         | `HELLING_TARGET_TYPE` + `HELLING_TARGET_ID`                   |
+| Source IP      | `HELLING_SOURCE_IP`                                           |
+| Request ID     | `HELLING_REQUEST_ID`                                          |
+| Before / After | `HELLING_BEFORE` / `HELLING_AFTER` (JSON strings, ≤4 KB each) |
+| Policy reason  | `HELLING_POLICY_REASON` (present only when outcome=denied)    |
+
+The diff viewer displays `HELLING_BEFORE` on the left and `HELLING_AFTER` on the right. If either field ends with `,"truncated":true`, the viewer shows a `Truncated (>4 KB)` badge and a "View full context in related events" link filtering to the same `HELLING_REQUEST_ID`. See `docs/spec/audit.md` §1 for the truncation marker contract.
+
 ## Data Model
 
 - AuditEvent: `timestamp`, `actor_user_id`, `actor_username`, `actor_role`, `action`, `target_type`, `target_id`, `outcome`, `source_ip`, `user_agent`, `request_id`, `jwt_id`, `fields{}` (action-specific payload, may include `before` / `after` maps for mutations)

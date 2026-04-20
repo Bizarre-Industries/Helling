@@ -70,7 +70,7 @@ Auth flow for Helling-specific endpoints:
 ### Session Security
 
 ```text
-  - Session timeout: 30 minutes inactivity (configurable)
+  - Session timeout: 30 minutes inactivity (`auth.session_inactivity_timeout`, see `docs/spec/auth.md` §2.2 and `docs/spec/config.md`)
   - Concurrent sessions: unlimited (but viewable + individually revocable)
   - Session binding: tie to IP + User-Agent (warn on change, don't block)
   - Logout: invalidate access token, delete refresh token, clear cookies

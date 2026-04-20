@@ -198,7 +198,7 @@ Helling ISO bakes in specific versions of its core platform dependencies. These 
 
 - ISO build manifest pins `incus >= 6.14.0` via the Zabbly apt repo.
 - hellingd boot-time check: if `incus --version` returns < 6.14.0, log a HIGH-severity structured warning to journal (`HELLING_COMPONENT=bootstrap`, `HELLING_CODE=INCUS_VERSION_BELOW_MIN`) and disable the Incus proxy until the operator upgrades.
-- The upgrade runbook (docs/runbooks/helling-upgrade.md) includes an Incus minimum-version gate check before applying the new Helling release.
+- The upgrade runbook (docs/runbooks/upgrade-rollback.md) includes an Incus minimum-version gate check before applying the new Helling release.
 
 ### CVE Inheritance
 

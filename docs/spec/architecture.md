@@ -76,7 +76,7 @@ Core backend dependencies (approximately 10-12 with build-profile variance):
 
 - `net/http` ServeMux for routing
 - `golang-jwt/jwt` for JWT handling
-- `msteinert/pam` for PAM integration
+- `msteinert/pam/v2` for PAM integration
 - `pquerna/otp` for TOTP
 - `gopkg.in/yaml.v3` for config loading
 - `database/sql` + generated `sqlc` query layer for state persistence

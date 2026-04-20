@@ -55,3 +55,4 @@
 - ADR-010 (SPICE VM console policy)
 - `docs/design/pages/instances.md`
 - `docs/spec/compute.md`
+- `docs/spec/proxies.md` — WebSocket upgrade semantics + JWT validity during long-lived console sessions

@@ -7,26 +7,26 @@
 
 ## Backend (hellingd)
 
-| Concern                | Tool                                               | What it does                                         | ADR                                 |
-| ---------------------- | -------------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
-| HTTP routing           | `net/http` ServeMux + `huma/v2/humago`             | ServeMux baseline + Huma adapter                     | ADR-043                             |
-| API types + validation | `danielgtaylor/huma/v2`                            | Validation + OpenAPI 3.1 from Go struct tags         | ADR-043                             |
-| Auth (PAM)             | `msteinert/pam/v2`                                 | PAM conversation (cgo — libpam is C)                 | ADR-030                             |
-| Auth (JWT)             | `golang-jwt/jwt/v5`                                | Ed25519-signed access + refresh tokens               | ADR-031                             |
-| Auth (TOTP)            | `pquerna/otp`                                      | QR generation, code verify                           | —                                   |
-| Database               | `database/sql` + `sqlc`                            | Helling state only (SQLite)                          | ADR-038                             |
-| SQLite driver          | `mattn/go-sqlite3`                                 | cgo-backed SQLite — cgo already mandatory for libpam | ADR-038                             |
-| Migrations             | `goose`                                            | Forward-only SQL migrations                          | ADR-038                             |
-| Password hashing       | `golang.org/x/crypto/argon2`                       | argon2id (RFC 9106 / OWASP baseline)                 | ADR-030                             |
-| Config                 | `gopkg.in/yaml.v3`                                 | YAML + env vars                                      | —                                   |
-| BMC                    | `bmc-toolbox/bmclib/v2`                            | IPMI + Redfish (v0.4 feature)                        | —                                   |
-| HTTP proxy             | `net/http/httputil.ReverseProxy`                   | Proxies to Incus HTTPS and Podman Unix socket        | ADR-014, ADR-036                    |
-| systemd unit mgmt      | `godbus/dbus/v5` + SUID `helling-unit-link` helper | DBus-based unit management under non-root hellingd   | ADR-017, ADR-018 (amended), ADR-050 |
-| Journal emit           | `coreos/go-systemd/v22/journal`                    | Structured-field audit emission                      | ADR-018 (exception), ADR-019        |
-| Audit log reads        | `journalctl -o json` (shell-out)                   | Journal query path for audit API                     | ADR-018, ADR-019                    |
-| Firewall               | `nft --json` (shell-out)                           | Host nftables rules                                  | ADR-018                             |
-| Disk health            | `smartctl --json` (shell-out)                      | SMART data                                           | ADR-018                             |
-| System info            | OS CLI tools (shell-out)                           | CPU, RAM, disk, NICs                                 | ADR-018                             |
+| Concern                | Tool                                     | What it does                                                | ADR                  |
+| ---------------------- | ---------------------------------------- | ----------------------------------------------------------- | -------------------- |
+| HTTP routing           | `net/http` ServeMux + `huma/v2/humago`   | ServeMux baseline + Huma adapter                            | ADR-043              |
+| API types + validation | `danielgtaylor/huma/v2`                  | Validation + OpenAPI 3.1 from Go struct tags                | ADR-043              |
+| Auth (PAM)             | `msteinert/pam/v2`                       | PAM conversation (cgo — libpam is C)                        | ADR-030              |
+| Auth (JWT)             | `golang-jwt/jwt/v5`                      | Ed25519-signed access + refresh tokens                      | ADR-031              |
+| Auth (TOTP)            | `pquerna/otp`                            | QR generation, code verify                                  | —                    |
+| Database               | `database/sql` + `sqlc`                  | Helling state only (SQLite)                                 | ADR-038              |
+| SQLite driver          | `mattn/go-sqlite3`                       | cgo-backed SQLite — cgo already mandatory for libpam        | ADR-038              |
+| Migrations             | `goose`                                  | Forward-only SQL migrations                                 | ADR-038              |
+| Password hashing       | `golang.org/x/crypto/argon2`             | argon2id (RFC 9106 / OWASP baseline)                        | ADR-030              |
+| Config                 | `gopkg.in/yaml.v3`                       | YAML + env vars                                             | —                    |
+| BMC                    | `bmc-toolbox/bmclib/v2`                  | IPMI + Redfish (v0.4 feature)                               | —                    |
+| HTTP proxy             | `net/http/httputil.ReverseProxy`         | Proxies to Incus HTTPS and Podman Unix socket               | ADR-014, ADR-036     |
+| systemd unit mgmt      | `godbus/dbus/v5` + SUID `helling-unit-link` helper | DBus-based unit management under non-root hellingd | ADR-017, ADR-018 (amended), ADR-050 |
+| Journal emit           | `coreos/go-systemd/v22/journal`          | Structured-field audit emission                             | ADR-018 (exception), ADR-019 |
+| Audit log reads        | `journalctl -o json` (shell-out)         | Journal query path for audit API                            | ADR-018, ADR-019     |
+| Firewall               | `nft --json` (shell-out)                 | Host nftables rules                                         | ADR-018              |
+| Disk health            | `smartctl --json` (shell-out)            | SMART data                                                  | ADR-018              |
+| System info            | OS CLI tools (shell-out)                 | CPU, RAM, disk, NICs                                        | ADR-018              |
 
 ### hellingd go.mod (target)
 
@@ -34,13 +34,13 @@ Small dependency set centred on stdlib routing, auth, config, SQLite persistence
 
 ### What hellingd does NOT import
 
-| Don't import                          | Use instead                                                      |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| `lxc/incus/v6`                        | Proxy to Incus HTTPS loopback (no SDK dependency)                |
-| `containers/podman/v5`                | Proxy to Podman Unix socket                                      |
-| `google/nftables`                     | Shell out to `nft --json`                                        |
-| `go-co-op/gocron`                     | systemd timers via DBus                                          |
-| `coreos/go-systemd/v22/dbus` (client) | `godbus/dbus/v5` directly for unit lifecycle (ADR-018 amendment) |
+| Don't import                          | Use instead                                                        |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| `lxc/incus/v6`                        | Proxy to Incus HTTPS loopback (no SDK dependency)                  |
+| `containers/podman/v5`                | Proxy to Podman Unix socket                                        |
+| `google/nftables`                     | Shell out to `nft --json`                                          |
+| `go-co-op/gocron`                     | systemd timers via DBus                                            |
+| `coreos/go-systemd/v22/dbus` (client) | `godbus/dbus/v5` directly for unit lifecycle (ADR-018 amendment)   |
 
 Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit operation costs ~50ms per call and produces unstructured output. Two narrow Go imports replace those specific paths only:
 
@@ -51,24 +51,24 @@ Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit opera
 
 ### Add when needed (later versions)
 
-| Dependency             | Introduced in | Purpose                          |
-| ---------------------- | ------------- | -------------------------------- |
-| `go-webauthn/webauthn` | v0.5+         | WebAuthn ceremony (ADR-033)      |
-| `go-ldap/ldap/v3`      | v0.5+         | LDAP bind, search, sync          |
-| `coreos/go-oidc/v3`    | v0.5+         | OIDC discovery, token verify     |
-| `filippo.io/age`       | v0.3+         | Encrypted backup blobs (ADR-039) |
+| Dependency             | Introduced in | Purpose                               |
+| ---------------------- | ------------- | ------------------------------------- |
+| `go-webauthn/webauthn` | v0.5+         | WebAuthn ceremony (ADR-033)           |
+| `go-ldap/ldap/v3`      | v0.5+         | LDAP bind, search, sync               |
+| `coreos/go-oidc/v3`    | v0.5+         | OIDC discovery, token verify          |
+| `filippo.io/age`       | v0.3+         | Encrypted backup blobs (ADR-039)      |
 
 ---
 
 ## CLI (helling)
 
-| Concern           | Tool                                         |
-| ----------------- | -------------------------------------------- |
-| Command framework | `spf13/cobra`                                |
-| Config            | `gopkg.in/yaml.v3` + env loader              |
+| Concern           | Tool                                       |
+| ----------------- | ------------------------------------------ |
+| Command framework | `spf13/cobra`                              |
+| Config            | `gopkg.in/yaml.v3` + env loader            |
 | API client        | Generated from Helling spec (`oapi-codegen`) |
-| Man pages         | `cobra/doc.GenManTree()`                     |
-| Shell completions | Cobra built-in                               |
+| Man pages         | `cobra/doc.GenManTree()`                   |
+| Shell completions | Cobra built-in                             |
 
 ~15 commands. ~800 lines of Go. Users use `incus`/`podman`/`kubectl` directly for anything outside Helling-managed surfaces (ADR-016).
 
@@ -76,20 +76,20 @@ Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit opera
 
 ## Frontend (web)
 
-| Concern          | Tool                                                      | Notes                                                              |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------ |
-| Framework        | React 19                                                  |                                                                    |
-| Build            | Vite (SPA, no SSR)                                        |                                                                    |
-| Base components  | `antd` v6                                                 | 6.x line, released Nov 2025                                        |
-| Admin components | `@ant-design/pro-components@beta` (3.x)                   | 3.x is on the `beta` dist-tag; peer dep `antd: ^6.0.0`             |
-| Charts           | `@ant-design/charts`                                      | G2-based, antd-theme integrated                                    |
-| Data fetching    | `@tanstack/react-query` via `@hey-api/openapi-ts`         | Generated hooks/options from Helling OpenAPI                       |
-| Terminal         | `@xterm/xterm`                                            | Renamed from `xterm.js` in 2024                                    |
-| VM VGA console   | `spice-html5` (bundled from Debian `spice-html5` package) | Served as static assets from `/usr/share/spice-html5/`; no npm dep |
-| Code editor      | `@uiw/react-codemirror` (CodeMirror 6)                    | Dynamic import                                                     |
-| Routing          | `react-router` v7                                         | Package was renamed from `react-router-dom` in v7                  |
-| HTTP             | `fetch` wrapper                                           | JWT injection + request-id propagation                             |
-| Icons            | `lucide-react`                                            |                                                                    |
+| Concern          | Tool                                                      | Notes                                                                  |
+| ---------------- | --------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Framework        | React 19                                                  |                                                                        |
+| Build            | Vite (SPA, no SSR)                                        |                                                                        |
+| Base components  | `antd` v6                                                 | 6.x line, released Nov 2025                                            |
+| Admin components | `@ant-design/pro-components@beta` (3.x)                   | 3.x is on the `beta` dist-tag; peer dep `antd: ^6.0.0`                |
+| Charts           | `@ant-design/charts`                                      | G2-based, antd-theme integrated                                        |
+| Data fetching    | `@tanstack/react-query` via `@hey-api/openapi-ts`         | Generated hooks/options from Helling OpenAPI                           |
+| Terminal         | `@xterm/xterm`                                            | Renamed from `xterm.js` in 2024                                        |
+| VM VGA console   | `spice-html5` (bundled from Debian `spice-html5` package) | Served as static assets from `/usr/share/spice-html5/`; no npm dep     |
+| Code editor      | `@uiw/react-codemirror` (CodeMirror 6)                    | Dynamic import                                                         |
+| Routing          | `react-router` v7                                         | Package was renamed from `react-router-dom` in v7                      |
+| HTTP             | `fetch` wrapper                                           | JWT injection + request-id propagation                                 |
+| Icons            | `lucide-react`                                            |                                                                        |
 
 ### On `pro-components@beta`
 
@@ -103,29 +103,29 @@ This keeps SPICE as the v0.1 VM console protocol (ADR-010 reasoning stands — I
 
 ### Frontend does NOT import
 
-| Don't import                      | Use instead                                             |
-| --------------------------------- | ------------------------------------------------------- |
-| noVNC                             | SPICE browser console is the v0.1 default (ADR-010)     |
+| Don't import                      | Use instead                                            |
+| --------------------------------- | ------------------------------------------------------ |
+| noVNC                             | SPICE browser console is the v0.1 default (ADR-010)    |
 | `@canonical/spice-html5`          | Doesn't exist. Use Debian-packaged `spice-html5` bundle |
-| `axios` for generated API surface | Fetch client generated by `@hey-api/openapi-ts`         |
-| `orval`                           | `@hey-api/openapi-ts`                                   |
-| `@refinedev/*`                    | antd v6 + React Query + generated SDK                   |
+| `axios` for generated API surface | Fetch client generated by `@hey-api/openapi-ts`        |
+| `orval`                           | `@hey-api/openapi-ts`                                  |
+| `@refinedev/*`                    | antd v6 + React Query + generated SDK                  |
 
 ---
 
 ## System Tools (shell out, ADR-018)
 
-| Tool                             | Provides                                       | Invocation                                         |
-| -------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
-| `nft --json`                     | Host nftables rules                            | `exec.Command("nft", "--json", ...)`               |
-| `smartctl --json`                | SMART disk health                              | `exec.Command("smartctl", "--json", "--all", ...)` |
+| Tool                             | Provides                | Invocation                                         |
+| -------------------------------- | ----------------------- | -------------------------------------------------- |
+| `nft --json`                     | Host nftables rules     | `exec.Command("nft", "--json", ...)`               |
+| `smartctl --json`                | SMART disk health       | `exec.Command("smartctl", "--json", "--all", ...)` |
 | `systemctl`                      | Unit lifecycle (root-only ops via SUID helper) | Via `/usr/lib/helling/helling-unit-link`           |
-| `zpool status`                   | ZFS pool details                               | `exec.Command("zpool", "status", ...)`             |
-| `lvs --reportformat json`        | LVM volume details                             | `exec.Command("lvs", "--reportformat", "json")`    |
-| `journalctl -t hellingd -o json` | Audit log queries                              | `exec.Command("journalctl", ...)`                  |
-| `apt`                            | Package updates                                | `exec.Command("apt", ...)`                         |
-| `wipefs`                         | Disk wiping                                    | `exec.Command("wipefs", ...)`                      |
-| `podman compose`                 | Compose stack lifecycle                        | `exec.Command("podman", "compose", ...)`           |
+| `zpool status`                   | ZFS pool details        | `exec.Command("zpool", "status", ...)`             |
+| `lvs --reportformat json`        | LVM volume details      | `exec.Command("lvs", "--reportformat", "json")`    |
+| `journalctl -t hellingd -o json` | Audit log queries       | `exec.Command("journalctl", ...)`                  |
+| `apt`                            | Package updates         | `exec.Command("apt", ...)`                         |
+| `wipefs`                         | Disk wiping             | `exec.Command("wipefs", ...)`                      |
+| `podman compose`                 | Compose stack lifecycle | `exec.Command("podman", "compose", ...)`           |
 
 All tools ship in the ISO. Stable CLI interfaces. JSON output where available.
 
@@ -156,11 +156,11 @@ Same pattern as Incus. `httputil.ReverseProxy` forwards to Podman socket (`/run/
 
 ## Base OS
 
-| Component | Version            | Notes                                        |
-| --------- | ------------------ | -------------------------------------------- |
-| Debian    | 13 (Trixie)        | ADR-002                                      |
-| Incus     | ≥ 6.14.0           | CVE-pinned (see platform.md)                 |
-| Podman    | Debian-shipped     | socket at `/run/podman/podman.sock`          |
-| K3s       | latest stable      | SQLite default, etcd opt-in for HA (ADR-005) |
-| Caddy     | 2.x Debian-shipped | ADR-037                                      |
-| AppArmor  | Debian default     | MAC layer                                    |
+| Component | Version              | Notes                                              |
+| --------- | -------------------- | -------------------------------------------------- |
+| Debian    | 13 (Trixie)          | ADR-002                                            |
+| Incus     | ≥ 6.14.0             | CVE-pinned (see platform.md)                       |
+| Podman    | Debian-shipped       | socket at `/run/podman/podman.sock`                |
+| K3s       | latest stable        | SQLite default, etcd opt-in for HA (ADR-005)       |
+| Caddy     | 2.x Debian-shipped   | ADR-037                                            |
+| AppArmor  | Debian default       | MAC layer                                          |

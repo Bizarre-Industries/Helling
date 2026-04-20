@@ -78,16 +78,6 @@ exceptions:
     reason: "Phase 0 — user management surfaces not yet implemented"
     target_version: "v0.4.0"
 
-  - operation_id: userGet
-    missing: webui
-    reason: "Phase 0 — CLI has `helling user get`; WebUI detail drawer not yet implemented"
-    target_version: "v0.4.0"
-
-  - operation_id: userUpdate
-    missing: webui
-    reason: "Phase 0 — CLI has `helling user update`; WebUI edit form not yet implemented"
-    target_version: "v0.4.0"
-
   - operation_id: userDelete
     missing: both
     reason: "Phase 0 — user management surfaces not yet implemented"
@@ -239,23 +229,12 @@ exceptions:
     target_version: "v0.5.0"
 
   # ── Audit ──────────────────────────────────────────────────────────────────
-  - operation_id: auditQuery
-    missing: webui
-    reason: "Phase 0 — CLI has `helling audit query`; WebUI audit page filter surface not yet implemented"
-    target_version: "v0.4.0"
-
-  - operation_id: auditExport
-    missing: webui
-    reason: "Phase 0 — CLI has `helling audit export`; WebUI export button not yet implemented"
-    target_version: "v0.4.0"
+  # auditQuery and auditExport have CLI surface (`helling audit query`,
+  # `helling audit export`) and WebUI surface (/audit page). Parity gap closed.
 
   # ── Health / Events ────────────────────────────────────────────────────────
-  - operation_id: healthGet
-    missing: both
-    reason: "Phase 0 — CLI has `helling system health` (not `system health get`); WebUI app-shell consumes internally. operationId naming doesn't match either surface string."
-    target_version: "v0.4.0"
+  # healthGet has CLI surface (`helling system health`) and internal WebUI
+  # consumption via app-shell health check. Parity gap closed.
 
-  - operation_id: eventsSse
-    missing: both
-    reason: "Phase 0 — CLI has `helling events tail` (not `events sse`); WebUI consumes SSE internally for task/log streaming. operationId naming doesn't match either surface string."
-    target_version: "v0.4.0"
+  # eventsSse has CLI surface (`helling events tail`) and is consumed
+  # internally by the WebUI for task/log streaming. Parity gap closed.

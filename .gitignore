@@ -6,6 +6,7 @@ IMPLEMENTATION-PLAN.md
 # Claude Code
 .claude/
 .remember/
+.task/
 CLAUDE.md
 LESSONS.md
 

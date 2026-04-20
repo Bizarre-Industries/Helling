@@ -22,7 +22,7 @@ System logs are read from journald; WebUI hits `hellingd` which tails the journa
 - `GET /api/v1/logs/stream` -- SSE live tail with same filter params
 - `GET /api/v1/logs/export` -- bulk download (journalctl-format or JSON) with the same filters applied
 - Per-instance logs route through the Incus proxy at `/api/incus/1.0/instances/{name}/logs`
-- Per-container logs route through the Podman proxy at `/api/podman/v5.0.0/libpod/containers/{id}/logs`
+- Per-container logs route through the Podman proxy at `/api/podman/libpod/containers/{id}/logs`
 
 ## Components
 

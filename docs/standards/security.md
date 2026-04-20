@@ -39,7 +39,7 @@ API Tokens:
 
 2FA:
   - TOTP: RFC 6238, 6-digit, 30-second step, SHA-1 (compatibility)
-  - WebAuthn: Level 2, discoverable credentials, user verification preferred
+  - WebAuthn: v0.5+ (not in v0.1 scope; see docs/spec/auth-v0.5.md)
   - Recovery codes: 10 codes, 16 chars each, argon2id hashed, single-use
   - 2FA lockout: 5 failed attempts → require recovery code
   - Recovery: documented process requiring identity verification
@@ -51,7 +51,7 @@ API Tokens:
 The proxy validates JWT before forwarding. For Incus calls,
 the proxy presents the authenticated user's dedicated TLS client certificate. Incus
 trust restrictions enforce scope. Podman requests are forwarded over the Podman
-Unix socket, accessible only by hellingd (running as root).
+Unix socket, accessible to hellingd via group membership (the `helling` system user is a member of the `podman` group).
 
 Auth flow for proxied requests:
   1. Client sends request with JWT (Authorization header or cookie)
@@ -139,6 +139,10 @@ Debian 13 base:
 
 ```toml
 [Service]
+# User and group (ADR-050)
+User=helling
+Group=helling
+
 # Process isolation
 ProtectSystem=strict
 ProtectHome=true
@@ -147,13 +151,16 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 
-# Capabilities
-CapabilityBoundingSet=CAP_DAC_OVERRIDE
+# Capabilities (none needed; file access via DAC only)
+CapabilityBoundingSet=
 AmbientCapabilities=
 
 # Filesystem
 ReadWritePaths=/var/lib/helling /var/log/helling /etc/helling /run/helling
 ReadOnlyPaths=/usr/bin
+
+# DBus access (for systemd unit management per ADR-050)
+SystemCallFilter=@system-service @network-io @file-system @io-event
 
 # Network
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
@@ -164,7 +171,6 @@ IPAddressAllow=172.16.0.0/12
 IPAddressAllow=192.168.0.0/16
 
 # System calls
-SystemCallFilter=@system-service @network-io @file-system
 SystemCallArchitectures=native
 MemoryDenyWriteExecute=true
 
@@ -206,7 +212,7 @@ Incus containers:
 ### Build Pipeline
 
 ```text
-SLSA Level 3 target:
+SLSA Level 1 baseline for v0.1 (compliance.md Tier 2); Level 2/3 aspirational post-v1 (Tier 3):
   - Source: GitHub with branch protection, signed commits encouraged
   - Build: GitHub Actions (ephemeral runners, no self-hosted)
   - Provenance: SLSA provenance attestation via slsa-github-generator
@@ -216,7 +222,6 @@ SLSA Level 3 target:
 
 Dependency security:
   - govulncheck: zero known vulnerabilities at release time
-  - osv-scanner: additional vulnerability database coverage
   - Dependabot: automated patch PRs (patch only, manual review for minor/major)
   - License scan: no AGPL-incompatible dependencies
   - Pin all dependencies to exact versions (go.sum verification)
@@ -227,7 +232,6 @@ Container images:
   - Minimal runtime image (debian-slim, no dev tools)
   - Non-root user in runtime
   - Grype scan: zero Critical, zero High at release time
-  - Trivy: additional scanning layer
   - Cosign signature on all pushed images
   - SBOM embedded as OCI annotation
   - No secrets baked into any layer

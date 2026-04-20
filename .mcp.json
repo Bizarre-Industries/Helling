@@ -1,0 +1,9 @@
+{
+  "mcps": {
+    "switchboard": {
+      "command": "npx",
+      "args": ["switchboard"],
+      "env": {}
+    }
+  }
+}

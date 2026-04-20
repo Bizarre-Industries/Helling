@@ -4,7 +4,7 @@
 
 Route: `/networking`
 
-> **Data source (ADR-014):** Incus proxy (`/api/incus/1.0/*`). Responses in native Incus format. Podman networks via Podman proxy (`/api/podman/v5.0/libpod/*`).
+> **Data source (ADR-014):** Incus proxy (`/api/incus/1.0/*`). Responses in native Incus format. Podman networks via Podman proxy (`/api/podman/libpod/*`).
 
 ---
 
@@ -20,7 +20,7 @@ Sidebar: "Network" selected. Main panel: Tabs for network types + topology view.
 - `DELETE /api/incus/1.0/networks/:name` -- delete network
 - `GET /api/incus/1.0/networks/:name/leases` -- DHCP leases
 - `GET /api/incus/1.0/networks/:name/forwards` -- port forwards
-- `GET /api/podman/v5.0/libpod/networks/json` -- Podman networks
+- `GET /api/podman/libpod/networks/json` -- Podman networks
 
 ## Components
 

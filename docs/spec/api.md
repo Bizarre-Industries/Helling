@@ -31,6 +31,7 @@ Markdown specs in this directory are companion contracts and operational rules.
 - Firewall
 - Audit
 - Events
+- Logs
 
 Deferred domains in v0.1 remain out-of-contract in this OpenAPI file until promoted:
 

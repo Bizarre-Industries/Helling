@@ -4,7 +4,7 @@
 
 Route: `/`
 
-> **Data source (ADR-014):** Mixed. System stats from Helling API (`/api/v1/*`, envelope format `{data, meta}`). Instance/storage/network data from Incus proxy (`/api/incus/1.0/*`, native Incus format). Container data from Podman proxy (`/api/podman/v5.0/libpod/*`, native Podman format).
+> **Data source (ADR-014):** Mixed. System stats from Helling API (`/api/v1/*`, envelope format `{data, meta}`). Instance/storage/network data from Incus proxy (`/api/incus/1.0/*`, native Incus format). Container data from Podman proxy (`/api/podman/libpod/*`, native Podman format).
 
 ---
 
@@ -16,7 +16,7 @@ Sidebar: "Dashboard" selected in resource tree. Main panel: full-width grid of s
 
 - `GET /api/v1/system/status` -- CPU, RAM, disk, uptime (Helling API)
 - `GET /api/incus/1.0/instances` -- instance counts and top consumers (Incus proxy)
-- `GET /api/podman/v5.0/libpod/containers/json` -- container counts (Podman proxy)
+- `GET /api/podman/libpod/containers/json` -- container counts (Podman proxy)
 - `GET /api/incus/1.0/storage-pools` -- pool usage (Incus proxy)
 - `GET /api/v1/tasks?limit=10` -- recent operations (Helling API)
 - `GET /api/v1/warnings` -- active warnings (Helling API)

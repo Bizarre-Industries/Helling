@@ -33,8 +33,8 @@ Snapshot defaults:
 
 Failure policy:
 
-- Fail-open with warning and audit event by default (operation continues)
-- Optional strict mode can block destructive operation when snapshot creation fails
+- Fail-closed by default for safety (operation blocked when snapshot creation fails)
+- Optional lenient mode can allow operation to proceed with warning and audit event
 
 Scope controls:
 

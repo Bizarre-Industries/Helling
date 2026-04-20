@@ -50,3 +50,4 @@
 | 047 | Dark mode scope for v0.1                                      | Proposed              |
 | 048 | Mobile scope for v0.1                                         | Proposed              |
 | 049 | Vim mode and keymap surfacing                                 | Accepted              |
+| 050 | hellingd runs as non-root `helling` system user               | Accepted              |

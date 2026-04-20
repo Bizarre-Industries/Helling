@@ -243,7 +243,7 @@ Table density:
 
 ## What This Means for Implementation
 
-The dashboard uses React 19 + antd 6 + @tanstack/react-query (via orval-generated hooks). antd's compact theme (configured in `theme.ts`) provides information density. Generated hooks and a shared fetch wrapper handle data fetching, pagination, and auth token injection. Override antd defaults for admin-density:
+The dashboard uses React 19 + antd 6 + @tanstack/react-query (via hey-api/openapi-ts generated hooks). antd's compact theme (configured in `theme.ts`) provides information density. Generated hooks and a shared fetch wrapper handle data fetching, pagination, and auth token injection. Override antd defaults for admin-density:
 
 ```css
 /* antd compact theme overrides for information-dense admin UI */

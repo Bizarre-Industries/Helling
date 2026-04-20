@@ -18,15 +18,26 @@ Key requirements:
 - Uses Unix socket and configured runtime paths from `docs/spec/config.md`.
 - Auto-restart on failure.
 
+User and group:
+
+- `User=helling`
+- `Group=helling`
+- Created at install time with reserved UID (e.g. 999 on Debian) and subuid/subgid ranges for rootless Podman
+
 Hardening baseline:
 
-- `CapabilityBoundingSet=CAP_DAC_OVERRIDE`
+- `CapabilityBoundingSet=` (empty — no capabilities needed; file access via DAC)
 - `AmbientCapabilities=` (empty)
 - `ProtectSystem=strict`
 - `ProtectHome=true`
 - `PrivateTmp=true`
 - `ReadWritePaths=/var/lib/helling /var/log/helling /etc/helling /run/helling`
 - `ReadOnlyPaths=/usr/bin`
+
+DBus access:
+
+- Uses `org.freedesktop.systemd1` socket (world-accessible on standard systemd)
+- Polkit rule at `/etc/polkit-1/rules.d/helling-systemd.rules` authorizes `helling` user to manage `helling-*` units (see ADR-050)
 
 ### `caddy.service`
 
@@ -66,11 +77,13 @@ Service requirements:
 
 ## Lifecycle Operations
 
-For schedule CRUD:
+For schedule CRUD (via DBus per ADR-050):
 
-- Create -> write unit files -> `daemon-reload` -> `enable --now timer`
-- Update -> rewrite units -> `daemon-reload` -> restart timer
-- Delete -> disable timer -> remove unit files -> `daemon-reload`
+- Create -> `StartTransientUnit` + `EnableUnitFiles` -> `Reload`
+- Update -> disable old timer -> create new timer -> `Reload`
+- Delete -> `DisableUnitFiles` + `Reload`
+
+Note: Transient units created via DBus are temporary (lost on systemd restart). hellingd persists schedule metadata in SQLite and reconstructs transient units on startup.
 
 ## Health Expectations
 

@@ -27,12 +27,18 @@ This spec is the skeleton. The details live in sibling docs — each page in thi
 
 **Pages (one doc per route)**
 
+**v0.1:**
+
 - [dashboard.md](../design/pages/dashboard.md) · [instances.md](../design/pages/instances.md) · [containers.md](../design/pages/containers.md) · [kubernetes.md](../design/pages/kubernetes.md)
-- [workspaces.md](../design/pages/workspaces.md) · [templates.md](../design/pages/templates.md)
+- [templates.md](../design/pages/templates.md)
 - [storage.md](../design/pages/storage.md) · [networking.md](../design/pages/networking.md) · [firewall.md](../design/pages/firewall.md) · [images.md](../design/pages/images.md)
 - [backups.md](../design/pages/backups.md) · [schedules.md](../design/pages/schedules.md) · [bmc.md](../design/pages/bmc.md) · [cluster.md](../design/pages/cluster.md)
 - [users.md](../design/pages/users.md) · [auth.md](../design/pages/auth.md) · [settings.md](../design/pages/settings.md)
 - [operations.md](../design/pages/operations.md) · [logs.md](../design/pages/logs.md) · [audit.md](../design/pages/audit.md)
+
+**v0.5+ (API not yet designed):**
+
+- [workspaces.md](../design/pages/workspaces.md)
 
 ## Stack
 
@@ -120,7 +126,6 @@ Function over beauty. See docs/design/philosophy.md for full 10 rules.
 │  ☸ K8s     │                                                 │
 │ ──────     │                                                 │
 │ Templates  │                                                 │
-│ Workspaces │                                                 │
 │ Storage    │                                                 │
 │ Network    │                                                 │
 │ Firewall   │                                                 │
@@ -268,7 +273,9 @@ Helm tab (or separate /kubernetes/:id/helm): Repo management, chart search `<Pro
 
 `<ProList grid>` of template cards with "Launch" `<Button>`. Active sessions `<ProTable>` (name, template, uptime, user, Destroy button). Launch → ephemeral instance + auto-open console. Idle timeout `<Statistic.Countdown>`.
 
-### /storage
+---
+
+## v0.5+ Pages (API design pending)
 
 Pool cards (`<Card>` with `<Progress>` usage bars, segments colored per instance). Type `<Tag>`. Create Pool `<StepsForm>`. Click pool → `<ProTable>` of volumes with resize, clone, snapshot, delete.
 

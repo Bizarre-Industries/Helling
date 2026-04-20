@@ -6,7 +6,7 @@
 
 Route: `/containers` (list) + `/containers/:id` (detail)
 
-> **Data source (ADR-014):** Podman proxy (`/api/podman/v5.0/libpod/*`). Responses in native Podman format.
+> **Data source (ADR-014):** Podman proxy (`/api/podman/libpod/*`). Responses in native Podman format.
 
 ---
 
@@ -16,16 +16,16 @@ Sidebar: Podman section in resource tree. List view: `Segmented` toggle for 3 vi
 
 ## API Endpoints
 
-- `GET /api/podman/v5.0/libpod/containers/json` -- list all containers
-- `GET /api/podman/v5.0/libpod/containers/:id/json` -- detail
-- `GET /api/podman/v5.0/libpod/containers/:id/stats` -- live CPU/RAM/net/disk
-- `GET /api/podman/v5.0/libpod/containers/:id/logs` -- WebSocket log stream
-- `POST /api/podman/v5.0/libpod/containers/:id/exec` -- WebSocket exec
-- `POST /api/podman/v5.0/libpod/containers/create` -- create
-- `POST /api/podman/v5.0/libpod/containers/:id/start` / `stop` / `restart` -- lifecycle
-- `DELETE /api/podman/v5.0/libpod/containers/:id` -- remove
-- `GET /api/podman/v5.0/libpod/containers/json?pod=true` -- compose stacks
-- `GET /api/podman/v5.0/libpod/pods/json` -- pod list
+- `GET /api/podman/libpod/containers/json` -- list all containers
+- `GET /api/podman/libpod/containers/:id/json` -- detail
+- `GET /api/podman/libpod/containers/:id/stats` -- live CPU/RAM/net/disk
+- `GET /api/podman/libpod/containers/:id/logs` -- WebSocket log stream
+- `POST /api/podman/libpod/containers/:id/exec` -- WebSocket exec
+- `POST /api/podman/libpod/containers/create` -- create
+- `POST /api/podman/libpod/containers/:id/start` / `stop` / `restart` -- lifecycle
+- `DELETE /api/podman/libpod/containers/:id` -- remove
+- `GET /api/podman/libpod/containers/json?pod=true` -- compose stacks
+- `GET /api/podman/libpod/pods/json` -- pod list
 
 ## Components
 

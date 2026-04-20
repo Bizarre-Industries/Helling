@@ -4,7 +4,7 @@
 
 Route: `/images`
 
-> **Data source (ADR-014):** Incus proxy (`/api/incus/1.0/*`). Responses in native Incus format. Podman images via Podman proxy (`/api/podman/v5.0/libpod/*`).
+> **Data source (ADR-014):** Incus proxy (`/api/incus/1.0/*`). Responses in native Incus format. Podman images via Podman proxy (`/api/podman/libpod/*`).
 
 ---
 
@@ -20,7 +20,7 @@ Sidebar: resource tree (Images not a top-level item; accessed via sidebar link o
 - `POST /api/incus/1.0/images` -- upload/import image
 - `GET /api/incus/1.0/images/remotes` -- remote image servers (images.linuxcontainers.org)
 - `POST /api/incus/1.0/images` -- pull remote image (with source)
-- `GET /api/podman/v5.0/libpod/images/json` -- Podman images
+- `GET /api/podman/libpod/images/json` -- Podman images
 - `GET /api/incus/1.0/profiles` -- Incus profiles (templates)
 
 ## Components

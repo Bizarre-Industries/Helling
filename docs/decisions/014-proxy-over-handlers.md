@@ -34,7 +34,9 @@ Helling-specific features that Incus/Podman don't provide keep dedicated handler
 - System (config, upgrade, diagnostics)
 - Host firewall (nftables via nft CLI)
 
-Everything else — instances, containers, storage, networks, images, profiles, projects, cluster, operations, events, metrics, warnings, certificates — is proxied to the upstream API surface.
+Everything else — instances, containers, storage, networks, images, profiles, projects, cluster, operations, metrics, warnings, certificates — is proxied to the upstream API surface.
+
+**Events:** Aggregated via Helling-specific endpoint `/api/v1/events` (Server-Sent Events stream). Upstream Incus `/1.0/events` and Podman `/libpod/events` are sources for aggregation but are not directly proxied.
 
 Proxy routes:
 

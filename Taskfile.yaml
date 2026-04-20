@@ -170,13 +170,13 @@ tasks:
 
   check:markdown:
     cmds:
-      # Quote glob so shell doesn't expand; pass negations in markdownlint-cli2 format.
-      - markdownlint-cli2 "#**/*.md" "#!node_modules" "#!web/node_modules" "#!.task" "#!refs"
+      # Globs and ignores live in .markdownlint-cli2.yaml. No CLI args needed.
+      - markdownlint-cli2
       - prettier --check "**/*.md" --ignore-path .gitignore
 
   fmt:markdown:
     cmds:
-      - markdownlint-cli2 --fix "#**/*.md" "#!node_modules" "#!web/node_modules" "#!.task" "#!refs" || true
+      - markdownlint-cli2 --fix || true
       - prettier --write "**/*.md" --ignore-path .gitignore
 
   # ============================================================

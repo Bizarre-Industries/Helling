@@ -104,16 +104,45 @@ is_exempt() {
   echo "$exempt" | tr '|' '\n' | grep -qx "$op"
 }
 
-in_cli_spec() {
+# camelCase → variants that might appear in docs.
+# authLogin → "authLogin", "auth login", "auth-login", "auth_login", "auth/login"
+op_variants() {
   local op="$1"
-  [ ! -f "$CLI_SPEC" ] && return 1
-  grep -qE "operationId:\s+${op}\b|\b${op}\b" "$CLI_SPEC" 2>/dev/null
+  # Insert a delimiter before each uppercase letter (except the first char), lowercase all.
+  local spaced
+  spaced=$(printf '%s' "$op" | python3 -c '
+import sys, re
+s = sys.stdin.read().strip()
+# Split camelCase: insert space before each uppercase that follows a lowercase/digit.
+out = re.sub(r"(?<=[a-z0-9])([A-Z])", r" \1", s).lower()
+print(out)
+')
+  local kebab="${spaced// /-}"
+  local snake="${spaced// /_}"
+  local slash="${spaced// //}"
+  # Unique variants (some collapse when op is single-word).
+  printf '%s\n%s\n%s\n%s\n%s\n' "$op" "$spaced" "$kebab" "$snake" "$slash" | awk '!seen[$0]++'
+}
+
+in_spec() {
+  local op="$1" spec="$2"
+  [ ! -f "$spec" ] && return 1
+  # operationId: X is a deterministic hit. Try it first.
+  grep -qE "operationId:\s+${op}\b" "$spec" 2>/dev/null && return 0
+  # Otherwise match any of the variants as a fixed substring (case-insensitive).
+  while IFS= read -r variant; do
+    [ -z "$variant" ] && continue
+    grep -qiF -- "$variant" "$spec" 2>/dev/null && return 0
+  done < <(op_variants "$op")
+  return 1
+}
+
+in_cli_spec() {
+  in_spec "$1" "$CLI_SPEC"
 }
 
 in_webui_spec() {
-  local op="$1"
-  [ ! -f "$WEBUI_SPEC" ] && return 1
-  grep -qE "operationId:\s+${op}\b|\b${op}\b" "$WEBUI_SPEC" 2>/dev/null
+  in_spec "$1" "$WEBUI_SPEC"
 }
 
 gap_count=0

@@ -63,9 +63,12 @@ rules:
       - "$.paths..requestBody.content['application/json']"
       - "$.paths..responses..content['application/json']"
     then:
-      function: xor
+      function: schema
       functionOptions:
-        properties: [ example, examples ]
+        schema:
+          anyOf:
+            - required: [ example ]
+            - required: [ examples ]
 
   helling-required-description-schema:
     description: Every top-level schema must have a description.
@@ -110,13 +113,16 @@ rules:
       Auth endpoints must declare a 429 response (rate limit policy is non-negotiable).
     severity: error
     given:
-      - "$.paths['/api/v1/auth/setup'].post"
-      - "$.paths['/api/v1/auth/login'].post"
-      - "$.paths['/api/v1/auth/refresh'].post"
-      - "$.paths['/api/v1/auth/mfa/complete'].post"
+      - "$.paths['/api/v1/auth/setup'].post.responses"
+      - "$.paths['/api/v1/auth/login'].post.responses"
+      - "$.paths['/api/v1/auth/refresh'].post.responses"
+      - "$.paths['/api/v1/auth/mfa/complete'].post.responses"
     then:
-      field: responses.429
-      function: truthy
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [ "429" ]
 
   helling-no-single-ref-combinator:
     description: |
@@ -165,7 +171,7 @@ rules:
   helling-health-is-public:
     description: /health must be reachable without authentication.
     severity: error
-    given: "$.paths[/api/v1/health].get"
+    given: "$.paths['/api/v1/health'].get"
     then:
       field: security
       function: schema

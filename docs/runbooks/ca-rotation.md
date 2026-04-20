@@ -32,3 +32,8 @@ Rotate Helling internal CA material used for per-user Incus trust certificate wo
 - Restore pre-rotation control-plane backup.
 - Reapply prior CA material and trust entries.
 - Restart services and revalidate health.
+
+## Related docs
+
+- `docs/spec/internal-ca.md` — key material types, validity windows, and rotation contract
+- `docs/spec/proxies.md` — mTLS client identity passed through hellingd to the Incus upstream

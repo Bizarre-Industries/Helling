@@ -88,3 +88,4 @@ Incus unavailable: banner "Incus service is unavailable. VM and container manage
 
 - Spec: docs/spec/webui-spec.md (Instance List + Instance Detail)
 - Patterns: docs/design/patterns/detail-views.md, docs/design/patterns/console.md
+- Proxy contract: docs/spec/proxies.md (Incus VGA WebSocket forwarding)

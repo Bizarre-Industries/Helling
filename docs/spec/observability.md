@@ -77,3 +77,9 @@ Operational targets are defined in standards, but default tracking includes:
 - p95 API latency
 - backup success rate
 - edge and daemon service health
+
+## Cross-references
+
+- `docs/spec/audit.md` — normative audit contract (distinct stream; correlates via `request_id`)
+- `docs/spec/proxies.md` — upstream proxy surface observability
+- `docs/decisions/019-journal-over-sqlite-audit.md` — journal-field schema for audit emission

@@ -39,7 +39,7 @@ Future enterprise IAM features (LDAP, OIDC, custom roles, WebAuthn, policy engin
 
 ### 2.1 PAM Login
 
-hellingd authenticates users through `/etc/pam.d/helling`.
+hellingd authenticates users through `/etc/pam.d/helling`. The normative PAM contract (service name, config path, runtime key) is in [`docs/spec/pam.md`](./pam.md).
 
 - `pam_authenticate()` verifies credentials.
 - `pam_acct_mgmt()` enforces account policy (lock, expiry).

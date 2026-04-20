@@ -28,4 +28,4 @@ App templates = Podman Compose YAML files stored in SQLite. Instance templates =
 - Users interact with image tools they already know (Incus remotes, `podman pull`)
 - Incus image caching, layer dedup, and remote servers work out of the box
 - OCI registry auth is Podman's concern, not Helling's
-- When microVM support lands post-v0.1, its image handling will be decided in the ADR that reverses ADR-006; no preemptive format work required
+- When microVM support lands post-v0.1, its image handling will be decided in the ADR that supersedes ADR-006; no preemptive format work required

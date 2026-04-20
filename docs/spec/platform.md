@@ -186,13 +186,13 @@ The dashboard reads tags from proxied responses. No separate tag API needed.
 
 Helling ISO bakes in specific versions of its core platform dependencies. These pins are enforced by the ISO build manifest and the Helling `.deb` postinst check.
 
-| Component | Minimum version | Why                                                                                                            |
-| --------- | --------------- | -------------------------------------------------------------------------------------------------------------- |
-| Debian    | 13 (Trixie)     | Base OS per ADR-002.                                                                                            |
+| Component | Minimum version | Why                                                                                                                                                                                      |
+| --------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Debian    | 13 (Trixie)     | Base OS per ADR-002.                                                                                                                                                                     |
 | Incus     | **6.14.0**      | CVE-2025-52889 (DoS), CVE-2025-52890 (ACL firewall-rule bypass, CVSS 8.1), CVE-2025-4115 (local privesc via custom storage volumes). All three affect 6.12/6.13 and are patched in 6.14. |
-| Podman    | Debian-shipped  | Whatever Debian 13 packages. libpod v5 socket at `/run/podman/podman.sock`.                                    |
-| K3s       | latest stable   | SQLite datastore default, etcd opt-in for HA (ADR-005).                                                         |
-| Caddy     | 2.x             | Debian-shipped package (ADR-037).                                                                               |
+| Podman    | Debian-shipped  | Whatever Debian 13 packages. libpod v5 socket at `/run/podman/podman.sock`.                                                                                                              |
+| K3s       | latest stable   | SQLite datastore default, etcd opt-in for HA (ADR-005).                                                                                                                                  |
+| Caddy     | 2.x             | Debian-shipped package (ADR-037).                                                                                                                                                        |
 
 ### Enforcement
 

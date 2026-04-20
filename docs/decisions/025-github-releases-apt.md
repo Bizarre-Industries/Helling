@@ -30,10 +30,10 @@ deb [signed-by=/usr/share/keyrings/helling-archive-keyring.gpg] https://bizarre-
 Updates:
 
 ```bash
-apt update && apt install --only-upgrade helling helling-proxy hellingd
+apt update && apt install --only-upgrade caddy hellingd
 ```
 
-The management plane (hellingd, helling-proxy) restarts via systemd after upgrade. The OS itself updates via standard Debian security repos + Zabbly (for Incus). These are decoupled.
+The management plane (`hellingd` and Caddy edge service) restarts via systemd after upgrade. The OS itself updates via standard Debian security repos + Zabbly (for Incus). These are decoupled.
 
 GitHub Releases remains the release-event trigger and artifact source, while GitHub Pages is the APT repository serving layer.
 
@@ -52,5 +52,5 @@ Signing and key lifecycle:
 - `.deb` packages are still built by nfpm in the release pipeline
 - Repository integrity uses APT GPG verification; artifact-level provenance can still use Cosign + SLSA
 - OS updates (Debian security, Zabbly Incus) are independent of Helling updates
-- "Update" button in dashboard UI runs: `apt update && apt install --only-upgrade helling helling-proxy hellingd`
+- "Update" button in dashboard UI runs: `apt update && apt install --only-upgrade caddy hellingd`
 - On upgrade: only management plane restarts — running VMs/containers unaffected

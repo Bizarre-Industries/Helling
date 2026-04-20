@@ -62,3 +62,37 @@ Dashboard API:
 - Query performance for large time ranges depends on journal indexing
 - Dashboard audit page requires parsing journal JSON (different format than a simple SQL query)
 - Journal retention is configured via journald.conf, not Helling's own config
+
+## Audit Field Schema
+
+All audit entries are structured with these standard fields:
+
+| Field               | Type              | Example               | Purpose                                      |
+| ------------------- | ----------------- | --------------------- | -------------------------------------------- |
+| `MESSAGE`           | string            | `"api.mutation"`      | Log event identifier (e.g., category.action) |
+| `PRIORITY`          | int               | `6` (info)            | syslog severity (0-7)                        |
+| `SYSLOG_IDENTIFIER` | string            | `"hellingd"`          | Daemon name (systemd-managed)                |
+| `REQUEST_ID`        | string            | uuid                  | Correlation ID across logs                   |
+| `USER`              | string            | `"alice"`             | Authenticated user or service account        |
+| `SOURCE_IP`         | string            | `"10.0.1.50"`         | Client IP (or internal service identifier)   |
+| `METHOD`            | string            | `"POST"`              | HTTP verb or RPC method                      |
+| `PATH`              | string            | `"/api/v1/instances"` | API resource path                            |
+| `STATUS`            | int               | `201`                 | HTTP status or operation result code         |
+| `DURATION_MS`       | int               | `45`                  | Operation time in milliseconds               |
+| `ERROR`             | string (optional) | `"permission denied"` | Error message if operation failed            |
+| `RESOURCE_ID`       | string (optional) | instance name         | Affected resource identifier                 |
+
+Query examples:
+
+```bash
+# All mutations by user alice
+journalctl -t hellingd --output json-pretty MESSAGE="api.mutation" USER="alice"
+
+# Failed operations
+journalctl -t hellingd --output json-pretty ERROR="*"
+
+# Specific resource changes
+journalctl -t hellingd --output json-pretty RESOURCE_ID="prod-web-01"
+```
+
+Dashboard audit filtering uses these fields with AND/OR logic to support user queries like "show all mutations by user X on resource Y since date Z".

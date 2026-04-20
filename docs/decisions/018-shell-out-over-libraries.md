@@ -53,3 +53,9 @@ func (s *FirewallService) ListRules() ([]Rule, error) {
 - Performance: exec.Command has more overhead than a library call (but these are infrequent operations)
 - Testing: must mock or have real tools available in test environment
 - Path assumptions: tools must be in PATH (guaranteed on the ISO, but worth documenting)
+
+## Exceptions
+
+**systemd unit/timer management:** Do not use `systemctl` CLI for dynamic unit creation or timer scheduling. Instead use the systemd DBus API (`org.freedesktop.systemd1.Manager`) as specified in ADR-017. DBus provides transactional safety and permission isolation that CLI invocations cannot guarantee.
+
+**Journal audit logging:** `journalctl` queries use shell invocation. High-volume audit queries should be handled via `sd-journal` C bindings (via cgo) rather than spawning `journalctl` processes repeatedly; see ADR-019 for audit schema.

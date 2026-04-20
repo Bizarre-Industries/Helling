@@ -332,3 +332,16 @@ Setup: create first admin. Login: username + password + optional TOTP. First-log
 ### /workspaces
 
 `<ProList grid>` of template cards with "Launch" `<Button>`. Active sessions `<ProTable>` (name, template, uptime, user, Destroy button). Launch → ephemeral instance + auto-open console. Idle timeout `<Statistic.Countdown>`.
+
+---
+
+## API Operation Coverage
+
+Helling OpenAPI operationIds whose WebUI surface does not match the naive camelCase variant of the operationId as a substring — listed here so `scripts/check-parity.sh` can resolve coverage without a phase0 exception entry.
+
+- operationId: userGet → user detail drawer on `/users` page (`docs/design/pages/users.md`)
+- operationId: userUpdate → user edit `ModalForm` on `/users` page (`docs/design/pages/users.md`)
+- operationId: auditQuery → filter controls on `/audit` page (`docs/design/pages/audit.md`)
+- operationId: auditExport → CSV/JSONL export button on `/audit` page (`docs/design/pages/audit.md`)
+- operationId: healthGet → consumed internally by app-shell status banner (no dedicated route)
+- operationId: eventsSse → consumed internally by task log + SSE subscribers across pages (no dedicated route)

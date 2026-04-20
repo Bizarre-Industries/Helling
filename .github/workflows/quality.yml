@@ -259,6 +259,7 @@ jobs:
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   spelling:
     name: Spelling (typos)

@@ -2,11 +2,60 @@
 
 > Proxy-first architecture (ADR-014). ISO-only deployment (ADR-021). approximately 10-12 Go dependencies.
 >
-> **📖 For detailed implementation steps, see:** [implementation-guide.md](./implementation-guide.md)
->
 > **📋 For verification checklists, see:** [checklist.md](./checklist.md)
 >
 > See also: ADR-014 through ADR-021, full-automation-pipeline.md, tools-and-frameworks.md
+
+---
+
+## Implementation Sequence
+
+Execution order aligned with accepted ADRs and active migration decisions:
+
+1. Freeze hand-authored OpenAPI changes.
+2. Implement Huma spike endpoints (`POST /api/v1/auth/login`, `GET /api/v1/users`).
+3. Generate and validate `api/openapi.yaml` with vacuum.
+4. Expand Huma coverage to all Helling-owned routes.
+5. Migrate WebUI API generation to hey-api/openapi-ts.
+6. Land tooling and hook package.
+7. Complete drift cleanup in docs/standards/spec/design.
+
+Mandatory validation loop for each phase:
+
+```bash
+make generate
+make check-generated
+make fmt-check
+make lint
+make test
+vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
+```
+
+---
+
+## v0.1.0-alpha Prerequisites
+
+Required baseline before alpha implementation is considered ready:
+
+- Initial Go module scaffolding for core binaries
+- API contract skeleton for Helling-specific endpoints
+- Makefile targets for generation, lint, and test flow
+- Web UI scaffold with build and dev commands
+- CI workflow skeleton with basic validation gates
+
+Documentation baseline:
+
+- Auth model aligned to ADR-024/030/031/032
+- Console model aligned to ADR-010
+- Kubernetes model aligned to ADR-005
+- MicroVM scope explicitly deferred (ADR-006)
+
+Exit criteria:
+
+- No contradictory references to superseded auth/query-param model
+- No contradictory references to any non-SPICE default VM console path
+- No contradictory references to CAPN as v0.1 default path
+- No contradictory references to microVM runtime in v0.1 scope
 
 ---
 

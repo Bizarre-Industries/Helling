@@ -131,5 +131,4 @@ Harder:
 
 - docs/design/openapi-pipeline.md
 - docs/standards/quality-assurance.md (OpenAPI gate semantics)
-- docs/roadmap/implementation-guide.md
 - docs/roadmap/plan.md

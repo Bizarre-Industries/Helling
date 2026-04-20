@@ -39,7 +39,7 @@
 - [ ] No `handlers_phase*.go` files exist
 - [ ] No `strict_handlers.go` (empty struct) exists
 - [ ] `grep -rn "TODO\|FIXME\|stub\|not implemented" apps/ --include="*.go" | grep -v _test.go | wc -l` = 0
-- [ ] `grep -rn "Docker mode\|Docker try-it\|devauth" docs/ --exclude-dir=decisions --exclude=checklist.md --exclude=plan.md --exclude=implementation-guide.md | wc -l` = 0
+- [ ] `grep -rn "Docker mode\|Docker try-it\|devauth" docs/ --exclude-dir=decisions --exclude=checklist.md --exclude=plan.md | wc -l` = 0
 
 ### Spec
 

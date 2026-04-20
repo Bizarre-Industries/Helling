@@ -24,11 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Install vacuum
+        env:
+          VACUUM_VERSION: "0.16.5"
+          VACUUM_SHA256: "68ed0b45ecbf4af245d36997b9b1df36a99d6bc093868be4c0d29583bbd747f6"
         run: |
-          vacuum_ver=0.16.5
-          curl -fsSL "https://github.com/daveshanley/vacuum/releases/download/v${vacuum_ver}/vacuum_${vacuum_ver}_linux_x86_64.tar.gz" \
-            -o /tmp/vacuum.tar.gz
+          set -euo pipefail
+          curl -fsSL -o /tmp/vacuum.tar.gz \
+            "https://github.com/daveshanley/vacuum/releases/download/v${VACUUM_VERSION}/vacuum_${VACUUM_VERSION}_linux_x86_64.tar.gz"
+          echo "${VACUUM_SHA256}  /tmp/vacuum.tar.gz" | sha256sum -c -
           tar -xzf /tmp/vacuum.tar.gz -C /usr/local/bin vacuum
+          vacuum version
       - name: Lint
         run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml -d
       - name: Gate score at 100 (against our ruleset)

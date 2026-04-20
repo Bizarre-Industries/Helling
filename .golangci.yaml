@@ -79,7 +79,6 @@ linters:
     - forbidigo
 
 linters-settings:
-
   gocyclo:
     min-complexity: 15
 
@@ -128,7 +127,7 @@ linters-settings:
     default-signifies-exhaustive: true
 
   gosimple:
-    checks: [ "all" ]
+    checks: ["all"]
 
   staticcheck:
     checks:

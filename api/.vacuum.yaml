@@ -7,9 +7,9 @@
 #
 # Apply: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 
-extends: [ [ spectral:oas, recommended ] ]
+extends: [[spectral:oas, recommended]]
 
-formats: [ oas3_1, oas3 ]
+formats: [oas3_1, oas3]
 
 rules:
   # ---------- Overrides of vacuum recommended ----------
@@ -67,8 +67,8 @@ rules:
       functionOptions:
         schema:
           anyOf:
-            - required: [ example ]
-            - required: [ examples ]
+            - required: [example]
+            - required: [examples]
 
   helling-required-description-schema:
     description: Every top-level schema must have a description.
@@ -122,7 +122,7 @@ rules:
       functionOptions:
         schema:
           type: object
-          required: [ "429" ]
+          required: ["429"]
 
   helling-no-single-ref-combinator:
     description: |

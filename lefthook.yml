@@ -17,14 +17,13 @@
 pre-commit:
   parallel: true
   commands:
-
     gitleaks:
       tags: secrets fast
       run: gitleaks protect --staged --no-banner --redact
 
     gofmt:
       tags: go format fast
-      glob: '*.go'
+      glob: "*.go"
       run: |
         unformatted=$(gofmt -l {staged_files} 2>/dev/null)
         if [ -n "$unformatted" ]; then
@@ -35,7 +34,7 @@ pre-commit:
 
     goimports:
       tags: go format fast
-      glob: '*.go'
+      glob: "*.go"
       run: |
         if ! command -v goimports >/dev/null; then exit 0; fi
         goimports -w -local github.com/Bizarre-Industries/Helling {staged_files}
@@ -43,8 +42,8 @@ pre-commit:
 
     markdownlint:
       tags: markdown fast
-      glob: '*.md'
-      exclude: 'refs/.*'
+      glob: "*.md"
+      exclude: "refs/.*"
       # IMPORTANT: pass staged files ONLY, not a trailing glob. The prior
       # form ("markdownlint-cli2 {staged_files}") caused lefthook to append
       # the glob default, which made the linter scan every .md in the repo.
@@ -52,41 +51,41 @@ pre-commit:
 
     prettier-md:
       tags: markdown format fast
-      glob: '*.md'
-      exclude: 'refs/.*'
+      glob: "*.md"
+      exclude: "refs/.*"
       run: |
         prettier --write {staged_files} 2>/dev/null
         git add {staged_files}
 
     yamllint:
       tags: yaml fast
-      glob: '*.{yaml,yml}'
+      glob: "*.{yaml,yml}"
       exclude: 'api/openapi\.yaml|refs/.*'
       run: yamllint -s {staged_files}
 
     shellcheck:
       tags: shell fast
-      glob: '*.{sh,bash}'
-      exclude: 'refs/.*'
+      glob: "*.{sh,bash}"
+      exclude: "refs/.*"
       run: shellcheck -S style {staged_files}
 
     shfmt:
       tags: shell format fast
-      glob: '*.{sh,bash}'
-      exclude: 'refs/.*'
+      glob: "*.{sh,bash}"
+      exclude: "refs/.*"
       run: |
         shfmt -w -i 2 -ci -bn {staged_files}
         git add {staged_files}
 
     vacuum:
       tags: openapi
-      glob: 'api/openapi.yaml'
+      glob: "api/openapi.yaml"
       run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 
     typos:
       tags: docs fast
-      glob: '*.md'
-      exclude: 'refs/.*'
+      glob: "*.md"
+      exclude: "refs/.*"
       run: typos {staged_files}
 
 # ============================================================
@@ -95,7 +94,6 @@ pre-commit:
 pre-push:
   parallel: false
   commands:
-
     banner:
       run: |
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -28,7 +28,7 @@ tags:
 paths:
   /api/v1/auth/setup:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authSetup
       summary: First admin creation (one-time)
       description: Creates the initial administrator account when no users exist in the system.
@@ -39,29 +39,29 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthSetupRequest'
+              $ref: "#/components/schemas/AuthSetupRequest"
             example:
               username: admin
               password: correct-horse-battery-staple
       responses:
-        '201':
+        "201":
           description: Setup completed and first administrator created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuthSetupResponse'
+                $ref: "#/components/schemas/EnvelopeAuthSetupResponse"
               example:
                 data:
                   setup_complete: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
   /api/v1/auth/login:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authLogin
       summary: PAM authenticate and issue JWT pair
       description: Authenticates a PAM user and returns either tokens or an MFA challenge.
@@ -72,7 +72,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthLoginRequest'
+              $ref: "#/components/schemas/AuthLoginRequest"
             examples:
               basic:
                 summary: Password-only login
@@ -86,12 +86,12 @@ paths:
                   password: correct-horse-battery-staple
                   totp_code: "492018"
       responses:
-        '200':
+        "200":
           description: Login successful and access token issued.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuthLoginResponse'
+                $ref: "#/components/schemas/EnvelopeAuthLoginResponse"
               example:
                 data:
                   access_token: eyJhbGciOiJFZERTQSJ9...
@@ -99,35 +99,35 @@ paths:
                   expires_in: 900
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '202':
+        "202":
           description: MFA challenge required before tokens are issued.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeMfaChallengeResponse'
+                $ref: "#/components/schemas/EnvelopeMfaChallengeResponse"
               example:
                 data:
                   mfa_required: true
                   mfa_token: mfa_01JZABC0123456789ABCDEFGJK
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '401':
-          $ref: '#/components/responses/AuthError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
+        "401":
+          $ref: "#/components/responses/AuthError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
   /api/v1/auth/refresh:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authRefresh
       summary: Refresh access token
       description: Exchanges a valid refresh session for a new short-lived access token.
       responses:
-        '200':
+        "200":
           description: Access token refreshed successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuthRefreshResponse'
+                $ref: "#/components/schemas/EnvelopeAuthRefreshResponse"
               example:
                 data:
                   access_token: eyJhbGciOiJFZERTQSJ9...
@@ -135,23 +135,23 @@ paths:
                   expires_in: 900
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '401':
-          $ref: '#/components/responses/AuthError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
+        "401":
+          $ref: "#/components/responses/AuthError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
   /api/v1/auth/logout:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authLogout
       summary: Revoke current session
       description: Revokes the current refresh session and invalidates subsequent refresh attempts.
       responses:
-        '200':
+        "200":
           description: Session revoked successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -159,7 +159,7 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/auth/mfa/complete:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authMfaComplete
       summary: Complete MFA challenge
       description: Completes a pending MFA challenge using a valid challenge token and TOTP code.
@@ -169,17 +169,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaCompleteRequest'
+              $ref: "#/components/schemas/MfaCompleteRequest"
             example:
               mfa_token: mfa_01JZABC0123456789ABCDEFGJK
               totp_code: "492018"
       responses:
-        '200':
+        "200":
           description: MFA challenge completed and access token issued.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuthLoginResponse'
+                $ref: "#/components/schemas/EnvelopeAuthLoginResponse"
               example:
                 data:
                   access_token: eyJhbGciOiJFZERTQSJ9...
@@ -187,33 +187,33 @@ paths:
                   expires_in: 900
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '401':
-          $ref: '#/components/responses/AuthError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
+        "401":
+          $ref: "#/components/responses/AuthError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
   /api/v1/auth/totp/setup:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTotpSetup
       summary: Start TOTP enrollment
       description: Creates enrollment material for TOTP setup for the authenticated user.
       responses:
-        '200':
+        "200":
           description: Enrollment material returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeTotpSetupResponse'
+                $ref: "#/components/schemas/EnvelopeTotpSetupResponse"
               example:
                 data:
                   otpauth_uri: otpauth://totp/Helling:alice?secret=ABC123&issuer=Helling
                   qr_png_base64: iVBORw0KGgoAAAANSUhEUgAA...
-                  recovery_codes: [ rc1a-1234, rc1b-5678 ]
+                  recovery_codes: [rc1a-1234, rc1b-5678]
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/auth/totp/verify:
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTotpVerify
       summary: Verify TOTP enrollment
       description: Verifies the enrollment code and enables TOTP for the current user.
@@ -223,36 +223,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TotpVerifyRequest'
+              $ref: "#/components/schemas/TotpVerifyRequest"
             example:
               code: "492018"
       responses:
-        '200':
+        "200":
           description: TOTP enabled successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '401':
-          $ref: '#/components/responses/AuthError'
+        "401":
+          $ref: "#/components/responses/AuthError"
   /api/v1/auth/totp:
     delete:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTotpDisable
       summary: Disable TOTP
       description: Disables TOTP for the current authenticated user.
       responses:
-        '200':
+        "200":
           description: TOTP disabled successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -260,17 +260,17 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/auth/tokens:
     get:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTokenList
       summary: List API tokens for current user
       description: Returns API tokens owned by the current authenticated user.
       responses:
-        '200':
+        "200":
           description: API token list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeTokenList'
+                $ref: "#/components/schemas/EnvelopeTokenList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -280,7 +280,7 @@ paths:
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     post:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTokenCreate
       summary: Create API token
       description: Creates an API token for the current user with the requested scope.
@@ -290,17 +290,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTokenRequest'
+              $ref: "#/components/schemas/CreateTokenRequest"
             example:
               name: ci-bot
               scope: write
       responses:
-        '201':
+        "201":
           description: API token created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeCreateTokenResponse'
+                $ref: "#/components/schemas/EnvelopeCreateTokenResponse"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -311,37 +311,37 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/auth/tokens/{id}:
     delete:
-      tags: [ Auth ]
+      tags: [Auth]
       operationId: authTokenRevoke
       summary: Revoke API token
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Token revoked
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/v1/users:
     get:
-      tags: [ Users ]
+      tags: [Users]
       operationId: userList
       summary: List users
       description: Returns paginated users managed by Helling.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: User list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeUserList'
+                $ref: "#/components/schemas/EnvelopeUserList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -356,7 +356,7 @@ paths:
                     next_cursor: null
                     limit: 50
     post:
-      tags: [ Users ]
+      tags: [Users]
       operationId: userCreate
       summary: Create user and provision trust identity
       description: Creates a user account and provisions delegated access identity.
@@ -366,17 +366,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUserRequest'
+              $ref: "#/components/schemas/CreateUserRequest"
             example:
               username: bob
               role: user
       responses:
-        '201':
+        "201":
           description: User created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeUser'
+                $ref: "#/components/schemas/EnvelopeUser"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -386,23 +386,23 @@ paths:
                   created_at: "2026-04-20T10:00:00Z"
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '409':
-          $ref: '#/components/responses/ConflictError'
+        "409":
+          $ref: "#/components/responses/ConflictError"
   /api/v1/users/{id}:
     get:
-      tags: [ Users ]
+      tags: [Users]
       operationId: userGet
       summary: Get user detail
       description: Returns details for a specific user by ULID identifier.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: User details returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeUser'
+                $ref: "#/components/schemas/EnvelopeUser"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -412,32 +412,32 @@ paths:
                   created_at: "2026-04-20T10:00:00Z"
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+        "404":
+          $ref: "#/components/responses/NotFoundError"
     put:
-      tags: [ Users ]
+      tags: [Users]
       operationId: userUpdate
       summary: Update user role/status
       description: Updates mutable role and status fields for a user.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       requestBody:
         required: true
         description: Partial user update payload.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
+              $ref: "#/components/schemas/UpdateUserRequest"
             example:
               role: auditor
               status: active
       responses:
-        '200':
+        "200":
           description: User updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeUser'
+                $ref: "#/components/schemas/EnvelopeUser"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -447,22 +447,22 @@ paths:
                   created_at: "2026-04-20T10:00:00Z"
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+        "404":
+          $ref: "#/components/responses/NotFoundError"
     delete:
-      tags: [ Users ]
+      tags: [Users]
       operationId: userDelete
       summary: Delete user and revoke trust identity
       description: Deletes a user and revokes delegated trust identity artifacts.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: User deleted successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -471,20 +471,20 @@ paths:
 
   /api/v1/schedules:
     get:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleList
       summary: List schedules
       description: Returns paginated schedule definitions configured in Helling.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: Schedule list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeScheduleList'
+                $ref: "#/components/schemas/EnvelopeScheduleList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -499,7 +499,7 @@ paths:
                     next_cursor: null
                     limit: 50
     post:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleCreate
       summary: Create schedule
       description: Creates a recurring schedule for backup or snapshot workloads.
@@ -509,18 +509,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateScheduleRequest'
+              $ref: "#/components/schemas/CreateScheduleRequest"
             example:
               type: backup
               target: vm-web-1
               cron: "0 3 * * *"
       responses:
-        '201':
+        "201":
           description: Schedule created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSchedule'
+                $ref: "#/components/schemas/EnvelopeSchedule"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -532,19 +532,19 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/schedules/{id}:
     get:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleGet
       summary: Get schedule detail
       description: Returns schedule details for a specific schedule ULID.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Schedule details returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSchedule'
+                $ref: "#/components/schemas/EnvelopeSchedule"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -555,29 +555,29 @@ paths:
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     put:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleUpdate
       summary: Update schedule
       description: Updates mutable schedule fields while preserving unspecified values.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       requestBody:
         required: true
         description: Partial schedule update payload.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateScheduleRequest'
+              $ref: "#/components/schemas/UpdateScheduleRequest"
             example:
               cron: "0 */6 * * *"
               enabled: true
       responses:
-        '200':
+        "200":
           description: Schedule updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSchedule'
+                $ref: "#/components/schemas/EnvelopeSchedule"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -588,19 +588,19 @@ paths:
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     delete:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleDelete
       summary: Delete schedule
       description: Deletes an existing schedule definition.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Schedule deleted successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -608,19 +608,19 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/schedules/{id}/run:
     post:
-      tags: [ Schedules ]
+      tags: [Schedules]
       operationId: scheduleRunNow
       summary: Run schedule now
       description: Triggers immediate execution of the referenced schedule.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '202':
+        "202":
           description: Schedule execution trigger accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -629,26 +629,26 @@ paths:
 
   /api/v1/webhooks:
     get:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookList
       summary: List webhooks
       description: Returns configured webhook integrations.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: Webhook list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeWebhookList'
+                $ref: "#/components/schemas/EnvelopeWebhookList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
                     name: ops-pagerduty
                     url: https://events.example.com/helling
-                    events: [ instance.created, instance.deleted ]
+                    events: [instance.created, instance.deleted]
                     enabled: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
@@ -657,7 +657,7 @@ paths:
                     next_cursor: null
                     limit: 50
     post:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookCreate
       summary: Create webhook
       description: Creates an outbound event-delivery webhook endpoint.
@@ -667,98 +667,98 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateWebhookRequest'
+              $ref: "#/components/schemas/CreateWebhookRequest"
             example:
               name: ops-pagerduty
               url: https://events.example.com/helling
-              events: [ instance.created, instance.deleted ]
+              events: [instance.created, instance.deleted]
       responses:
-        '201':
+        "201":
           description: Webhook created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeWebhook'
+                $ref: "#/components/schemas/EnvelopeWebhook"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
                   name: ops-pagerduty
                   url: https://events.example.com/helling
-                  events: [ instance.created, instance.deleted ]
+                  events: [instance.created, instance.deleted]
                   enabled: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/webhooks/{id}:
     get:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookGet
       summary: Get webhook
       description: Returns details for a specific webhook by ULID.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Webhook details returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeWebhook'
+                $ref: "#/components/schemas/EnvelopeWebhook"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
                   name: ops-pagerduty
                   url: https://events.example.com/helling
-                  events: [ instance.created, instance.deleted ]
+                  events: [instance.created, instance.deleted]
                   enabled: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     put:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookUpdate
       summary: Update webhook
       description: Updates mutable webhook settings for an existing webhook.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       requestBody:
         required: true
         description: Partial webhook update payload.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateWebhookRequest'
+              $ref: "#/components/schemas/UpdateWebhookRequest"
             example:
               name: ops-discord
               enabled: true
       responses:
-        '200':
+        "200":
           description: Webhook updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeWebhook'
+                $ref: "#/components/schemas/EnvelopeWebhook"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
                   name: ops-discord
                   url: https://events.example.com/helling
-                  events: [ instance.created ]
+                  events: [instance.created]
                   enabled: true
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     delete:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookDelete
       summary: Delete webhook
       description: Deletes a webhook configuration.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Webhook deleted successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -766,19 +766,19 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/webhooks/{id}/test:
     post:
-      tags: [ Webhooks ]
+      tags: [Webhooks]
       operationId: webhookTest
       summary: Send test delivery
       description: Sends a test event delivery to verify webhook reachability and signing.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '202':
+        "202":
           description: Test webhook delivery accepted for asynchronous processing.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -787,20 +787,20 @@ paths:
 
   /api/v1/kubernetes:
     get:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesList
       summary: List clusters
       description: Returns Kubernetes clusters managed by Helling.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: Cluster list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeKubernetesClusterList'
+                $ref: "#/components/schemas/EnvelopeKubernetesClusterList"
               example:
                 data:
                   - name: k3s-prod
@@ -813,7 +813,7 @@ paths:
                     next_cursor: null
                     limit: 50
     post:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesCreate
       summary: Create cluster
       description: Starts asynchronous provisioning of a new Kubernetes cluster.
@@ -823,17 +823,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateKubernetesClusterRequest'
+              $ref: "#/components/schemas/CreateKubernetesClusterRequest"
             example:
               name: k3s-prod
               k8s_version: v1.30.0+k3s1
       responses:
-        '202':
+        "202":
           description: Cluster provisioning request accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeKubernetesCluster'
+                $ref: "#/components/schemas/EnvelopeKubernetesCluster"
               example:
                 data:
                   name: k3s-prod
@@ -843,19 +843,19 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/kubernetes/{name}:
     get:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesGet
       summary: Get cluster detail
       description: Returns details for a named Kubernetes cluster.
       parameters:
-        - $ref: '#/components/parameters/NamePath'
+        - $ref: "#/components/parameters/NamePath"
       responses:
-        '200':
+        "200":
           description: Cluster details returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeKubernetesCluster'
+                $ref: "#/components/schemas/EnvelopeKubernetesCluster"
               example:
                 data:
                   name: k3s-prod
@@ -864,19 +864,19 @@ paths:
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     delete:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesDelete
       summary: Delete cluster
       description: Starts asynchronous cluster deletion workflow.
       parameters:
-        - $ref: '#/components/parameters/NamePath'
+        - $ref: "#/components/parameters/NamePath"
       responses:
-        '202':
+        "202":
           description: Cluster deletion request accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -884,28 +884,28 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/kubernetes/{name}/scale:
     post:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesScale
       summary: Scale worker pool
       description: Scales the worker node pool for the named Kubernetes cluster.
       parameters:
-        - $ref: '#/components/parameters/NamePath'
+        - $ref: "#/components/parameters/NamePath"
       requestBody:
         required: true
         description: Desired worker count for the cluster.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScaleKubernetesClusterRequest'
+              $ref: "#/components/schemas/ScaleKubernetesClusterRequest"
             example:
               worker_count: 5
       responses:
-        '202':
+        "202":
           description: Scale request accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -913,28 +913,28 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/kubernetes/{name}/upgrade:
     post:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesUpgrade
       summary: Rolling upgrade
       description: Starts a rolling upgrade of the named cluster to a target version.
       parameters:
-        - $ref: '#/components/parameters/NamePath'
+        - $ref: "#/components/parameters/NamePath"
       requestBody:
         required: true
         description: Kubernetes version target for the rolling upgrade.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpgradeKubernetesClusterRequest'
+              $ref: "#/components/schemas/UpgradeKubernetesClusterRequest"
             example:
               k8s_version: v1.30.1+k3s1
       responses:
-        '202':
+        "202":
           description: Upgrade request accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -942,13 +942,13 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/kubernetes/{name}/kubeconfig:
     get:
-      tags: [ Kubernetes ]
+      tags: [Kubernetes]
       operationId: kubernetesKubeconfig
       summary: Download kubeconfig
       parameters:
-        - $ref: '#/components/parameters/NamePath'
+        - $ref: "#/components/parameters/NamePath"
       responses:
-        '200':
+        "200":
           description: Kubeconfig
           content:
             application/yaml:
@@ -957,17 +957,17 @@ paths:
 
   /api/v1/system/info:
     get:
-      tags: [ System ]
+      tags: [System]
       operationId: systemInfo
       summary: Host and version info
       description: Returns host identity, versions, and runtime details for the control node.
       responses:
-        '200':
+        "200":
           description: System information returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSystemInfo'
+                $ref: "#/components/schemas/EnvelopeSystemInfo"
               example:
                 data:
                   hostname: helling-node-1
@@ -982,17 +982,17 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/system/hardware:
     get:
-      tags: [ System ]
+      tags: [System]
       operationId: systemHardware
       summary: Hardware detail
       description: Returns a hardware inventory view including disks, NICs, and GPUs.
       responses:
-        '200':
+        "200":
           description: Hardware inventory returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSystemHardware'
+                $ref: "#/components/schemas/EnvelopeSystemHardware"
               example:
                 data:
                   disks:
@@ -1008,17 +1008,17 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/system/config:
     get:
-      tags: [ System ]
+      tags: [System]
       operationId: systemConfigGet
       summary: Get current config
       description: Returns effective runtime configuration visible to the API.
       responses:
-        '200':
+        "200":
           description: Config snapshot returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSystemConfig'
+                $ref: "#/components/schemas/EnvelopeSystemConfig"
               example:
                 data:
                   listen_socket: /run/helling/hellingd.sock
@@ -1029,7 +1029,7 @@ paths:
                 meta:
                   request_id: req_01JZABC0123456789ABCDEFGJK
     put:
-      tags: [ System ]
+      tags: [System]
       operationId: systemConfigPut
       summary: Update config
       description: Applies a configuration update and persists it for subsequent restarts.
@@ -1039,17 +1039,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SystemConfigUpdateRequest'
+              $ref: "#/components/schemas/SystemConfigUpdateRequest"
             example:
               warnings_interval: 10m
               warnings_pool_full_pct: 90
       responses:
-        '200':
+        "200":
           description: Configuration updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -1057,17 +1057,17 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/system/upgrade:
     post:
-      tags: [ System ]
+      tags: [System]
       operationId: systemUpgrade
       summary: Apply upgrades
       description: Starts asynchronous package and service upgrade workflow.
       responses:
-        '202':
+        "202":
           description: Upgrade request accepted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -1075,17 +1075,17 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/system/diagnostics:
     get:
-      tags: [ System ]
+      tags: [System]
       operationId: systemDiagnostics
       summary: Run diagnostics
       description: Runs or returns a summarized diagnostics check suite.
       responses:
-        '200':
+        "200":
           description: Diagnostics report returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeDiagnostics'
+                $ref: "#/components/schemas/EnvelopeDiagnostics"
               example:
                 data:
                   checks:
@@ -1097,20 +1097,20 @@ paths:
 
   /api/v1/firewall/host:
     get:
-      tags: [ Firewall ]
+      tags: [Firewall]
       operationId: firewallHostList
       summary: List host firewall rules
       description: Returns host-level firewall rules managed by Helling.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: Firewall rule list returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeFirewallRuleList'
+                $ref: "#/components/schemas/EnvelopeFirewallRuleList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -1123,7 +1123,7 @@ paths:
                     next_cursor: null
                     limit: 50
     post:
-      tags: [ Firewall ]
+      tags: [Firewall]
       operationId: firewallHostCreate
       summary: Create host firewall rule
       description: Creates a host firewall rule using supported action/protocol fields.
@@ -1133,17 +1133,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateFirewallRuleRequest'
+              $ref: "#/components/schemas/CreateFirewallRuleRequest"
             example:
               action: accept
               protocol: tcp
       responses:
-        '201':
+        "201":
           description: Firewall rule created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeFirewallRule'
+                $ref: "#/components/schemas/EnvelopeFirewallRule"
               example:
                 data:
                   id: 01JZABC0123456789ABCDEFGJK
@@ -1153,19 +1153,19 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/firewall/host/{id}:
     delete:
-      tags: [ Firewall ]
+      tags: [Firewall]
       operationId: firewallHostDelete
       summary: Delete host firewall rule
       description: Deletes a specific host firewall rule by ULID.
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - $ref: "#/components/parameters/IdPath"
       responses:
-        '200':
+        "200":
           description: Firewall rule deleted successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeSimpleOk'
+                $ref: "#/components/schemas/EnvelopeSimpleOk"
               example:
                 data:
                   ok: true
@@ -1174,20 +1174,20 @@ paths:
 
   /api/v1/audit:
     get:
-      tags: [ Audit ]
+      tags: [Audit]
       operationId: auditQuery
       summary: Query audit log
       description: Returns paginated audit records filtered by query parameters.
       parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageCursor'
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
-        '200':
+        "200":
           description: Audit records returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuditRecordList'
+                $ref: "#/components/schemas/EnvelopeAuditRecordList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -1201,7 +1201,7 @@ paths:
                     limit: 50
   /api/v1/audit/export:
     get:
-      tags: [ Audit ]
+      tags: [Audit]
       operationId: auditExport
       summary: Export audit data
       description: Exports audit data in CSV or JSON format.
@@ -1211,10 +1211,10 @@ paths:
           description: Export format for the response body.
           schema:
             type: string
-            enum: [ csv, json ]
+            enum: [csv, json]
             default: csv
       responses:
-        '200':
+        "200":
           description: Audit export returned in the requested format.
           content:
             text/csv:
@@ -1225,7 +1225,7 @@ paths:
                 01JZABC0123456789ABCDEFGJK,user.created,2026-04-20T10:00:00Z"
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeAuditRecordList'
+                $ref: "#/components/schemas/EnvelopeAuditRecordList"
               example:
                 data:
                   - id: 01JZABC0123456789ABCDEFGJK
@@ -1236,18 +1236,18 @@ paths:
 
   /api/v1/health:
     get:
-      tags: [ System ]
+      tags: [System]
       operationId: healthGet
       summary: Health check
       description: Returns service health for unauthenticated readiness checks.
       security: []
       responses:
-        '200':
+        "200":
           description: Service is healthy and ready.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvelopeHealth'
+                $ref: "#/components/schemas/EnvelopeHealth"
               example:
                 data:
                   status: ok
@@ -1255,12 +1255,12 @@ paths:
                   request_id: req_01JZABC0123456789ABCDEFGJK
   /api/v1/events:
     get:
-      tags: [ Events ]
+      tags: [Events]
       operationId: eventsSse
       summary: Helling SSE event stream
       description: Streams Helling events as server-sent events for UI subscribers.
       responses:
-        '200':
+        "200":
           description: Event stream opened successfully.
           content:
             text/event-stream:
@@ -1286,7 +1286,7 @@ components:
       description: ULID identifier of the targeted resource.
       schema:
         type: string
-        pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+        pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
         example: "01JZABC0123456789ABCDEFGJK"
     NamePath:
       in: path
@@ -1320,7 +1320,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
+            $ref: "#/components/schemas/ErrorEnvelope"
           example:
             error: Invalid credentials.
             code: AUTH_INVALID_CREDENTIALS
@@ -1333,7 +1333,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
+            $ref: "#/components/schemas/ErrorEnvelope"
           example:
             error: Resource not found.
             code: RESOURCE_NOT_FOUND
@@ -1346,7 +1346,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
+            $ref: "#/components/schemas/ErrorEnvelope"
           example:
             error: Resource already exists.
             code: RESOURCE_CONFLICT
@@ -1364,7 +1364,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
+            $ref: "#/components/schemas/ErrorEnvelope"
           example:
             error: Too many requests.
             code: RATE_LIMIT_EXCEEDED
@@ -1376,7 +1376,7 @@ components:
     Meta:
       type: object
       description: Metadata attached to every API response envelope.
-      required: [ request_id ]
+      required: [request_id]
       properties:
         request_id:
           type: string
@@ -1391,7 +1391,7 @@ components:
               description: Indicates whether an additional page can be fetched.
               example: false
             next_cursor:
-              type: [ string, 'null' ]
+              type: [string, "null"]
               description: Opaque cursor to fetch the next page.
               example: null
             limit:
@@ -1404,7 +1404,7 @@ components:
     ErrorEnvelope:
       type: object
       description: Standard error envelope returned on failed requests.
-      required: [ error, code, action, doc_link, meta ]
+      required: [error, code, action, doc_link, meta]
       properties:
         error:
           type: string
@@ -1424,12 +1424,12 @@ components:
           description: Documentation URL for the error code.
           example: https://bizarre.industries/docs/errors/AUTH_INVALID_CREDENTIALS
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeSimpleOk:
       type: object
       description: Generic success envelope for operations returning only an ok flag.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
@@ -1441,19 +1441,19 @@ components:
               default: true
               example: true
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     AuthSetupRequest:
       type: object
       description: Bootstrap administrator creation payload.
-      required: [ username, password ]
+      required: [username, password]
       properties:
         username:
           type: string
           description: Username for the first administrator.
           minLength: 1
           maxLength: 32
-          pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+          pattern: "^[a-z_][a-z0-9_-]{0,31}$"
           example: admin
         password:
           type: string
@@ -1467,14 +1467,14 @@ components:
     AuthLoginRequest:
       type: object
       description: PAM login request payload.
-      required: [ username, password ]
+      required: [username, password]
       properties:
         username:
           type: string
           description: Login username.
           minLength: 1
           maxLength: 32
-          pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+          pattern: "^[a-z_][a-z0-9_-]{0,31}$"
           example: alice
         password:
           type: string
@@ -1487,15 +1487,15 @@ components:
         totp_code:
           type: string
           description: Optional TOTP code for one-step MFA login.
-          pattern: '^[0-9]{6}$'
+          pattern: "^[0-9]{6}$"
           minLength: 6
           maxLength: 6
-          example: '492018'
+          example: "492018"
 
     MfaCompleteRequest:
       type: object
       description: MFA challenge completion payload.
-      required: [ mfa_token, totp_code ]
+      required: [mfa_token, totp_code]
       properties:
         mfa_token:
           type: string
@@ -1504,24 +1504,24 @@ components:
         totp_code:
           type: string
           description: TOTP code that completes the challenge.
-          pattern: '^[0-9]{6}$'
-          example: '492018'
+          pattern: "^[0-9]{6}$"
+          example: "492018"
 
     TotpVerifyRequest:
       type: object
       description: TOTP enrollment verification payload.
-      required: [ code ]
+      required: [code]
       properties:
         code:
           type: string
           description: TOTP code generated by the enrollment secret.
-          pattern: '^[0-9]{6}$'
-          example: '492018'
+          pattern: "^[0-9]{6}$"
+          example: "492018"
 
     CreateTokenRequest:
       type: object
       description: API token creation payload.
-      required: [ name, scope ]
+      required: [name, scope]
       properties:
         name:
           type: string
@@ -1532,51 +1532,51 @@ components:
         scope:
           type: string
           description: Authorization scope for the token.
-          enum: [ read, write, admin ]
+          enum: [read, write, admin]
           example: write
 
     User:
       type: object
       description: Helling-managed user account.
-      required: [ id, username, role, status, created_at ]
+      required: [id, username, role, status, created_at]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         username:
           type: string
           description: POSIX-compatible username.
           minLength: 1
           maxLength: 32
-          pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+          pattern: "^[a-z_][a-z0-9_-]{0,31}$"
           example: alice
         role:
           type: string
           description: Fixed user role.
-          enum: [ admin, user, auditor ]
+          enum: [admin, user, auditor]
           example: admin
         status:
           type: string
           description: Account status.
-          enum: [ active, disabled ]
+          enum: [active, disabled]
           example: active
         created_at:
           type: string
           format: date-time
           description: User creation timestamp in UTC.
-          example: '2026-04-20T10:00:00Z'
+          example: "2026-04-20T10:00:00Z"
 
     Token:
       type: object
       description: API token metadata visible after creation.
-      required: [ id, name, scope, expires_at ]
+      required: [id, name, scope, expires_at]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         name:
           type: string
@@ -1585,28 +1585,28 @@ components:
         scope:
           type: string
           description: Token scope.
-          enum: [ read, write, admin ]
+          enum: [read, write, admin]
           example: write
         expires_at:
           type: string
           format: date-time
           description: Token expiration timestamp.
-          example: '2026-06-01T00:00:00Z'
+          example: "2026-06-01T00:00:00Z"
 
     Schedule:
       type: object
       description: Scheduled operation definition.
-      required: [ id, type, target, cron, enabled ]
+      required: [id, type, target, cron, enabled]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         type:
           type: string
           description: Schedule operation type.
-          enum: [ backup, snapshot, volume_snapshot ]
+          enum: [backup, snapshot, volume_snapshot]
           example: backup
         target:
           type: string
@@ -1627,12 +1627,12 @@ components:
     Webhook:
       type: object
       description: Configured outbound event-delivery webhook.
-      required: [ id, name, url, events, enabled ]
+      required: [id, name, url, events, enabled]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         name:
           type: string
@@ -1644,7 +1644,7 @@ components:
           type: string
           format: uri
           description: HTTPS endpoint for webhook deliveries.
-          pattern: '^https://'
+          pattern: "^https://"
           maxLength: 2048
           example: https://events.example.com/helling
         events:
@@ -1654,7 +1654,7 @@ components:
             type: string
           minItems: 1
           uniqueItems: true
-          example: [ instance.created, instance.deleted ]
+          example: [instance.created, instance.deleted]
         enabled:
           type: boolean
           description: Delivery state for this webhook.
@@ -1663,7 +1663,7 @@ components:
     KubernetesCluster:
       type: object
       description: Managed Kubernetes cluster state summary.
-      required: [ name, state, k8s_version ]
+      required: [name, state, k8s_version]
       properties:
         name:
           type: string
@@ -1674,7 +1674,7 @@ components:
         state:
           type: string
           description: Cluster lifecycle state.
-          enum: [ provisioning, ready, upgrading, deleting, error ]
+          enum: [provisioning, ready, upgrading, deleting, error]
           example: ready
         k8s_version:
           type: string
@@ -1684,33 +1684,33 @@ components:
     FirewallRule:
       type: object
       description: Host firewall rule record.
-      required: [ id, action, protocol ]
+      required: [id, action, protocol]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         action:
           type: string
           description: Firewall action to apply.
-          enum: [ accept, drop, reject ]
+          enum: [accept, drop, reject]
           example: accept
         protocol:
           type: string
           description: Rule protocol selector.
-          enum: [ tcp, udp, icmp ]
+          enum: [tcp, udp, icmp]
           example: tcp
 
     AuditRecord:
       type: object
       description: Immutable audit event entry.
-      required: [ id, event_type, created_at ]
+      required: [id, event_type, created_at]
       properties:
         id:
           type: string
           description: ULID identifier.
-          pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
           example: 01JZABC0123456789ABCDEFGJK
         event_type:
           type: string
@@ -1720,24 +1720,24 @@ components:
           type: string
           format: date-time
           description: Event timestamp in UTC.
-          example: '2026-04-20T10:00:00Z'
+          example: "2026-04-20T10:00:00Z"
 
     CreateUserRequest:
       type: object
       description: User creation request payload.
-      required: [ username, role ]
+      required: [username, role]
       properties:
         username:
           type: string
           description: Username for the user account.
           minLength: 1
           maxLength: 32
-          pattern: '^[a-z_][a-z0-9_-]{0,31}$'
+          pattern: "^[a-z_][a-z0-9_-]{0,31}$"
           example: bob
         role:
           type: string
           description: Initial role for the user account.
-          enum: [ admin, user, auditor ]
+          enum: [admin, user, auditor]
           example: user
 
     UpdateUserRequest:
@@ -1747,23 +1747,23 @@ components:
         role:
           type: string
           description: Updated role value.
-          enum: [ admin, user, auditor ]
+          enum: [admin, user, auditor]
           example: auditor
         status:
           type: string
           description: Updated account status.
-          enum: [ active, disabled ]
+          enum: [active, disabled]
           example: active
 
     CreateScheduleRequest:
       type: object
       description: Schedule creation payload.
-      required: [ type, target, cron ]
+      required: [type, target, cron]
       properties:
         type:
           type: string
           description: Schedule operation type.
-          enum: [ backup, snapshot, volume_snapshot ]
+          enum: [backup, snapshot, volume_snapshot]
           example: backup
         target:
           type: string
@@ -1783,7 +1783,7 @@ components:
         type:
           type: string
           description: Schedule operation type.
-          enum: [ backup, snapshot, volume_snapshot ]
+          enum: [backup, snapshot, volume_snapshot]
           example: backup
         target:
           type: string
@@ -1803,7 +1803,7 @@ components:
     CreateWebhookRequest:
       type: object
       description: Webhook creation payload.
-      required: [ name, url, events ]
+      required: [name, url, events]
       properties:
         name:
           type: string
@@ -1815,7 +1815,7 @@ components:
           type: string
           format: uri
           description: HTTPS endpoint for event delivery.
-          pattern: '^https://'
+          pattern: "^https://"
           example: https://events.example.com/helling
         events:
           type: array
@@ -1824,7 +1824,7 @@ components:
             type: string
           minItems: 1
           uniqueItems: true
-          example: [ instance.created, instance.deleted ]
+          example: [instance.created, instance.deleted]
 
     UpdateWebhookRequest:
       type: object
@@ -1840,7 +1840,7 @@ components:
           type: string
           format: uri
           description: Updated HTTPS delivery URL.
-          pattern: '^https://'
+          pattern: "^https://"
           example: https://events.example.com/helling
         events:
           type: array
@@ -1849,7 +1849,7 @@ components:
             type: string
           minItems: 1
           uniqueItems: true
-          example: [ instance.created ]
+          example: [instance.created]
         enabled:
           type: boolean
           description: Updated webhook enabled state.
@@ -1858,7 +1858,7 @@ components:
     CreateKubernetesClusterRequest:
       type: object
       description: Kubernetes cluster creation payload.
-      required: [ name, k8s_version ]
+      required: [name, k8s_version]
       properties:
         name:
           type: string
@@ -1874,7 +1874,7 @@ components:
     ScaleKubernetesClusterRequest:
       type: object
       description: Cluster scale request payload.
-      required: [ worker_count ]
+      required: [worker_count]
       properties:
         worker_count:
           type: integer
@@ -1886,7 +1886,7 @@ components:
     UpgradeKubernetesClusterRequest:
       type: object
       description: Cluster upgrade request payload.
-      required: [ k8s_version ]
+      required: [k8s_version]
       properties:
         k8s_version:
           type: string
@@ -1901,7 +1901,7 @@ components:
         warnings_interval:
           type: string
           description: Warning engine run interval as Go duration.
-          pattern: '^[0-9]+(s|m|h)$'
+          pattern: "^[0-9]+(s|m|h)$"
           example: 10m
         warnings_pool_full_pct:
           type: integer
@@ -1922,23 +1922,23 @@ components:
     CreateFirewallRuleRequest:
       type: object
       description: Host firewall rule creation payload.
-      required: [ action, protocol ]
+      required: [action, protocol]
       properties:
         action:
           type: string
           description: Firewall action to apply.
-          enum: [ accept, drop, reject ]
+          enum: [accept, drop, reject]
           example: accept
         protocol:
           type: string
           description: Transport protocol selector.
-          enum: [ tcp, udp, icmp ]
+          enum: [tcp, udp, icmp]
           example: tcp
 
     AuthLoginData:
       type: object
       description: Access token payload returned after successful login.
-      required: [ access_token, token_type, expires_in ]
+      required: [access_token, token_type, expires_in]
       properties:
         access_token:
           type: string
@@ -1947,7 +1947,7 @@ components:
         token_type:
           type: string
           description: Token type identifier.
-          enum: [ Bearer ]
+          enum: [Bearer]
           example: Bearer
         expires_in:
           type: integer
@@ -1962,7 +1962,7 @@ components:
     AuthRefreshData:
       type: object
       description: Access token payload returned after refresh.
-      required: [ access_token, token_type, expires_in ]
+      required: [access_token, token_type, expires_in]
       properties:
         access_token:
           type: string
@@ -1971,7 +1971,7 @@ components:
         token_type:
           type: string
           description: Token type identifier.
-          enum: [ Bearer ]
+          enum: [Bearer]
           example: Bearer
         expires_in:
           type: integer
@@ -1986,7 +1986,7 @@ components:
     MfaChallengeData:
       type: object
       description: MFA challenge response payload.
-      required: [ mfa_required, mfa_token ]
+      required: [mfa_required, mfa_token]
       properties:
         mfa_required:
           type: boolean
@@ -2003,7 +2003,7 @@ components:
     TotpSetupData:
       type: object
       description: TOTP enrollment artifact payload.
-      required: [ otpauth_uri, qr_png_base64, recovery_codes ]
+      required: [otpauth_uri, qr_png_base64, recovery_codes]
       properties:
         otpauth_uri:
           type: string
@@ -2019,16 +2019,16 @@ components:
           items:
             type: string
           minItems: 1
-          example: [ rc1a-1234, rc1b-5678 ]
+          example: [rc1a-1234, rc1b-5678]
       example:
         otpauth_uri: otpauth://totp/Helling:alice?secret=ABC123&issuer=Helling
         qr_png_base64: iVBORw0KGgoAAAANSUhEUgAA...
-        recovery_codes: [ rc1a-1234, rc1b-5678 ]
+        recovery_codes: [rc1a-1234, rc1b-5678]
 
     EnvelopeAuthSetupResponse:
       type: object
       description: Envelope for auth setup response payload.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
@@ -2039,17 +2039,17 @@ components:
               description: Indicates setup completion status.
               example: true
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeAuthLoginResponse:
       type: object
       description: Envelope for successful login payload.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/AuthLoginData'
+          $ref: "#/components/schemas/AuthLoginData"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
       example:
         data:
           access_token: eyJhbGciOiJFZERTQSJ9...
@@ -2061,56 +2061,56 @@ components:
     EnvelopeAuthRefreshResponse:
       type: object
       description: Envelope for token refresh payload.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/AuthRefreshData'
+          $ref: "#/components/schemas/AuthRefreshData"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeMfaChallengeResponse:
       type: object
       description: Envelope for MFA challenge payload.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/MfaChallengeData'
+          $ref: "#/components/schemas/MfaChallengeData"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeTotpSetupResponse:
       type: object
       description: Envelope for TOTP setup payload.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/TotpSetupData'
+          $ref: "#/components/schemas/TotpSetupData"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeUser:
       type: object
       description: Envelope for a single user record.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
       example:
         data:
           id: 01JZABC0123456789ABCDEFGJK
           username: alice
           role: admin
           status: active
-          created_at: '2026-04-20T10:00:00Z'
+          created_at: "2026-04-20T10:00:00Z"
         meta:
           request_id: req_01JZABC0123456789ABCDEFGJK
 
     EnvelopeUserList:
       type: object
       description: Envelope for paginated user list response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2120,16 +2120,16 @@ components:
               username: alice
               role: admin
               status: active
-              created_at: '2026-04-20T10:00:00Z'
+              created_at: "2026-04-20T10:00:00Z"
           items:
-            $ref: '#/components/schemas/User'
+            $ref: "#/components/schemas/User"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeTokenList:
       type: object
       description: Envelope for token list response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2138,16 +2138,16 @@ components:
             - id: 01JZABC0123456789ABCDEFGJK
               name: ci-bot
               scope: write
-              expires_at: '2026-06-01T00:00:00Z'
+              expires_at: "2026-06-01T00:00:00Z"
           items:
-            $ref: '#/components/schemas/Token'
+            $ref: "#/components/schemas/Token"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeCreateTokenResponse:
       type: object
       description: Envelope for newly created API token response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
@@ -2156,7 +2156,7 @@ components:
             id:
               type: string
               description: ULID identifier for the token.
-              pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+              pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
               example: 01JZABC0123456789ABCDEFGJK
             token:
               type: string
@@ -2165,25 +2165,25 @@ components:
             scope:
               type: string
               description: Token scope.
-              enum: [ read, write, admin ]
+              enum: [read, write, admin]
               example: write
             expires_at:
               type: string
               format: date-time
               description: Token expiration timestamp.
-              example: '2026-06-01T00:00:00Z'
+              example: "2026-06-01T00:00:00Z"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeSchedule:
       type: object
       description: Envelope for schedule record response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/Schedule'
+          $ref: "#/components/schemas/Schedule"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
       example:
         data:
           id: 01JZABC0123456789ABCDEFGJK
@@ -2197,7 +2197,7 @@ components:
     EnvelopeScheduleList:
       type: object
       description: Envelope for schedule list response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2209,25 +2209,25 @@ components:
               cron: 0 3 * * *
               enabled: true
           items:
-            $ref: '#/components/schemas/Schedule'
+            $ref: "#/components/schemas/Schedule"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeWebhook:
       type: object
       description: Envelope for webhook record response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/Webhook'
+          $ref: "#/components/schemas/Webhook"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
       example:
         data:
           id: 01JZABC0123456789ABCDEFGJK
           name: ops-pagerduty
           url: https://events.example.com/helling
-          events: [ instance.created ]
+          events: [instance.created]
           enabled: true
         meta:
           request_id: req_01JZABC0123456789ABCDEFGJK
@@ -2235,7 +2235,7 @@ components:
     EnvelopeWebhookList:
       type: object
       description: Envelope for webhook list response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2244,22 +2244,22 @@ components:
             - id: 01JZABC0123456789ABCDEFGJK
               name: ops-pagerduty
               url: https://events.example.com/helling
-              events: [ instance.created ]
+              events: [instance.created]
               enabled: true
           items:
-            $ref: '#/components/schemas/Webhook'
+            $ref: "#/components/schemas/Webhook"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeKubernetesCluster:
       type: object
       description: Envelope for a single Kubernetes cluster.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/KubernetesCluster'
+          $ref: "#/components/schemas/KubernetesCluster"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
       example:
         data:
           name: k3s-prod
@@ -2271,7 +2271,7 @@ components:
     EnvelopeKubernetesClusterList:
       type: object
       description: Envelope for Kubernetes cluster list.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2281,19 +2281,29 @@ components:
               state: ready
               k8s_version: v1.30.0+k3s1
           items:
-            $ref: '#/components/schemas/KubernetesCluster'
+            $ref: "#/components/schemas/KubernetesCluster"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeSystemInfo:
       type: object
       description: Envelope for system identity and version information.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
           description: System information payload.
-          required: [ hostname, kernel, cpu_model, ram_total_bytes, uptime_seconds, helling_version, incus_version, podman_version ]
+          required:
+            [
+              hostname,
+              kernel,
+              cpu_model,
+              ram_total_bytes,
+              uptime_seconds,
+              helling_version,
+              incus_version,
+              podman_version,
+            ]
           properties:
             hostname:
               type: string
@@ -2324,18 +2334,18 @@ components:
             incus_version:
               type: string
               description: Installed Incus version.
-              example: '6.2'
+              example: "6.2"
             podman_version:
               type: string
               description: Installed Podman version.
               example: 5.1.1
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeSystemHardware:
       type: object
       description: Envelope for hardware inventory details.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
@@ -2350,14 +2360,14 @@ components:
                 mac: 52:54:00:aa:bb:cc
                 speed_mbps: 1000
             gpus: []
-          required: [ disks, nics, gpus ]
+          required: [disks, nics, gpus]
           properties:
             disks:
               type: array
               description: Disk inventory entries.
               items:
                 type: object
-                required: [ name, size_bytes, rotational ]
+                required: [name, size_bytes, rotational]
                 properties:
                   name:
                     type: string
@@ -2377,7 +2387,7 @@ components:
               description: Network interface inventory.
               items:
                 type: object
-                required: [ name, mac, speed_mbps ]
+                required: [name, mac, speed_mbps]
                 properties:
                   name:
                     type: string
@@ -2398,7 +2408,7 @@ components:
               example: []
               items:
                 type: object
-                required: [ model, vendor ]
+                required: [model, vendor]
                 properties:
                   model:
                     type: string
@@ -2409,17 +2419,24 @@ components:
                     description: GPU vendor.
                     example: NVIDIA
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeSystemConfig:
       type: object
       description: Envelope for effective runtime configuration snapshot.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
           description: Effective configuration values.
-          required: [ listen_socket, incus_https_address, podman_socket, auth_pam_service, warnings_interval ]
+          required:
+            [
+              listen_socket,
+              incus_https_address,
+              podman_socket,
+              auth_pam_service,
+              warnings_interval,
+            ]
           properties:
             listen_socket:
               type: string
@@ -2442,17 +2459,17 @@ components:
               description: Warning engine interval duration.
               example: 5m
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeDiagnostics:
       type: object
       description: Envelope for diagnostics check results.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
           description: Diagnostics payload.
-          required: [ checks ]
+          required: [checks]
           properties:
             checks:
               type: array
@@ -2463,7 +2480,7 @@ components:
                   detail: Incus API reachable on loopback.
               items:
                 type: object
-                required: [ check, status, detail ]
+                required: [check, status, detail]
                 properties:
                   check:
                     type: string
@@ -2472,29 +2489,29 @@ components:
                   status:
                     type: string
                     description: Check status.
-                    enum: [ ok, warn, fail ]
+                    enum: [ok, warn, fail]
                     example: ok
                   detail:
                     type: string
                     description: Human-readable check detail.
                     example: Incus API reachable on loopback.
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeFirewallRule:
       type: object
       description: Envelope for a firewall rule.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
-          $ref: '#/components/schemas/FirewallRule'
+          $ref: "#/components/schemas/FirewallRule"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeFirewallRuleList:
       type: object
       description: Envelope for paginated firewall rule list.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2504,14 +2521,14 @@ components:
               action: accept
               protocol: tcp
           items:
-            $ref: '#/components/schemas/FirewallRule'
+            $ref: "#/components/schemas/FirewallRule"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeAuditRecordList:
       type: object
       description: Envelope for paginated audit record list.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: array
@@ -2519,28 +2536,28 @@ components:
           example:
             - id: 01JZABC0123456789ABCDEFGJK
               event_type: user.created
-              created_at: '2026-04-20T10:00:00Z'
+              created_at: "2026-04-20T10:00:00Z"
           items:
-            $ref: '#/components/schemas/AuditRecord'
+            $ref: "#/components/schemas/AuditRecord"
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 
     EnvelopeHealth:
       type: object
       description: Envelope for health endpoint response.
-      required: [ data, meta ]
+      required: [data, meta]
       properties:
         data:
           type: object
           description: Health payload.
-          required: [ status ]
+          required: [status]
           properties:
             status:
               type: string
               description: Service health state.
-              enum: [ ok ]
+              enum: [ok]
               example: ok
         meta:
-          $ref: '#/components/schemas/Meta'
+          $ref: "#/components/schemas/Meta"
 security:
   - bearerAuth: []

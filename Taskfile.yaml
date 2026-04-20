@@ -11,12 +11,12 @@
 #   task install      — install all tools
 #   task hooks        — install lefthook git hooks
 
-version: '3'
+version: "3"
 silent: true
-output: 'interleaved'
+output: "interleaved"
 
 vars:
-  REPO: '{{.TASKFILE_DIR}}'
+  REPO: "{{.TASKFILE_DIR}}"
   GO_PKG: ./...
   COVERAGE_OUT: coverage.out
   OPENAPI_FILE: api/openapi.yaml
@@ -27,7 +27,6 @@ env:
   GOFLAGS: -mod=readonly
 
 tasks:
-
   default:
     desc: List available tasks
     cmds:
@@ -130,8 +129,8 @@ tasks:
           exit 1
         fi
     sources:
-      - '{{.OPENAPI_FILE}}'
-      - '{{.VACUUM_RULESET}}'
+      - "{{.OPENAPI_FILE}}"
+      - "{{.VACUUM_RULESET}}"
 
   check:openapi:generated:
     desc: Verify committed api/openapi.yaml matches what Huma would generate now.

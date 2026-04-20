@@ -36,7 +36,10 @@
 
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsole": { "level": "warn", "options": { "allow": ["error", "warn", "info"] } },
+        "noConsole": {
+          "level": "warn",
+          "options": { "allow": ["error", "warn", "info"] }
+        },
         "noDoubleEquals": "error",
         "noImplicitAnyLet": "error"
       },

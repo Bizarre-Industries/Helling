@@ -29,7 +29,6 @@
 version: 2
 
 updates:
-
   # ══════════════════════════════════════════════════════════════════════════
   # GitHub Actions — ACTIVE
   # ══════════════════════════════════════════════════════════════════════════
@@ -73,7 +72,7 @@ updates:
       # Major version bumps need human review. They usually require
       # input/output contract changes that auto-bumps don't handle.
       - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
+        update-types: ["version-update:semver-major"]
 
   # ══════════════════════════════════════════════════════════════════════════
   # Go modules — INACTIVE (uncomment when apps/ go.mod files land)

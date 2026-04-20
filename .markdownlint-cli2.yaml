@@ -2,15 +2,15 @@
 # Rule definitions live in .markdownlint.yaml.
 
 globs:
-  - '**/*.md'
+  - "**/*.md"
 
 ignores:
-  - 'node_modules/**'
-  - 'web/node_modules/**'
-  - '.task/**'
-  - 'dist/**'
-  - 'bin/**'
-  - 'web/src/api/generated/**'
+  - "node_modules/**"
+  - "web/node_modules/**"
+  - ".task/**"
+  - "dist/**"
+  - "bin/**"
+  - "web/src/api/generated/**"
   # refs/ contains vendored reference copies of other projects.
   # Not authored by Helling; not our lint responsibility.
-  - 'refs/**'
+  - "refs/**"

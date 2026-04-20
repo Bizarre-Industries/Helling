@@ -68,7 +68,7 @@ Verify: `make build` on fresh clone produces byte-identical binaries
 5. Artifacts: GoReleaser produces binaries, .deb packages (via nfpm)
 6. Signing: Cosign signs all artifacts, SLSA provenance generated
 7. SBOM: Syft generates CycloneDX + SPDX, attached to release
-8. Publish: GitHub Release, APT repo update (via aptly), optional ghcr.io push
+8. Publish: GitHub Release, APT repo update (via reprepro per ADR-045), optional ghcr.io push
 9. Announce: changelog, blog post, notification channels
 10. Monitor: watch error rates, support channels for 48 hours
 
@@ -77,7 +77,7 @@ Rollback: if critical issue found within 48 hours, yank release and publish patc
 Tooling:
   - goose + sqlc: SQL-first migrations and typed query generation
   - nfpm: .deb package generation (hellingd, helling-cli, edge service config)
-  - aptly: APT repository management (hosts .deb packages for apt-get upgrade)
+  - reprepro: APT repository management (hosts .deb packages for apt-get upgrade, see ADR-045)
   - live-build / mkosi: ISO image building (bootable installer)
   - GoReleaser: orchestrates build + package + sign + publish
 ```
@@ -91,7 +91,7 @@ RULE: Primary upgrade path is APT-based: apt-get update && apt-get upgrade helli
 Pre-upgrade:
   - Automatic backup of hellingd SQLite database
   - dpkg stores previous package version for rollback
-  - Verify package signature (GPG-signed .deb via aptly repo)
+  - Verify package signature (GPG-signed .deb via reprepro repo per ADR-045)
 
 During upgrade (handled by .deb postinst script):
   - systemctl stop caddy (dashboard offline)

@@ -2,6 +2,38 @@
 
 <!-- markdownlint-disable MD040 -->
 
+## Related docs
+
+This spec is the skeleton. The details live in sibling docs — each page in this spec has a corresponding design doc under `docs/design/pages/`, and the components those pages use are specified under `docs/design/patterns/`.
+
+**Philosophy & guidelines**
+
+- [docs/design/philosophy.md](../design/philosophy.md) — the 10 rules (function over beauty, tables by default, no motion)
+- [docs/design/tokens.md](../design/tokens.md) — design tokens (colors, spacing, typography, z-index)
+- [docs/design/identity.md](../design/identity.md) — brand and visual identity
+- [docs/design/magic.md](../design/magic.md) — 12 "magic" features (snapshot-before-destroy, command palette, blueprints, etc.)
+- [docs/design/keyboard.md](../design/keyboard.md) — full keyboard shortcut map
+- [docs/spec/accessibility.md](./accessibility.md) — WCAG 2.1 AA commitment
+
+**Patterns (components used across every page)**
+
+- [data-tables.md](../design/patterns/data-tables.md) — ProTable, inline actions, bulk selection
+- [forms-wizards.md](../design/patterns/forms-wizards.md) — ModalForm, StepsForm, ProForm
+- [detail-views.md](../design/patterns/detail-views.md) — Tabs + Descriptions layout
+- [console.md](../design/patterns/console.md) — SPICE and xterm.js integration
+- [empty-states.md](../design/patterns/empty-states.md) — zero-data guidance
+- [loading-error.md](../design/patterns/loading-error.md) — skeletons, errors, retry
+- [notifications.md](../design/patterns/notifications.md) — toasts, banners, progress
+
+**Pages (one doc per route)**
+
+- [dashboard.md](../design/pages/dashboard.md) · [instances.md](../design/pages/instances.md) · [containers.md](../design/pages/containers.md) · [kubernetes.md](../design/pages/kubernetes.md)
+- [workspaces.md](../design/pages/workspaces.md) · [templates.md](../design/pages/templates.md)
+- [storage.md](../design/pages/storage.md) · [networking.md](../design/pages/networking.md) · [firewall.md](../design/pages/firewall.md) · [images.md](../design/pages/images.md)
+- [backups.md](../design/pages/backups.md) · [schedules.md](../design/pages/schedules.md) · [bmc.md](../design/pages/bmc.md) · [cluster.md](../design/pages/cluster.md)
+- [users.md](../design/pages/users.md) · [auth.md](../design/pages/auth.md) · [settings.md](../design/pages/settings.md)
+- [operations.md](../design/pages/operations.md) · [logs.md](../design/pages/logs.md) · [audit.md](../design/pages/audit.md)
+
 ## Stack
 
 ```text

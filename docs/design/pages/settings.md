@@ -29,7 +29,7 @@ Sidebar: "Settings" selected (admin-only). Main panel: 5 Tabs. Each tab uses Pro
 
 ## Components
 
-- `Tabs` -- General | Certificates | Notifications | Updates | Registries
+- `Tabs` -- General | Certificates | Notifications | Updates | Registries | Keyboard
 
 **General tab:** `ProForm` -- hostname, DNS domain, timezone Select, backup defaults, appearance (logo Upload, accent color ColorPicker, login message TextArea, favicon Upload). Preset theme Segmented (Default, Homelab Green, Enterprise Gray).
 
@@ -40,6 +40,17 @@ Sidebar: "Settings" selected (admin-only). Main panel: 5 Tabs. Each tab uses Pro
 **Updates tab:** `Descriptions` (current version, latest version, release date). [View Changes] [Upgrade Now] Buttons. Security patch banner when applicable.
 
 **Registries tab:** `ProTable` of container registries (name, URL, auth status Badge). `ModalForm` to add registry (URL, username, password/token). Test connection Button.
+
+**Keyboard tab:** Per-user keymap editor. See docs/design/keyboard.md for the full architecture; this is the UI surface.
+
+- Top bar: `Switch` "Vim mode" (toggles `vim_mode` preference; off by default per ADR-049). `Switch` "Use local overrides on this device" (localStorage layer).
+- Conflict banner: `Alert type="error"` when two actions in overlapping contexts share the same binding; rows involved highlight.
+- Main table: `ProTable` of every action registered in `web/src/keyboard/registry.ts`:
+  - Columns: Action ID (monospace, copyable), Label, Category filter, Context (monospace tag), Default binding (`Kbd` chips, read-only), Current binding (`Kbd` chips + inline "Record keystroke" button), Reset-to-default row action.
+  - Search by label or action ID.
+  - Filter by category, vim-only, overridden-only.
+- "Record keystroke" input: opens a popover that listens for a chord; escape cancels; enter confirms. Validates against the reserved-shortcut list (`Cmd+T`, `Cmd+W`, `Cmd+N`, `Cmd+Tab`, `F5`, `Cmd+L`, `Cmd+S`) and warns; `Cmd+P` and `Cmd+Shift+P` are allowed per ADR-049.
+- Bulk actions: Export as JSON, Import from JSON, Reset all to default.
 
 ## Data Model
 
@@ -71,8 +82,11 @@ ACME failure: inline Alert with error. Notification test failure: toast with rea
 - Configure event-to-channel routing and quiet hours
 - Check for and apply updates
 - Add/remove container registries
+- Toggle vim mode, re-bind any keyboard shortcut, export/import keymap as JSON
 
 ## Cross-References
 
 - Spec: docs/spec/webui-spec.md (Settings section)
 - Identity: docs/design/identity.md (Branding, Update Experience, Notification Architecture)
+- Keyboard: docs/design/keyboard.md (architecture, default keymap, vim mode)
+- ADR-049 (vim mode and keymap surfacing)

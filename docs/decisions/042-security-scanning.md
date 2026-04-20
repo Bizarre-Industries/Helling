@@ -1,7 +1,8 @@
 # ADR-042: Security scanning stack: CodeQL + Grype + govulncheck + gitleaks
 
 > Status: Accepted (2026-04-20)
-> Supersedes scanning pipeline portions of `docs/standards/security.md` §4
+>
+> Supersedes all scanning-tool references in `docs/standards/security.md` — specifically §1 (application container-image scan), §3 (dependency security), and §4 (scanning pipeline). Any remaining mention of Trivy, Semgrep, Bearer, Snyk Container, or osv-scanner in those sections is stale and must be removed when this ADR is applied.
 
 ## Context
 
@@ -17,8 +18,9 @@ The prior security scanning pipeline named a mix of commercial and redundant too
 - Snyk Container: listed, commercial license required
 - osv-scanner: listed, overlaps with govulncheck for Go coverage
 - OpenSSF Scorecard: listed, independent value for project hygiene
+- Trivy: referenced in `security.md` §1 as "additional scanning layer"; suspended by ADR-009 after the March 2026 Aqua supply-chain attack
 
-Helling is a solo-developed open-source project on GitHub. Commercial scanner licenses are a non-starter. Tool overlap is a maintenance burden without additive coverage.
+Helling is a solo-developed open-source project on GitHub. Commercial scanner licenses are a non-starter. Tool overlap is a maintenance burden without additive coverage. And Trivy specifically is paused until upstream Aqua practices meet Helling's supply-chain bar (ADR-009).
 
 ## Decision
 
@@ -37,6 +39,7 @@ Removed tools:
 - **Bearer** — commercial license.
 - **Snyk Container** — commercial license, superseded by Grype.
 - **osv-scanner** — redundant with govulncheck for Go; GitHub Dependabot handles general dependency advisories.
+- **Trivy** — suspended per ADR-009; removed from `security.md` §1 container-image pipeline.
 
 ## Gates
 
@@ -64,5 +67,6 @@ Removed tools:
 ## References
 
 - `docs/standards/quality-assurance.md` §9 for the normative scanning matrix.
-- `docs/standards/security.md` (update required to align with this ADR).
+- `docs/standards/security.md` — §1, §3, §4 all require the sweep noted at the top of this ADR.
+- ADR-009 (no Trivy — reaffirmed here).
 - ADR-026 SHA-pin GitHub Actions (all security tooling actions pinned by SHA).

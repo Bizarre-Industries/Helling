@@ -18,6 +18,7 @@ jobs:
   grype:
     name: Grype — artifact + SBOM vulnerability scan
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -33,6 +34,7 @@ jobs:
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.26"
+          cache: true
 
       - name: Check prerequisites
         id: prereq
@@ -41,6 +43,18 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "No go.mod yet — skipping artifact build and vulnerability scan."
           fi
+
+      - name: Add local bin to PATH
+        if: steps.prereq.outputs.skip != 'true'
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache Syft binary
+        if: steps.prereq.outputs.skip != 'true'
+        id: syft-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local/bin/syft
+          key: ${{ runner.os }}-syft-${{ env.SYFT_VERSION }}
 
       - name: Build artifacts
         if: steps.prereq.outputs.skip != 'true'
@@ -54,22 +68,38 @@ jobs:
           done
 
       - name: Install Syft
-        if: steps.prereq.outputs.skip != 'true'
+        if: steps.prereq.outputs.skip != 'true' && steps.syft-cache.outputs.cache-hit != 'true'
         run: |
+          mkdir -p "$HOME/.local/bin"
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
-            sh -s -- -b /usr/local/bin "v${SYFT_VERSION}"
-          syft version
+            sh -s -- -b "$HOME/.local/bin" "v${SYFT_VERSION}"
+
+      - name: Syft version
+        if: steps.prereq.outputs.skip != 'true'
+        run: syft version
 
       - name: Generate SBOM (CycloneDX JSON)
         if: steps.prereq.outputs.skip != 'true'
         run: syft dir:./dist -o cyclonedx-json > dist/sbom.cdx.json
 
-      - name: Install Grype
+      - name: Cache Grype binary
         if: steps.prereq.outputs.skip != 'true'
+        id: grype-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local/bin/grype
+          key: ${{ runner.os }}-grype-${{ env.GRYPE_VERSION }}
+
+      - name: Install Grype
+        if: steps.prereq.outputs.skip != 'true' && steps.grype-cache.outputs.cache-hit != 'true'
         run: |
+          mkdir -p "$HOME/.local/bin"
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | \
-            sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"
-          grype version
+            sh -s -- -b "$HOME/.local/bin" "v${GRYPE_VERSION}"
+
+      - name: Grype version
+        if: steps.prereq.outputs.skip != 'true'
+        run: grype version
 
       - name: Refresh vulnerability DB
         if: steps.prereq.outputs.skip != 'true'
@@ -90,6 +120,7 @@ jobs:
   scorecard:
     name: OpenSSF Scorecard
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     # publish_results=true requires a push to the default branch.
     if: github.event_name == 'push' || github.event_name == 'schedule'
     permissions:

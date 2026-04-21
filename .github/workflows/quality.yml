@@ -11,29 +11,101 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  openapi:
-    name: OpenAPI lint (score ≥100)
+  changes:
+    name: Detect changed areas
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      sql: ${{ steps.filter.outputs.sql }}
+      docs: ${{ steps.filter.outputs.docs }}
+      openapi: ${{ steps.filter.outputs.openapi }}
+      yaml: ${{ steps.filter.outputs.yaml }}
+      shell: ${{ steps.filter.outputs.shell }}
+      parity: ${{ steps.filter.outputs.parity }}
+      workflow: ${{ steps.filter.outputs.workflow }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            go:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - '.golangci.yml'
+              - 'scripts/check-coverage.sh'
+            frontend:
+              - 'web/**'
+            sql:
+              - 'db/**'
+              - 'sqlc.yaml'
+              - 'internal/db/**'
+              - 'internal/store/**'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+              - 'README.md'
+              - 'CONTRIBUTING.md'
+              - 'SECURITY.md'
+              - 'CODE_OF_CONDUCT.md'
+            openapi:
+              - 'api/**'
+              - 'tools/openapi-dump/**'
+              - 'apps/hellingd/**'
+            yaml:
+              - '**/*.yaml'
+              - '**/*.yml'
+            shell:
+              - '**/*.sh'
+              - '**/*.bash'
+            parity:
+              - 'api/**'
+              - 'apps/helling-cli/**'
+              - 'web/**'
+              - 'scripts/check-parity.sh'
+            workflow:
+              - '.github/workflows/quality.yml'
+              - '.github/actions/**'
+
+  openapi:
+    name: OpenAPI lint (score ≥100)
+    needs: changes
+    if: needs.changes.outputs.openapi == 'true' || needs.changes.outputs.workflow == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Add local bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Cache vacuum binary
+        id: vacuum-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local/bin/vacuum
+          key: ${{ runner.os }}-vacuum-0.16.5
       - name: Install vacuum
+        if: steps.vacuum-cache.outputs.cache-hit != 'true'
         env:
           VACUUM_VERSION: "0.16.5"
           VACUUM_SHA256: "68ed0b45ecbf4af245d36997b9b1df36a99d6bc093868be4c0d29583bbd747f6"
         run: |
           set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
           curl -fsSL -o /tmp/vacuum.tar.gz \
             "https://github.com/daveshanley/vacuum/releases/download/v${VACUUM_VERSION}/vacuum_${VACUUM_VERSION}_linux_x86_64.tar.gz"
           echo "${VACUUM_SHA256}  /tmp/vacuum.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/vacuum.tar.gz -C /usr/local/bin vacuum
-          vacuum version
+          tar -xzf /tmp/vacuum.tar.gz -C "$HOME/.local/bin" vacuum
+      - name: Vacuum version
+        run: vacuum version
       - name: Lint
         run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml -d
       - name: Gate score at 100 (against our ruleset)
@@ -47,13 +119,12 @@ jobs:
 
   openapi-generated:
     name: OpenAPI drift check
+    needs: changes
+    if: needs.changes.outputs.openapi == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
-        with:
-          go-version: "1.26"
-          cache: true
+      - uses: ./.github/actions/setup-go-env
       - name: Verify committed openapi.yaml matches Huma output
         run: |
           if [ -d apps/hellingd ]; then
@@ -68,9 +139,19 @@ jobs:
 
   markdown:
     name: Markdown lint + prettier
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Cache npm
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-prettier-3.3.3
+          restore-keys: |
+            ${{ runner.os }}-npm-prettier-
       # Bumped 2026-04-21: v16.0.0 → v22.0.0 (6 major versions behind).
       # Major jumps: markdownlint-cli2 v0.13 → v0.20, markdownlint v0.34 → v0.40.
       # No config changes required — same `globs` input schema.
@@ -83,14 +164,23 @@ jobs:
             !refs
       - name: Prettier check
         run: |
-          npm i -g prettier@3.3.3
-          prettier --write --check '**/*.md' --ignore-path .gitignore
+          npx -y prettier@3.3.3 --check '**/*.md' --ignore-path .gitignore
 
   yaml:
     name: YAML lint (strict)
+    needs: changes
+    if: needs.changes.outputs.yaml == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Cache pip
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-yamllint-1.35.1
+          restore-keys: |
+            ${{ runner.os }}-pip-yamllint-
       - name: Install yamllint
         run: pip install yamllint==1.35.1
       - name: Lint
@@ -107,17 +197,21 @@ jobs:
 
   shell:
     name: Shell lint + format
+    needs: changes
+    if: needs.changes.outputs.shell == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      - uses: ./.github/actions/setup-go-env
         with:
-          go-version: "1.26"
+          cache-go: "false"
       - name: Install shellcheck + shfmt
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          go install mvdan.cc/sh/v3/cmd/shfmt@v3.9.0
+          if ! command -v shfmt >/dev/null 2>&1; then
+            go install mvdan.cc/sh/v3/cmd/shfmt@v3.9.0
+          fi
       - name: Lint + format check
         run: |
           files=$(find . -type f \( -name '*.sh' -o -name '*.bash' \) \
@@ -130,13 +224,12 @@ jobs:
 
   go:
     name: Go build / vet / lint / vuln / test / coverage
+    needs: changes
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
-        with:
-          go-version: "1.26"
-          cache: true
+      - uses: ./.github/actions/setup-go-env
       - name: Skip if no go.mod
         id: skip
         run: |
@@ -174,12 +267,17 @@ jobs:
       - name: govulncheck
         if: steps.skip.outputs.skip != 'true'
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+          if ! command -v govulncheck >/dev/null 2>&1; then
+            go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+          fi
           govulncheck ./...
 
   frontend:
     name: Frontend lint / tsc / codegen drift / tests
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: web
@@ -217,37 +315,60 @@ jobs:
 
   sql:
     name: SQL lint / sqlc drift / goose round-trip
+    needs: changes
+    if: needs.changes.outputs.sql == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      - uses: ./.github/actions/setup-go-env
         with:
-          go-version: "1.26"
+          cache-go: "false"
       - name: Skip if no db/
         id: skip
         run: |
           if [ ! -d db ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Cache pip and pipx
+        if: steps.skip.outputs.skip != 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/pipx
+          key: ${{ runner.os }}-pip-sqlfluff-3.0.7-yamllint-1.35.1-pyyaml-6.0.2
+          restore-keys: |
+            ${{ runner.os }}-pip-sqlfluff-
       - name: sqlfluff
         if: steps.skip.outputs.skip != 'true'
         run: |
           pipx install sqlfluff==3.0.7
           sqlfluff lint db/
+      - name: Add local bin to PATH
+        if: steps.skip.outputs.skip != 'true'
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Cache sqlc binary
+        if: steps.skip.outputs.skip != 'true'
+        id: sqlc-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local/bin/sqlc
+          key: ${{ runner.os }}-sqlc-1.31.0
       # Fixed 2026-04-21: was fetching api.github.com/.../releases/latest and
       # parsing with jq — that's a floating pin per ADR-026. Explicit version +
       # SHA256 checksum, same pattern as vacuum above.
       - name: Install sqlc
-        if: steps.skip.outputs.skip != 'true'
+        if: steps.skip.outputs.skip != 'true' && steps.sqlc-cache.outputs.cache-hit != 'true'
         env:
           SQLC_VERSION: "1.31.0"
           SQLC_SHA256: "e35394ba3df5e62669e76627f45172d18c6cbb1479e4762c51b29b0eafc16dc0"
         run: |
           set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
           curl -fsSL -o /tmp/sqlc.tar.gz \
             "https://github.com/sqlc-dev/sqlc/releases/download/v${SQLC_VERSION}/sqlc_${SQLC_VERSION}_linux_amd64.tar.gz"
           echo "${SQLC_SHA256}  /tmp/sqlc.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/sqlc.tar.gz -C /usr/local/bin sqlc
+          tar -xzf /tmp/sqlc.tar.gz -C "$HOME/.local/bin" sqlc
           sqlc version
       - name: sqlc drift
         if: steps.skip.outputs.skip != 'true'
@@ -262,7 +383,9 @@ jobs:
       - name: goose round-trip
         if: steps.skip.outputs.skip != 'true'
         run: |
-          go install github.com/pressly/goose/v3/cmd/goose@v3.21.1
+          if ! command -v goose >/dev/null 2>&1; then
+            go install github.com/pressly/goose/v3/cmd/goose@v3.21.1
+          fi
           if [ -d db/migrations ]; then
             tmp=$(mktemp -d)
             export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="$tmp/test.db"
@@ -273,7 +396,12 @@ jobs:
 
   secrets:
     name: Secret scan (gitleaks)
+    needs: changes
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -288,7 +416,14 @@ jobs:
 
   spelling:
     name: Spelling (typos)
+    needs: changes
+    if: >-
+      needs.changes.outputs.docs == 'true' || needs.changes.outputs.go == 'true' ||
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.sql == 'true' ||
+      needs.changes.outputs.openapi == 'true' || needs.changes.outputs.shell == 'true' ||
+      needs.changes.outputs.yaml == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Fixed 2026-04-21: was pinned to `master @ 2026-04-20` — floating tag
@@ -297,7 +432,10 @@ jobs:
 
   links:
     name: Link check (lychee, offline)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
@@ -306,10 +444,39 @@ jobs:
 
   parity:
     name: API ↔ CLI ↔ WebUI parity
+    needs: changes
+    if: needs.changes.outputs.parity == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run parity check
         run: |
           pip install pyyaml==6.0.2
           bash scripts/check-parity.sh
+
+  ci-complete:
+    name: CI complete
+    if: always()
+    needs:
+      - changes
+      - openapi
+      - openapi-generated
+      - markdown
+      - yaml
+      - shell
+      - go
+      - frontend
+      - sql
+      - secrets
+      - spelling
+      - links
+      - parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Ensure all needed jobs succeeded or skipped
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results"
+          echo "$results" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")'

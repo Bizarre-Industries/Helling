@@ -252,11 +252,7 @@ components:
           description: Property data.
           $ref: '#/components/schemas/AuthLoginData'
           examples:
-            - access_token: example
-              expires_in: 1
-              mfa_required: true
-              mfa_token: example
-              token_type: Bearer
+            - {}
         meta:
           description: Property meta.
           $ref: '#/components/schemas/AuthLoginMeta'
@@ -490,7 +486,8 @@ components:
           description: Property meta.
           $ref: '#/components/schemas/UserListMeta'
           examples:
-            - {}
+            - page: {}
+              request_id: id_example
       required:
         - data
         - meta

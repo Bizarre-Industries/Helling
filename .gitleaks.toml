@@ -1,6 +1,13 @@
 # Gitleaks config for Helling.
-# Extends the default ruleset; adds path-based allowlist for vendored refs.
+# Extends the default ruleset; adds path-based allowlist for vendored refs
+# and stopword/pattern-based allowlist for documented stub/example values
+# used in Huma route response examples.
+#
 # Docs: https://github.com/gitleaks/gitleaks#configuration
+#
+# NOTE: this file uses the legacy [allowlist] syntax. gitleaks v8.25.0+
+# prefers [[allowlists]] (array of tables) for multiple allowlist blocks.
+# Migrate when we need targetRules or per-rule scoping. Not today.
 
 title = "Helling gitleaks config"
 
@@ -10,7 +17,7 @@ useDefault = true
 
 # Global allowlist — applies to every rule.
 [allowlist]
-description = "Helling allowlist — vendored reference projects and test fixtures"
+description = "Helling allowlist — vendored reference projects, test fixtures, and documented stubs"
 
 # Never scan under refs/. Other projects' secrets are not Helling's problem.
 paths = [
@@ -27,9 +34,34 @@ paths = [
 ]
 
 # Paths that are explicitly fixtures (safe to contain test-only secrets).
+# `regexTarget = "match"` tests these regexes against the full Match context
+# (e.g. `MFAToken": "mfa_..."`), not just the extracted secret.
 regexTarget = "match"
 regexes = [
+  # Documented fake private keys
   '''-----BEGIN (TEST|SAMPLE|FAKE|EXAMPLE) PRIVATE KEY-----''',
-  # Truncated JWTs used as documentation examples end with "..." — not real tokens.
-  '''eyJ[A-Za-z0-9_-]+\.\.\.$''',
+  # Truncated JWTs (ending in "...") or explicitly-labelled stub JWTs
+  # (ending in .stub / .fake / .example / .test).
+  '''eyJ[A-Za-z0-9_-]+\.(\.\.|stub|fake|example|test)\b''',
+]
+
+# Stopwords test the EXTRACTED SECRET (not the full match). If the secret
+# contains any of these substrings (case-insensitive), the finding is suppressed.
+#
+# Keep this list conservative — anything that could plausibly appear inside
+# a real production secret does NOT belong here. Stubs in Helling's Huma
+# route examples use deliberate filler sequences that would never appear in
+# a real credential: sequential digits, sequential letters, or explicit
+# "stub"/"example" markers.
+stopwords = [
+  # Deliberate filler sequences used in Helling stubs (would never appear in a real credential)
+  "ABC0123",
+  "0123456789ABCDEF",
+  "ABCDEFGHIJK",
+  "DEADBEEF",
+  "CAFEBABE",
+  # Explicit stub markers (literal substrings in docs/example values)
+  "stub",
+  "example",
+  "placeholder",
 ]

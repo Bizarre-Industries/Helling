@@ -1,0 +1,29 @@
+name: Setup Go environment
+description: Checkout repository, install Go, and cache Go-installed binaries
+inputs:
+  go-version:
+    description: Go version to install
+    required: false
+    default: "1.26"
+  cache-go:
+    description: Enable Go module and build cache in setup-go
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: ${{ inputs.cache-go }}
+    - name: Add Go bin to PATH
+      shell: bash
+      run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+    - name: Cache Go-installed binaries
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ~/go/bin
+        key: ${{ runner.os }}-go-bin-${{ hashFiles('.github/actions/setup-go-env/action.yml', '.github/workflows/*.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-go-bin-

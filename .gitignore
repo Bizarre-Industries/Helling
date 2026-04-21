@@ -69,3 +69,4 @@ jwt.secret
 refs/
 
 
+api/openapi.yaml.tmp

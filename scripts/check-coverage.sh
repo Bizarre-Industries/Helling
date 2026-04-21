@@ -51,7 +51,7 @@ check_floor() {
 
   local matched_pct
   matched_pct="$(echo "$coverage_output" \
-    | grep -E "/${prefix}/" \
+    | grep -E "/${prefix}/" || true \
     | awk '{gsub("%","",$NF); sum += $NF; n++} END { if (n > 0) printf "%.1f\n", sum/n }')"
 
   if [ -z "$matched_pct" ]; then

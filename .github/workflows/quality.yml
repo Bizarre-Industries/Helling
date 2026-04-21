@@ -423,7 +423,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Fixed 2026-04-21: was pinned to `master @ 2026-04-20` — floating tag
       # per ADR-026. v1.43.4 is a stable tag; dependabot will bump forward.
-      - uses: crate-ci/typos@78bc6fb2c0d734235d57a2d6b9de923cc325ebdd # v1.43.4
+      - uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1
 
   links:
     name: Link check (lychee, offline)

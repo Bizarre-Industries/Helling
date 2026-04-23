@@ -6,8 +6,8 @@
 // - 401 responses clear the stored token; the app's route guard picks up the change
 //   on the next render and redirects to /login. (Redirect logic lives in app.jsx.)
 
-import { client } from './generated/client.gen';
 import { clearAccessToken, getAccessToken } from './auth-store';
+import { client } from './generated/client.gen';
 
 client.setConfig({
   baseUrl: '',

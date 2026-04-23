@@ -87,7 +87,7 @@ function instanceAction(name, action) {
     const prevCpu = inst.cpuPct,
       prevRam = inst.ramPct,
       prevUp = inst.uptime;
-    inst.status = action === 'pause' ? 'stopped' : 'stopped';
+    inst.status = 'stopped';
     inst.cpuPct = 0;
     inst.ramPct = action === 'pause' ? inst.ramPct : 0;
     pushTask({ op: 'instance.' + action, target: name });

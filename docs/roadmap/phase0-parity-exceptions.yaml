@@ -35,40 +35,43 @@ exceptions:
     reason: "Server-side shipped in PR B; CLI in PR F, WebUI in PR G"
     target_version: "v0.1.0-alpha"
 
+  # authMfaComplete / authTotp{Setup,Verify,Disable} / authToken{List,Create,Revoke}:
+  # server-side shipped in PR C (TOTP enrolment + MFA gate on login + argon2id
+  # recovery codes + API tokens with bearer-auth). CLI surface in PR F, WebUI in PR G.
   - operation_id: authMfaComplete
     missing: both
-    reason: "Phase 0 — CLI and WebUI MFA flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTotpSetup
     missing: both
-    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTotpVerify
     missing: both
-    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTotpDisable
     missing: both
-    reason: "Phase 0 — CLI and WebUI TOTP flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTokenList
     missing: both
-    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTokenCreate
     missing: both
-    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authTokenRevoke
     missing: both
-    reason: "Phase 0 — CLI and WebUI token management not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR C; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   # ── Users ──────────────────────────────────────────────────────────────────
   - operation_id: userList

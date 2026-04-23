@@ -247,3 +247,134 @@ func TestSetClockAffectsEventTimestamps(t *testing.T) {
 		t.Errorf("CreatedAt = %d, want %d", u.CreatedAt, fixed.Unix())
 	}
 }
+
+func TestTOTPSecret_UpsertGetSetDelete(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "alice", "user", "h")
+
+	if err := r.UpsertTOTPSecret(ctx, u.ID, []byte("secret123"), false); err != nil {
+		t.Fatal(err)
+	}
+	got, err := r.GetTOTPSecret(ctx, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got.EncryptedSecret) != "secret123" || got.Enabled {
+		t.Fatalf("bad totp row: %+v", got)
+	}
+
+	if err := r.SetTOTPEnabled(ctx, u.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = r.GetTOTPSecret(ctx, u.ID)
+	if !got.Enabled {
+		t.Fatal("expected enabled=true")
+	}
+
+	// Upsert replaces secret.
+	if err := r.UpsertTOTPSecret(ctx, u.ID, []byte("new-secret"), true); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = r.GetTOTPSecret(ctx, u.ID)
+	if string(got.EncryptedSecret) != "new-secret" {
+		t.Errorf("upsert did not replace: %q", string(got.EncryptedSecret))
+	}
+
+	if err := r.DeleteTOTPSecret(ctx, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.GetTOTPSecret(ctx, u.ID); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("want ErrNotFound after delete, got %v", err)
+	}
+}
+
+func TestRecoveryCodes_InsertListMark(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "bob", "user", "h")
+
+	if err := r.InsertRecoveryCodes(ctx, u.ID, []string{"h1", "h2", "h3"}); err != nil {
+		t.Fatal(err)
+	}
+	codes, err := r.ListUnusedRecoveryCodes(ctx, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(codes) != 3 {
+		t.Fatalf("want 3 codes, got %d", len(codes))
+	}
+	if err := r.MarkRecoveryCodeUsed(ctx, codes[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	codes, _ = r.ListUnusedRecoveryCodes(ctx, u.ID)
+	if len(codes) != 2 {
+		t.Fatalf("want 2 unused, got %d", len(codes))
+	}
+}
+
+func TestRecoveryCodes_InsertEmptyIsNoop(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "c", "user", "h")
+	if err := r.InsertRecoveryCodes(ctx, u.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAPITokens_CreateListRevokeLookup(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "u", "user", "h")
+
+	exp := time.Now().Add(24 * time.Hour)
+	tok, err := r.CreateAPIToken(ctx, u.ID, "ci", "deadbeef", "read", exp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tok.ID == "" {
+		t.Fatal("missing id")
+	}
+
+	list, err := r.ListAPITokens(ctx, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("want 1 token, got %d", len(list))
+	}
+
+	got, err := r.GetAPITokenByHash(ctx, "deadbeef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != tok.ID {
+		t.Fatal("id mismatch on lookup by hash")
+	}
+
+	if err := r.TouchAPITokenLastUsed(ctx, tok.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.RevokeAPIToken(ctx, u.ID, tok.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.RevokeAPIToken(ctx, u.ID, tok.ID); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("want ErrNotFound on re-revoke, got %v", err)
+	}
+	if _, err := r.GetAPITokenByHash(ctx, "deadbeef"); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("want ErrNotFound after revoke, got %v", err)
+	}
+}
+
+func TestAPITokens_ExpiredNotReturned(t *testing.T) {
+	r := newRepo(t)
+	r.SetClock(func() time.Time { return time.Unix(1_700_000_000, 0) })
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "u", "user", "h")
+	_, _ = r.CreateAPIToken(ctx, u.ID, "expired", "oldhash", "read", time.Unix(1_700_000_000, 0).Add(-time.Hour))
+
+	if _, err := r.GetAPITokenByHash(ctx, "oldhash"); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for expired token, got %v", err)
+	}
+}

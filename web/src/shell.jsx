@@ -43,7 +43,9 @@ function __notifyStore() {
   __storeListeners.forEach((fn) => {
     try {
       fn();
-    } catch (e) {}
+    } catch (e) {
+      console.error('Store listener error:', e);
+    }
   });
 }
 function useStore() {

@@ -2,16 +2,38 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
 	"database/sql"
+	"encoding/pem"
 	"errors"
+	"flag"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/db"
 )
+
+func ed25519GenerateForTest() (ed25519.PublicKey, ed25519.PrivateKey, error) {
+	return ed25519.GenerateKey(rand.Reader)
+}
+
+func x509MarshalPKCS8PrivateKey(priv ed25519.PrivateKey) ([]byte, error) {
+	return x509.MarshalPKCS8PrivateKey(priv)
+}
+
+func pemEncodeForTest(typ string, data []byte) []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: typ, Bytes: data})
+}
+
+func writeFile(path string, data []byte) error {
+	return os.WriteFile(path, data, 0o600)
+}
 
 // stubDBOpen swaps openDB with a harmless opener for tests that don't need
 // real migrations. Returns via t.Cleanup to restore the real opener.
@@ -192,5 +214,100 @@ func TestDBOpenRealRunsMigrations(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("users table missing, count=%d", n)
+	}
+}
+
+// TestBuildAuthServiceEphemeralKey exercises the no-env key generation branch.
+func TestBuildAuthServiceEphemeralKey(t *testing.T) {
+	t.Setenv(jwtKeyPathEnvVar, "")
+	dsn := "file:" + filepath.Join(t.TempDir(), "auth.db") + "?cache=shared"
+	pool, err := db.Open(context.Background(), dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pool.Close() })
+
+	svc, err := buildAuthService(newLogger(io.Discard), pool)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if svc == nil || svc.Signer() == nil || svc.Repo() == nil {
+		t.Fatal("service should be fully initialized")
+	}
+}
+
+// TestLoadSigningKey_MissingFileErrors verifies the operator-supplied path
+// error path.
+func TestLoadSigningKey_MissingFileErrors(t *testing.T) {
+	t.Setenv(jwtKeyPathEnvVar, filepath.Join(t.TempDir(), "does-not-exist.pem"))
+	if _, err := loadOrGenerateSigningKey(newLogger(io.Discard)); err == nil {
+		t.Fatal("expected error for missing key file")
+	}
+}
+
+// TestParseFlagsHelpExits confirms -h surfaces flag.ErrHelp.
+func TestParseFlagsHelpExits(t *testing.T) {
+	_, err := parseFlags([]string{"-h"}, io.Discard)
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected flag.ErrHelp, got %v", err)
+	}
+}
+
+// TestParseFlagsUnknownReturnsError confirms unknown flag surfaces an error.
+func TestParseFlagsUnknownReturnsError(t *testing.T) {
+	if _, err := parseFlags([]string{"-unknown"}, io.Discard); err == nil {
+		t.Fatal("expected parse error")
+	}
+}
+
+// TestLoadSigningKey_FromPEMFile covers the successful PEM+PKCS8 load path.
+func TestLoadSigningKey_FromPEMFile(t *testing.T) {
+	_, priv, err := ed25519GenerateForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkcs8, err := x509MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemBytes := pemEncodeForTest("PRIVATE KEY", pkcs8)
+	path := filepath.Join(t.TempDir(), "jwt.pem")
+	if err := writeFile(path, pemBytes); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(jwtKeyPathEnvVar, path)
+	loaded, err := loadOrGenerateSigningKey(newLogger(io.Discard))
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(loaded) == 0 {
+		t.Fatal("loaded key should be non-empty")
+	}
+}
+
+// TestLoadSigningKey_EmptyFileErrors covers PEM-decode-failed path.
+func TestLoadSigningKey_EmptyFileErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "empty.pem")
+	if err := writeFile(path, []byte("not-a-pem")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(jwtKeyPathEnvVar, path)
+	if _, err := loadOrGenerateSigningKey(newLogger(io.Discard)); err == nil {
+		t.Fatal("expected PEM decode error")
+	}
+}
+
+// TestLoadSigningKey_BadKeyTypeErrors covers non-Ed25519 key material.
+func TestLoadSigningKey_BadKeyTypeErrors(t *testing.T) {
+	// Create a valid PEM that decodes but isn't PKCS8 / Ed25519.
+	pemBytes := pemEncodeForTest("PRIVATE KEY", []byte{0x00, 0x01, 0x02})
+	path := filepath.Join(t.TempDir(), "bad.pem")
+	if err := writeFile(path, pemBytes); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(jwtKeyPathEnvVar, path)
+	if _, err := loadOrGenerateSigningKey(newLogger(io.Discard)); err == nil {
+		t.Fatal("expected pkcs8 parse error")
 	}
 }

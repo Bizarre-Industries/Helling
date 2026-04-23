@@ -58,6 +58,15 @@ func TestOpenRejectsEmptyDSN(t *testing.T) {
 	}
 }
 
+// TestOpenRejectsUnwritablePath exercises the pragma/migration failure path
+// when the DSN refers to a directory SQLite cannot create a file in.
+func TestOpenRejectsUnwritablePath(t *testing.T) {
+	_, err := Open(context.Background(), "file:/nonexistent/directory/does-not-exist.db?cache=shared")
+	if err == nil {
+		t.Fatal("expected migrate/pragma error for unwritable path")
+	}
+}
+
 // TestAllSpecTablesPresent sanity-checks that every top-level table listed
 // in docs/spec/sqlite-schema.md exists after migration.
 func TestAllSpecTablesPresent(t *testing.T) {

@@ -28,11 +28,18 @@ type authLoginCookieInput struct {
 	Body      AuthLoginRequest
 }
 
+// authRefreshCookieBody accepts refresh_token optionally; cookie is the
+// primary transport per docs/spec/auth.md §2.2, so a body-less request with
+// a valid cookie still succeeds.
+type authRefreshCookieBody struct {
+	RefreshToken string `json:"refresh_token,omitempty" maxLength:"4096" doc:"Opaque refresh token. Optional when helling_refresh cookie is present."`
+}
+
 type authRefreshCookieInput struct {
 	UserAgent     string `header:"User-Agent"`
 	XRealIP       string `header:"X-Real-IP"`
 	RefreshCookie string `cookie:"helling_refresh"`
-	Body          AuthRefreshRequest
+	Body          authRefreshCookieBody
 }
 
 type authLogoutCookieInput struct {
@@ -70,7 +77,7 @@ func refreshCookieFor(token string, maxAgeSeconds int) string {
 }
 
 func refreshClearCookie() string {
-	return fmt.Sprintf("%s=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict", refreshCookieName)
+	return refreshCookieName + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"
 }
 
 func registerAuthSetupReal(api huma.API, svc *auth.Service) {

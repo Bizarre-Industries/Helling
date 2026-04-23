@@ -12,25 +12,28 @@
 
 exceptions:
   # ── Auth ───────────────────────────────────────────────────────────────────
+  # authSetup / authLogin / authRefresh / authLogout: server-side implemented in
+  # PR B (argon2id + Ed25519 JWT + cookie-backed refresh sessions per
+  # docs/spec/auth.md §2). CLI surface lands in PR F, WebUI in PR G.
   - operation_id: authSetup
     missing: both
-    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR B; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authLogin
     missing: both
-    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR B; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authRefresh
     missing: both
-    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR B; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authLogout
     missing: both
-    reason: "Phase 0 — CLI and WebUI auth flows not yet implemented"
-    target_version: "v0.3.0"
+    reason: "Server-side shipped in PR B; CLI in PR F, WebUI in PR G"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: authMfaComplete
     missing: both

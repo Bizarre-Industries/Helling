@@ -77,7 +77,7 @@ func (s *Service) Setup(ctx context.Context, username, password, ip, userAgent s
 		return Identity{}, fmt.Errorf("auth: create user: %w", err)
 	}
 
-	ident, err := s.issueSession(ctx, u, ip, userAgent)
+	ident, err := s.issueSession(ctx, &u, ip, userAgent)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -114,7 +114,7 @@ func (s *Service) Login(ctx context.Context, username, password, ip, userAgent s
 		return Identity{}, ErrInvalidCredentials
 	}
 
-	ident, err := s.issueSession(ctx, u, ip, userAgent)
+	ident, err := s.issueSession(ctx, &u, ip, userAgent)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -147,7 +147,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, ip, userAgent strin
 	if err := s.repo.RevokeSession(ctx, sess.ID); err != nil {
 		return Identity{}, err
 	}
-	ident, err := s.issueSession(ctx, u, ip, userAgent)
+	ident, err := s.issueSession(ctx, &u, ip, userAgent)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -172,7 +172,7 @@ func (s *Service) Signer() *Signer { return s.signer }
 // Repo exposes the underlying auth repo so callers can query users.
 func (s *Service) Repo() *authrepo.Repo { return s.repo }
 
-func (s *Service) issueSession(ctx context.Context, u authrepo.User, ip, userAgent string) (Identity, error) {
+func (s *Service) issueSession(ctx context.Context, u *authrepo.User, ip, userAgent string) (Identity, error) {
 	access, ttl, err := s.signer.IssueAccess(u.ID, u.Username, u.Role)
 	if err != nil {
 		return Identity{}, fmt.Errorf("auth: issue access: %w", err)

@@ -9,59 +9,67 @@
    Italic axes are provided for Hanken Grotesk and JetBrains Mono. */
 
 @font-face {
-  font-family: 'Big Shoulders Stencil Display';
-  src: url('fonts/BigShouldersStencil-VariableFont_opsz_wght.ttf') format('truetype-variations');
+  font-family: "Big Shoulders Stencil Display";
+  src: url("fonts/BigShouldersStencil-VariableFont_opsz_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Big Shoulders Stencil';
-  src: url('fonts/BigShouldersStencil-VariableFont_opsz_wght.ttf') format('truetype-variations');
+  font-family: "Big Shoulders Stencil";
+  src: url("fonts/BigShouldersStencil-VariableFont_opsz_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Unbounded';
-  src: url('fonts/Unbounded-VariableFont_wght.ttf') format('truetype-variations');
+  font-family: "Unbounded";
+  src: url("fonts/Unbounded-VariableFont_wght.ttf") format("truetype-variations");
   font-weight: 200 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Hanken Grotesk';
-  src: url('fonts/HankenGrotesk-VariableFont_wght.ttf') format('truetype-variations');
+  font-family: "Hanken Grotesk";
+  src: url("fonts/HankenGrotesk-VariableFont_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Hanken Grotesk';
-  src: url('fonts/HankenGrotesk-Italic-VariableFont_wght.ttf') format('truetype-variations');
+  font-family: "Hanken Grotesk";
+  src: url("fonts/HankenGrotesk-Italic-VariableFont_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('fonts/JetBrainsMono-VariableFont_wght.ttf') format('truetype-variations');
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-VariableFont_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('fonts/JetBrainsMono-Italic-VariableFont_wght.ttf') format('truetype-variations');
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-Italic-VariableFont_wght.ttf") format("truetype-variations");
   font-weight: 100 900;
   font-style: italic;
   font-display: swap;
 }
 
 /* ── BASE RESET ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
 body {
   background: var(--surface-primary);
   color: var(--text-primary);
@@ -74,7 +82,8 @@ body {
 }
 
 /* ── HEADING SCALE ──────────────────────────────────────── */
-h1, .h1 {
+h1,
+.h1 {
   font-family: var(--bzr-font-display);
   font-weight: var(--fw-black);
   font-size: var(--fs-hero);
@@ -83,7 +92,8 @@ h1, .h1 {
   text-transform: uppercase;
   margin: 0;
 }
-h2, .h2 {
+h2,
+.h2 {
   font-family: var(--bzr-font-display);
   font-weight: var(--fw-bold);
   font-size: var(--fs-4xl);
@@ -91,7 +101,8 @@ h2, .h2 {
   letter-spacing: var(--ls-snug);
   margin: 0;
 }
-h3, .h3 {
+h3,
+.h3 {
   font-family: var(--bzr-font-stencil);
   font-weight: 800;
   font-size: var(--fs-3xl);
@@ -100,7 +111,8 @@ h3, .h3 {
   text-transform: uppercase;
   margin: 0;
 }
-h4, .h4 {
+h4,
+.h4 {
   font-family: var(--bzr-font-stencil);
   font-weight: var(--fw-bold);
   font-size: var(--fs-2xl);
@@ -108,7 +120,8 @@ h4, .h4 {
   text-transform: uppercase;
   margin: 0;
 }
-h5, .h5 {
+h5,
+.h5 {
   font-family: var(--bzr-font-body);
   font-weight: var(--fw-bold);
   font-size: var(--fs-xl);
@@ -117,7 +130,8 @@ h5, .h5 {
 }
 
 /* ── BODY TEXT ──────────────────────────────────────────── */
-p, .body {
+p,
+.body {
   font-family: var(--bzr-font-body);
   font-size: var(--fs-base);
   line-height: var(--lh-body);
@@ -128,7 +142,8 @@ p, .body {
   font-size: var(--fs-md);
   line-height: var(--lh-body);
 }
-.caption, small {
+.caption,
+small {
   font-family: var(--bzr-font-body);
   font-size: var(--fs-sm);
   line-height: var(--lh-body);
@@ -148,9 +163,12 @@ p, .body {
   align-items: center;
   gap: var(--sp-2);
 }
-.eyebrow--accent { color: var(--text-accent); }
+.eyebrow--accent {
+  color: var(--text-accent);
+}
 .eyebrow .dot {
-  width: 7px; height: 7px;
+  width: 7px;
+  height: 7px;
   background: var(--bzr-lime);
   display: inline-block;
   transform: translateY(-1px);
@@ -176,7 +194,11 @@ p, .body {
 }
 
 /* ── CODE ───────────────────────────────────────────────── */
-code, .code, kbd, samp, pre {
+code,
+.code,
+kbd,
+samp,
+pre {
   font-family: var(--bzr-font-mono);
   font-size: 0.9em;
   line-height: var(--lh-snug);
@@ -189,29 +211,64 @@ a {
   border-bottom: 1px solid currentColor;
   transition: opacity var(--dur-fast) var(--ease-out);
 }
-a:hover { opacity: 0.7; }
+a:hover {
+  opacity: 0.7;
+}
 
 /* ── UTILITY CLASSES ────────────────────────────────────── */
-.ff-display  { font-family: var(--bzr-font-display); }
-.ff-stencil  { font-family: var(--bzr-font-stencil); }
-.ff-body     { font-family: var(--bzr-font-body); }
-.ff-mono     { font-family: var(--bzr-font-mono); }
+.ff-display {
+  font-family: var(--bzr-font-display);
+}
+.ff-stencil {
+  font-family: var(--bzr-font-stencil);
+}
+.ff-body {
+  font-family: var(--bzr-font-body);
+}
+.ff-mono {
+  font-family: var(--bzr-font-mono);
+}
 
-.fg-lime     { color: var(--bzr-lime); }
-.fg-paper    { color: var(--bzr-paper); }
-.fg-void     { color: var(--bzr-void); }
-.fg-muted    { color: var(--text-muted); }
+.fg-lime {
+  color: var(--bzr-lime);
+}
+.fg-paper {
+  color: var(--bzr-paper);
+}
+.fg-void {
+  color: var(--bzr-void);
+}
+.fg-muted {
+  color: var(--text-muted);
+}
 
-.bg-void     { background: var(--bzr-void); color: var(--bzr-paper); }
-.bg-lime     { background: var(--bzr-lime); color: var(--bzr-void); }
-.bg-paper    { background: var(--bzr-paper); color: var(--bzr-void); }
+.bg-void {
+  background: var(--bzr-void);
+  color: var(--bzr-paper);
+}
+.bg-lime {
+  background: var(--bzr-lime);
+  color: var(--bzr-void);
+}
+.bg-paper {
+  background: var(--bzr-paper);
+  color: var(--bzr-void);
+}
 
-.upper       { text-transform: uppercase; }
-.tracked     { letter-spacing: var(--ls-xwide); }
+.upper {
+  text-transform: uppercase;
+}
+.tracked {
+  letter-spacing: var(--ls-xwide);
+}
 
 /* ── LINE RULES (1 or 3, never between) ─────────────────── */
-.rule-1 { border-top: var(--line-1) solid var(--border-default); }
-.rule-3 { border-top: var(--line-3) solid var(--border-default); }
+.rule-1 {
+  border-top: var(--line-1) solid var(--border-default);
+}
+.rule-3 {
+  border-top: var(--line-3) solid var(--border-default);
+}
 
 /* ── COMPONENTS: Button ─────────────────────────────────── */
 .btn {
@@ -227,26 +284,33 @@ a:hover { opacity: 0.7; }
   border: var(--line-1) solid transparent;
   border-radius: var(--rd-1);
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-out),
-              background var(--dur-fast) var(--ease-out),
-              color var(--dur-fast) var(--ease-out);
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   text-decoration: none;
 }
-.btn:active { transform: translateY(1px); }
+.btn:active {
+  transform: translateY(1px);
+}
 
 .btn--primary {
   background: var(--bzr-lime);
   color: var(--bzr-void);
   border-color: var(--bzr-lime);
 }
-.btn--primary:hover { background: var(--bzr-lime-glow); border-color: var(--bzr-lime-glow); }
+.btn--primary:hover {
+  background: var(--bzr-lime-glow);
+  border-color: var(--bzr-lime-glow);
+}
 
 .btn--ghost {
   background: transparent;
   color: var(--bzr-paper);
   border-color: var(--bzr-void-4);
 }
-.btn--ghost:hover { border-color: var(--bzr-lime); color: var(--bzr-lime); }
+.btn--ghost:hover {
+  border-color: var(--bzr-lime);
+  color: var(--bzr-lime);
+}
 
 .btn--danger {
   background: var(--bzr-danger);
@@ -268,8 +332,12 @@ a:hover { opacity: 0.7; }
   outline: none;
   transition: border-color var(--dur-fast) var(--ease-out);
 }
-.input:focus { border-color: var(--bzr-lime); }
-.input::placeholder { color: var(--text-muted); }
+.input:focus {
+  border-color: var(--bzr-lime);
+}
+.input::placeholder {
+  color: var(--text-muted);
+}
 
 /* ── COMPONENTS: Badge ──────────────────────────────────── */
 .badge {

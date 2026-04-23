@@ -187,14 +187,15 @@ tasks:
       - |
         # yamllint -s means strict (warnings count as failures).
         # Pass specific directories, not ".", to avoid refs/ and node_modules/.
-        yamllint -s . --no-warnings=false 2>/dev/null || \
-          yamllint -s $(find . -maxdepth 4 -type f \( -name '*.yaml' -o -name '*.yml' \) \
-            -not -path './.git/*' \
-            -not -path './refs/*' \
-            -not -path './node_modules/*' \
-            -not -path './web/node_modules/*' \
-            -not -path './.task/*' \
-            -not -path './dist/*')
+        yamllint -s $(find . -maxdepth 4 -type f \( -name '*.yaml' -o -name '*.yml' \) \
+          -not -path './.git/*' \
+          -not -path './refs/*' \
+          -not -path './node_modules/*' \
+          -not -path './web/node_modules/*' \
+          -not -path './.task/*' \
+          -not -path './.tmp/*' \
+          -not -path './.claude-plans/*' \
+          -not -path './dist/*')
 
   # ============================================================
   # Shell — excludes refs/

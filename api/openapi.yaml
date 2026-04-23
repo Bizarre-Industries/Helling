@@ -536,7 +536,7 @@ paths:
             example:
               $schema: https://localhost:8006/schemas/AuthTokenCreateRequest.json
               name: example
-              scope: admin
+              scope: read
         required: true
       responses:
         "200":
@@ -3464,11 +3464,11 @@ components:
           maxLength: 256
         totp_code:
           type: string
-          description: Six-digit TOTP code from the user's authenticator.
+          description: Six-digit TOTP code or 16-char recovery code.
           examples:
             - example
           minLength: 6
-          maxLength: 8
+          maxLength: 32
       required:
         - mfa_token
         - totp_code
@@ -3692,7 +3692,7 @@ components:
       examples:
         - id: id_example
           name: example
-          scope: admin
+          scope: read
           token: example
       additionalProperties: false
       properties:
@@ -3710,11 +3710,11 @@ components:
           type: string
           description: Token scope.
           examples:
-            - admin
+            - read
           enum:
+            - read
+            - write
             - admin
-            - user
-            - auditor
         token:
           type: string
           description: Plaintext API token. Surfaced only once; store it securely.
@@ -3747,7 +3747,7 @@ components:
           examples:
             - id: id_example
               name: example
-              scope: admin
+              scope: read
               token: example
         meta:
           description: Property meta.
@@ -3777,7 +3777,7 @@ components:
       examples:
         - $schema: https://localhost:8006/schemas/AuthTokenCreateRequest.json
           name: example
-          scope: admin
+          scope: read
       additionalProperties: false
       properties:
         $schema:
@@ -3796,13 +3796,13 @@ components:
           maxLength: 128
         scope:
           type: string
-          description: Token scope, must be one of the fixed roles.
+          description: Token scope.
           examples:
-            - admin
+            - read
           enum:
+            - read
+            - write
             - admin
-            - user
-            - auditor
       required:
         - name
         - scope
@@ -3896,7 +3896,7 @@ components:
           id: id_example
           last_used: example
           name: example
-          scope: admin
+          scope: read
       additionalProperties: false
       properties:
         created_at:
@@ -3925,11 +3925,11 @@ components:
           type: string
           description: Token scope.
           examples:
-            - admin
+            - read
           enum:
+            - read
+            - write
             - admin
-            - user
-            - auditor
       required:
         - id
         - name

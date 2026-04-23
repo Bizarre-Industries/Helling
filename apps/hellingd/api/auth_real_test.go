@@ -77,9 +77,13 @@ func discardBody(resp *http.Response) {
 	_ = resp.Body.Close()
 }
 
-func extractCookie(resp *http.Response, name string) string {
+const refreshCookieNameForTest = "helling_refresh"
+
+// extractRefreshCookie pulls the Set-Cookie value for helling_refresh from a
+// response, or "" when absent.
+func extractRefreshCookie(resp *http.Response) string {
 	for _, c := range resp.Cookies() {
-		if c.Name == name {
+		if c.Name == refreshCookieNameForTest {
 			return c.Name + "=" + c.Value
 		}
 	}
@@ -105,7 +109,7 @@ func TestRealAuth_SetupLoginRefreshLogout(t *testing.T) {
 	if setupBody.Data.AccessToken == "" || setupBody.Data.TokenType != "Bearer" {
 		t.Fatalf("setup missing access token: %+v", setupBody.Data)
 	}
-	cookie := extractCookie(setupResp, "helling_refresh")
+	cookie := extractRefreshCookie(setupResp)
 	if cookie == "" || !strings.Contains(cookie, "helling_refresh=") {
 		t.Fatalf("refresh cookie not set")
 	}
@@ -130,7 +134,7 @@ func TestRealAuth_SetupLoginRefreshLogout(t *testing.T) {
 	if loginBody.Data.AccessToken == "" {
 		t.Fatal("login missing access token")
 	}
-	loginCookie := extractCookie(loginResp, "helling_refresh")
+	loginCookie := extractRefreshCookie(loginResp)
 	if loginCookie == "" {
 		t.Fatal("login cookie missing")
 	}
@@ -176,7 +180,7 @@ func TestRealAuth_RefreshBodyTokenAlsoWorks(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("setup: %d", resp.StatusCode)
 	}
-	cookie := extractCookie(resp, "helling_refresh")
+	cookie := extractRefreshCookie(resp)
 	rawRefresh := strings.TrimPrefix(cookie, "helling_refresh=")
 	discardBody(resp)
 

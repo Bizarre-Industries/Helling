@@ -11,9 +11,10 @@ import (
 // Service ties password hashing, JWT signing, and persistence into the
 // high-level auth operations used by the API layer.
 type Service struct {
-	repo   *authrepo.Repo
-	signer *Signer
-	hashP  Argon2idParams
+	repo       *authrepo.Repo
+	signer     *Signer
+	hashP      Argon2idParams
+	mfaPending mfaPendingStore
 }
 
 // NewService wires a Service. params default to DefaultArgon2idParams when zero.
@@ -21,7 +22,12 @@ func NewService(repo *authrepo.Repo, signer *Signer, params Argon2idParams) *Ser
 	if params == (Argon2idParams{}) {
 		params = DefaultArgon2idParams
 	}
-	return &Service{repo: repo, signer: signer, hashP: params}
+	return &Service{
+		repo:       repo,
+		signer:     signer,
+		hashP:      params,
+		mfaPending: newMfaPendingStore(),
+	}
 }
 
 // Identity identifies the caller and carries the issued tokens.
@@ -53,6 +59,10 @@ var ErrInvalidCredentials = errors.New("auth: invalid credentials")
 
 // ErrUserDisabled is returned when a disabled user attempts to log in.
 var ErrUserDisabled = errors.New("auth: user disabled")
+
+// userStatusActive mirrors the active value in the users.status CHECK
+// constraint (docs/spec/sqlite-schema.md §1.1).
+const userStatusActive = "active"
 
 // Setup creates the initial admin account and issues a fresh token pair.
 // Fails with ErrSetupNotRequired when an admin already exists.
@@ -101,7 +111,7 @@ func (s *Service) Login(ctx context.Context, username, password, ip, userAgent s
 	if err != nil {
 		return Identity{}, err
 	}
-	if u.Status != "active" {
+	if u.Status != userStatusActive {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"disabled"}`)
 		return Identity{}, ErrUserDisabled
 	}
@@ -139,7 +149,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, ip, userAgent strin
 	if err != nil {
 		return Identity{}, err
 	}
-	if u.Status != "active" {
+	if u.Status != userStatusActive {
 		_ = s.repo.RevokeSession(ctx, sess.ID)
 		return Identity{}, ErrUserDisabled
 	}

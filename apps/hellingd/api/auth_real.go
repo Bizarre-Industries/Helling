@@ -118,31 +118,67 @@ func registerAuthLoginReal(api huma.API, svc *auth.Service) {
 		Method:      http.MethodPost,
 		Path:        "/api/v1/auth/login",
 		Summary:     "Authenticate and issue JWT pair",
-		Description: "Verifies credentials and returns a JWT access token. Refresh token is delivered via the helling_refresh cookie.",
+		Description: "Verifies credentials. Returns an access token + helling_refresh cookie for TOTP-disabled accounts, or an MFA challenge (202) for accounts with an active factor.",
 		Tags:        []string{"Auth"},
 		RequestBody: &huma.RequestBody{Description: "Credentials with optional inline TOTP code.", Required: true},
 		Errors:      []int{http.StatusUnauthorized, http.StatusTooManyRequests},
 	}, func(ctx context.Context, input *authLoginCookieInput) (*authLoginCookieOutput, error) {
-		ident, err := svc.Login(ctx, input.Body.Username, input.Body.Password, input.XRealIP, input.UserAgent)
+		// If TOTP code inlined, try the classic one-call path: login + MFA in a single request.
+		if input.Body.TOTPCode != "" {
+			res, err := svc.LoginWithMFA(ctx, input.Body.Username, input.Body.Password, input.XRealIP, input.UserAgent)
+			if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserDisabled) {
+				return nil, huma.Error401Unauthorized("AUTH_INVALID_CREDENTIALS")
+			}
+			if err != nil {
+				return nil, huma.Error500InternalServerError("AUTH_LOGIN_FAILED")
+			}
+			if res.Pending != nil {
+				ident, err := svc.CompleteMFA(ctx, res.Pending.MFAToken, input.Body.TOTPCode, input.XRealIP, input.UserAgent)
+				if err != nil {
+					return nil, huma.Error401Unauthorized("AUTH_MFA_CODE_INVALID")
+				}
+				return loginOK(svc, &ident), nil
+			}
+			return loginOK(svc, res.Identity), nil
+		}
+
+		res, err := svc.LoginWithMFA(ctx, input.Body.Username, input.Body.Password, input.XRealIP, input.UserAgent)
 		if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserDisabled) {
 			return nil, huma.Error401Unauthorized("AUTH_INVALID_CREDENTIALS")
 		}
 		if err != nil {
 			return nil, huma.Error500InternalServerError("AUTH_LOGIN_FAILED")
 		}
-		return &authLoginCookieOutput{
-			Status:    http.StatusOK,
-			SetCookie: refreshCookieFor(ident.RefreshToken, int(svc.Signer().RefreshTTL().Seconds())),
-			Body: AuthLoginEnvelope{
-				Data: AuthLoginData{
-					AccessToken: ident.AccessToken,
-					TokenType:   "Bearer",
-					ExpiresIn:   ident.AccessExpires,
+		if res.Pending != nil {
+			return &authLoginCookieOutput{
+				Status: http.StatusAccepted,
+				Body: AuthLoginEnvelope{
+					Data: AuthLoginData{
+						MFARequired: true,
+						MFAToken:    res.Pending.MFAToken,
+					},
+					Meta: AuthLoginMeta{RequestID: "req_auth_login_mfa"},
 				},
-				Meta: AuthLoginMeta{RequestID: "req_auth_login_ok"},
-			},
-		}, nil
+			}, nil
+		}
+		return loginOK(svc, res.Identity), nil
 	})
+}
+
+// loginOK builds a 200 login response from a fully-issued Identity.
+func loginOK(svc *auth.Service, ident *auth.Identity) *authLoginCookieOutput {
+	return &authLoginCookieOutput{
+		Status:    http.StatusOK,
+		SetCookie: refreshCookieFor(ident.RefreshToken, int(svc.Signer().RefreshTTL().Seconds())),
+		Body: AuthLoginEnvelope{
+			Data: AuthLoginData{
+				AccessToken: ident.AccessToken,
+				TokenType:   "Bearer",
+				ExpiresIn:   ident.AccessExpires,
+			},
+			Meta: AuthLoginMeta{RequestID: "req_auth_login_ok"},
+		},
+	}
 }
 
 func registerAuthRefreshReal(api huma.API, svc *auth.Service) {

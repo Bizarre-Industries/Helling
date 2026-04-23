@@ -968,10 +968,12 @@ type AuthSetupOutput struct {
 	Body AuthSetupEnvelope
 }
 
-// AuthMfaCompleteRequest completes an MFA challenge with a TOTP code.
+// AuthMfaCompleteRequest completes an MFA challenge with a TOTP code or a
+// recovery code (recovery codes are 16-char base32 strings per
+// docs/spec/auth.md §2.3).
 type AuthMfaCompleteRequest struct {
 	MfaToken string `json:"mfa_token" minLength:"1" maxLength:"256" doc:"MFA token returned by the login endpoint."`
-	TotpCode string `json:"totp_code" minLength:"6" maxLength:"8" doc:"Six-digit TOTP code from the user's authenticator."`
+	TotpCode string `json:"totp_code" minLength:"6" maxLength:"32" doc:"Six-digit TOTP code or 16-char recovery code."`
 }
 
 // AuthMfaCompleteInput wraps the MFA completion body.
@@ -1073,11 +1075,12 @@ type AuthTotpDisableOutput struct {
 	Body AuthTotpDisableEnvelope
 }
 
-// AuthTokenRecord is an API token summary.
+// AuthTokenRecord is an API token summary. Scope enum matches
+// docs/spec/auth.md §5 (`read`, `write`, `admin`).
 type AuthTokenRecord struct {
 	ID        string `json:"id" doc:"Token identifier."`
 	Name      string `json:"name" doc:"User-supplied token name."`
-	Scope     string `json:"scope" doc:"Token scope." enum:"admin,user,auditor"`
+	Scope     string `json:"scope" doc:"Token scope." enum:"read,write,admin"`
 	CreatedAt string `json:"created_at" doc:"ISO-8601 timestamp when the token was created." format:"date-time"`
 	LastUsed  string `json:"last_used,omitempty" doc:"ISO-8601 timestamp of last successful use, if any." format:"date-time"`
 }
@@ -1112,10 +1115,11 @@ type AuthTokenListOutput struct {
 	Body AuthTokenListEnvelope
 }
 
-// AuthTokenCreateRequest creates a new API token.
+// AuthTokenCreateRequest creates a new API token. Scope enum matches
+// docs/spec/auth.md §5.
 type AuthTokenCreateRequest struct {
 	Name  string `json:"name" minLength:"1" maxLength:"128" doc:"User-visible token name."`
-	Scope string `json:"scope" doc:"Token scope, must be one of the fixed roles." enum:"admin,user,auditor"`
+	Scope string `json:"scope" doc:"Token scope." enum:"read,write,admin"`
 }
 
 // AuthTokenCreateInput wraps the create request body.
@@ -1127,7 +1131,7 @@ type AuthTokenCreateInput struct {
 type AuthTokenCreateData struct {
 	ID    string `json:"id" doc:"New token identifier."`
 	Name  string `json:"name" doc:"Token name."`
-	Scope string `json:"scope" doc:"Token scope." enum:"admin,user,auditor"`
+	Scope string `json:"scope" doc:"Token scope." enum:"read,write,admin"`
 	Token string `json:"token" doc:"Plaintext API token. Surfaced only once; store it securely."`
 }
 
@@ -1172,8 +1176,8 @@ type AuthTokenRevokeOutput struct {
 }
 
 var stubAuthTokens = []AuthTokenRecord{
-	{ID: authTokenIDExisting, Name: "ci-bot", Scope: "user", CreatedAt: "2026-04-01T00:00:00Z", LastUsed: "2026-04-20T12:00:00Z"},
-	{ID: "tok_01JZTOKEN000000000000002", Name: "auditor-readonly", Scope: "auditor", CreatedAt: "2026-04-10T00:00:00Z"},
+	{ID: authTokenIDExisting, Name: "ci-bot", Scope: "write", CreatedAt: "2026-04-01T00:00:00Z", LastUsed: "2026-04-20T12:00:00Z"},
+	{ID: "tok_01JZTOKEN000000000000002", Name: "auditor-readonly", Scope: "read", CreatedAt: "2026-04-10T00:00:00Z"},
 }
 
 // RegisterOperations wires the current Huma spike operations with stubbed
@@ -1191,19 +1195,26 @@ func RegisterOperationsWith(api huma.API, deps Deps) {
 		registerAuthLoginReal(api, deps.Auth)
 		registerAuthLogoutReal(api, deps.Auth)
 		registerAuthRefreshReal(api, deps.Auth)
+		registerAuthMfaCompleteReal(api, deps.Auth)
+		registerAuthTotpSetupReal(api, deps.Auth)
+		registerAuthTotpVerifyReal(api, deps.Auth)
+		registerAuthTotpDisableReal(api, deps.Auth)
+		registerAuthTokenListReal(api, deps.Auth)
+		registerAuthTokenCreateReal(api, deps.Auth)
+		registerAuthTokenRevokeReal(api, deps.Auth)
 	} else {
 		registerAuthSetup(api)
 		registerAuthLogin(api)
 		registerAuthLogout(api)
 		registerAuthRefresh(api)
+		registerAuthMfaComplete(api)
+		registerAuthTotpSetup(api)
+		registerAuthTotpVerify(api)
+		registerAuthTotpDisable(api)
+		registerAuthTokenList(api)
+		registerAuthTokenCreate(api)
+		registerAuthTokenRevoke(api)
 	}
-	registerAuthMfaComplete(api)
-	registerAuthTotpSetup(api)
-	registerAuthTotpVerify(api)
-	registerAuthTotpDisable(api)
-	registerAuthTokenList(api)
-	registerAuthTokenCreate(api)
-	registerAuthTokenRevoke(api)
 	registerUserList(api)
 	registerUserCreate(api)
 	registerUserGet(api)

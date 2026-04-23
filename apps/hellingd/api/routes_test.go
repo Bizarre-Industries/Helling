@@ -335,7 +335,7 @@ func TestRegisterOperationsAuthTokenListPagination(t *testing.T) {
 
 func TestRegisterOperationsAuthTokenCreateSuccess(t *testing.T) {
 	mux := testAPI()
-	body := `{"name":"ci-bot","scope":"user"}`
+	body := `{"name":"ci-bot","scope":"write"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/tokens", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

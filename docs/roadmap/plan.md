@@ -204,7 +204,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] WebSocket proxy for SPICE/serial/exec (upgrade forwarding)
 - [ ] Auto-snapshot before destructive operations (proxy hook)
 - [ ] VM screenshot thumbnails (capture + cache)
-- [ ] SQL-first migrations with goose + generated queries via sqlc
+- [x] SQL-first migrations with goose (initial 14-table schema landed 2026-04-24 at apps/hellingd/internal/db/; modernc.org/sqlite pure-Go driver; sqlc queries land per-domain as handlers port)
 
 #### Frontend
 

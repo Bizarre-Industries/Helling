@@ -117,9 +117,71 @@ var stubUsers = []UserRecord{
 	{ID: "user_alice", Username: "alice", Role: "user", Status: "active"},
 }
 
+// AuthLogoutData is the payload returned on successful logout.
+// Empty object preserves the envelope contract (data + meta) without leaking session material.
+type AuthLogoutData struct{}
+
+// AuthLogoutMeta contains request metadata for logout responses.
+type AuthLogoutMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// AuthLogoutEnvelope follows the Helling success envelope shape for logout.
+type AuthLogoutEnvelope struct {
+	Data AuthLogoutData `json:"data"`
+	Meta AuthLogoutMeta `json:"meta"`
+}
+
+// AuthLogoutOutput is the response shape for POST /api/v1/auth/logout.
+type AuthLogoutOutput struct {
+	Body AuthLogoutEnvelope
+}
+
+// AuthRefreshRequest is the refresh request payload.
+// v0.1-alpha accepts the refresh token in the body; v0.1-beta moves to the httpOnly
+// cookie model documented in docs/spec/auth.md §2.2.
+type AuthRefreshRequest struct {
+	RefreshToken string `json:"refresh_token" minLength:"1" maxLength:"4096" doc:"Opaque refresh token issued by a prior login."`
+}
+
+// AuthRefreshInput wraps the refresh request body.
+type AuthRefreshInput struct {
+	Body AuthRefreshRequest `doc:"Refresh token exchange payload."`
+}
+
+// AuthRefreshData is the result payload for refresh.
+type AuthRefreshData struct {
+	AccessToken string `json:"access_token" doc:"New JWT access token."`
+	TokenType   string `json:"token_type" doc:"Token scheme for access token responses." enum:"Bearer"`
+	ExpiresIn   int    `json:"expires_in" doc:"Access token TTL in seconds." minimum:"1"`
+}
+
+// AuthRefreshMeta contains request metadata for refresh responses.
+type AuthRefreshMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// AuthRefreshEnvelope follows the Helling success envelope shape for refresh.
+type AuthRefreshEnvelope struct {
+	Data AuthRefreshData `json:"data"`
+	Meta AuthRefreshMeta `json:"meta"`
+}
+
+// AuthRefreshOutput is the response shape for POST /api/v1/auth/refresh.
+type AuthRefreshOutput struct {
+	Body AuthRefreshEnvelope
+}
+
+const (
+	authRefreshTokenStub  = "stub_refresh_token_01JZREFRESHABCDEFGHJK"
+	authRefreshTokenInval = "invalid"
+)
+
 // RegisterOperations wires the current Huma spike operations.
 func RegisterOperations(api huma.API) {
 	registerAuthLogin(api)
+	registerAuthLogout(api)
+	registerAuthRefresh(api)
 	registerUserList(api)
 	registerHealth(api)
 }
@@ -201,6 +263,64 @@ func registerAuthLogin(api huma.API) {
 					ExpiresIn:   900,
 				},
 				Meta: AuthLoginMeta{RequestID: "req_auth_login_ok"},
+			},
+		}, nil
+	})
+}
+
+func registerAuthLogout(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "authLogout",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/auth/logout",
+		Summary:     "Revoke the current session",
+		Description: "Invalidates the caller's refresh token server-side. Stub implementation returns empty success envelope until the token store lands. Bearer-auth requirement will be declared once the bearerAuth scheme ships with the JWT middleware.",
+		Tags:        []string{"Auth"},
+	}, func(ctx context.Context, input *struct{}) (*AuthLogoutOutput, error) {
+		_ = ctx
+		_ = input
+
+		return &AuthLogoutOutput{
+			Body: AuthLogoutEnvelope{
+				Data: AuthLogoutData{},
+				Meta: AuthLogoutMeta{RequestID: "req_auth_logout"},
+			},
+		}, nil
+	})
+}
+
+func registerAuthRefresh(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "authRefresh",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/auth/refresh",
+		Summary:     "Exchange a refresh token for a new access token",
+		Description: "Issues a new short-lived access token when the supplied refresh token is valid and within the inactivity window.",
+		Tags:        []string{"Auth"},
+		RequestBody: &huma.RequestBody{
+			Description: "Refresh token exchange payload.",
+			Required:    true,
+		},
+		Errors: []int{http.StatusUnauthorized},
+	}, func(ctx context.Context, input *AuthRefreshInput) (*AuthRefreshOutput, error) {
+		_ = ctx
+
+		if input.Body.RefreshToken == authRefreshTokenInval {
+			return nil, huma.Error401Unauthorized("AUTH_REFRESH_INVALID")
+		}
+
+		if input.Body.RefreshToken != authRefreshTokenStub {
+			return nil, huma.Error401Unauthorized("AUTH_REFRESH_INVALID")
+		}
+
+		return &AuthRefreshOutput{
+			Body: AuthRefreshEnvelope{
+				Data: AuthRefreshData{
+					AccessToken: "eyJhbGciOiJFZERTQSJ9.refresh.stub",
+					TokenType:   "Bearer",
+					ExpiresIn:   900,
+				},
+				Meta: AuthRefreshMeta{RequestID: "req_auth_refresh"},
 			},
 		}, nil
 	})

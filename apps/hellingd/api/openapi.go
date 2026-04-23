@@ -76,6 +76,36 @@ func setSchemaMetadata(schemas map[string]*huma.Schema) {
 	enrichHealthDataSchema(schemas["HealthData"])
 	enrichHealthEnvelopeSchema(schemas["HealthEnvelope"])
 	enrichHealthMetaSchema(schemas["HealthMeta"])
+	enrichAuthLogoutEnvelopeSchema(schemas["AuthLogoutEnvelope"])
+	enrichAuthRefreshEnvelopeSchema(schemas["AuthRefreshEnvelope"])
+}
+
+func enrichAuthLogoutEnvelopeSchema(schema *huma.Schema) {
+	if schema == nil {
+		return
+	}
+
+	schema.Description = "Success envelope for auth logout responses."
+	schema.Examples = []any{map[string]any{
+		"data": map[string]any{},
+		"meta": map[string]any{"request_id": "req_auth_logout"},
+	}}
+}
+
+func enrichAuthRefreshEnvelopeSchema(schema *huma.Schema) {
+	if schema == nil {
+		return
+	}
+
+	schema.Description = "Success envelope for auth refresh responses."
+	schema.Examples = []any{map[string]any{
+		"data": map[string]any{
+			"access_token": "eyJhbGciOiJFZERTQSJ9.refresh.stub",
+			"token_type":   "Bearer",
+			"expires_in":   900,
+		},
+		"meta": map[string]any{"request_id": "req_auth_refresh"},
+	}}
 }
 
 func enrichErrorDetailSchema(schema *huma.Schema) {

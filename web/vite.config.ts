@@ -6,6 +6,14 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      // Dev-time: forward /api/* to the local hellingd daemon so the
+      // generated hey-api SDK can be configured with same-origin baseUrl.
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',

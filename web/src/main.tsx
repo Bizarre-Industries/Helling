@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -5,6 +6,11 @@ import { createRoot } from 'react-dom/client';
 import './styles/ds/tokens.css';
 import './styles/ds/colors_and_type.css';
 import './styles/app.css';
+
+// Configure the hey-api fetch client (baseUrl + auth interceptors) before any
+// component renders; importing for its side-effect registers the interceptors
+// on the generated client singleton.
+import './api/client';
 
 // Side-effect imports populate window.* globals referenced by App.
 // Order matters: shell defines primitives, infra adds shared UI, pages add
@@ -20,8 +26,23 @@ if (!container) {
   throw new Error('Helling WebUI: #root not found in document');
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
+
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </StrictMode>,
 );

@@ -169,7 +169,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 #### Frontend (Beta)
 
 - [ ] Three API clients: hellingClient, incusClient, podmanClient
-- [ ] hey-api/openapi-ts generated SDK/hooks for Helling API
+- [x] hey-api/openapi-ts generated SDK/hooks for Helling API (wired 2026-04-24; client interceptor + QueryClientProvider live, pages still on mock data pending real backend impls)
 - [ ] Dashboard page: system stats from Incus proxy
 - [ ] Instances page: list from Incus proxy
 - [ ] Containers page: list from Podman proxy

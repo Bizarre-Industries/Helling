@@ -1,0 +1,189 @@
+/* ============================================================
+   BIZARRE INDUSTRIES — DESIGN TOKENS
+   v0.1 — April 2026
+
+   Companion to BRAND.md. Two source-of-truth files:
+     BRAND.md    — the decision rules (philosophy, voice, usage)
+     tokens.css  — the computed values (colors, type, spacing)
+
+   Applies to all surfaces: web, CLI, print, physical (vehicle
+   livery, helmets, crates, merch), event signage, packaging.
+
+   Namespace: --bzr-*
+   Slogan: CATCH THE STARS.
+   ============================================================ */
+
+:root {
+  /* ── BRAND CORE ─────────────────────────────────────────── */
+  --bzr-lime:           #C6FF24;   /* Signal Lime — hero, brand, always on dark */
+  --bzr-lime-ink:       #5E7A00;   /* Acid Lime — functional UI on light (WCAG AA, 5.4:1 on white) */
+  --bzr-lime-glow:      #E8FF8A;   /* Lime Glow — tints, hover fields, highlight strokes */
+  --bzr-gray:           #545454;   /* Void Gray — the original brand gray */
+
+  /* ── VOID SCALE (dark surfaces) ─────────────────────────── */
+  --bzr-void:           #0E0E0E;   /* Deep Void — primary dark bg */
+  --bzr-void-2:         #1A1A1A;   /* Midnight — elevated dark surface */
+  --bzr-void-3:         #2B2B2B;   /* Smoke — card / panel dark */
+  --bzr-void-4:         #3D3D3D;   /* Iron — border on dark */
+
+  /* ── ASH SCALE (mid neutrals) ───────────────────────────── */
+  --bzr-ash-900:        #1F1F1F;
+  --bzr-ash-700:        #545454;   /* = Void Gray, canonical */
+  --bzr-ash-500:        #7A7A7A;
+  --bzr-ash-300:        #B8B8B8;
+  --bzr-ash-100:        #E4E4E4;
+
+  /* ── LIGHT SCALE (light surfaces) ───────────────────────── */
+  --bzr-snow:           #FFFFFF;   /* pure white */
+  --bzr-paper:          #F9F8F2;   /* warm off-white, default light bg */
+  --bzr-bone:           #F5F2EA;   /* warm neutral surface */
+
+  /* ── SEMANTIC (non-brand, for functional UI signals) ────── */
+  --bzr-success:        #3FB950;
+  --bzr-warn:           #E8A33D;
+  --bzr-danger:         #F0525B;
+  --bzr-info:           #5B9FFF;
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────── */
+  --bzr-font-display:   'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --bzr-font-stencil:   'Big Shoulders Stencil Display', 'Impact', sans-serif;
+  --bzr-font-body:      'Hanken Grotesk', 'Helvetica Neue', system-ui, sans-serif;
+  --bzr-font-mono:      'JetBrains Mono', 'Menlo', 'Courier New', monospace;
+
+  /* ── TYPE SCALE (1.25 major-third progression) ──────────── */
+  --fs-xs:              0.75rem;     /* 12 — mono labels, captions */
+  --fs-sm:              0.875rem;    /* 14 — small UI */
+  --fs-base:            1rem;        /* 16 — body */
+  --fs-md:              1.125rem;    /* 18 — lead body */
+  --fs-lg:              1.25rem;     /* 20 — subheads */
+  --fs-xl:              1.5rem;      /* 24 — H5 */
+  --fs-2xl:             2rem;        /* 32 — H4 */
+  --fs-3xl:             2.75rem;     /* 44 — H3 */
+  --fs-4xl:             3.75rem;     /* 60 — H2 */
+  --fs-5xl:             5rem;        /* 80 — H1 */
+  --fs-6xl:             7rem;        /* 112 — hero display */
+  --fs-hero:            clamp(3.75rem, 12vw, 12rem); /* responsive hero */
+
+  /* ── LINE HEIGHT ────────────────────────────────────────── */
+  --lh-tight:           0.92;
+  --lh-snug:            1.15;
+  --lh-body:            1.55;
+  --lh-loose:           1.75;
+
+  /* ── LETTER SPACING ─────────────────────────────────────── */
+  --ls-tight:           -0.04em;     /* big display */
+  --ls-snug:            -0.02em;     /* headings */
+  --ls-body:            0;
+  --ls-wide:            0.05em;      /* mono labels, small caps */
+  --ls-xwide:           0.16em;      /* uppercase mono eyebrows */
+
+  /* ── WEIGHT ─────────────────────────────────────────────── */
+  --fw-light:           300;
+  --fw-regular:         400;
+  --fw-medium:          500;
+  --fw-semibold:        600;
+  --fw-bold:            700;
+  --fw-black:           900;
+
+  /* ── SPACING (8pt scale with 4pt detail) ────────────────── */
+  --sp-1:               4px;
+  --sp-2:               8px;
+  --sp-3:               12px;
+  --sp-4:               16px;
+  --sp-5:               20px;
+  --sp-6:               24px;
+  --sp-8:               32px;
+  --sp-10:              40px;
+  --sp-12:              48px;
+  --sp-16:              64px;
+  --sp-20:              80px;
+  --sp-24:              96px;
+  --sp-32:              128px;
+  --sp-40:              160px;
+  --sp-48:              192px;
+
+  /* ── RADII (keep sharp — brand is geometric) ────────────── */
+  --rd-0:               0;
+  --rd-1:               2px;
+  --rd-2:               4px;
+  --rd-pill:            999px;
+
+  /* ── BORDERS ────────────────────────────────────────────── */
+  --line-1:             1px;
+  --line-2:             2px;
+  --line-3:             3px;
+  --line-4:             4px;
+
+  /* ── MOTION ─────────────────────────────────────────────── */
+  --ease-out:           cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:            cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-inout:         cubic-bezier(0.87, 0, 0.13, 1);
+  --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-instant:        80ms;
+  --dur-fast:           150ms;
+  --dur-mid:            300ms;
+  --dur-slow:           600ms;
+  --dur-epic:           1200ms;
+
+  /* ── SHADOWS (minimal, brand is flat) ───────────────────── */
+  --shadow-sm:          0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md:          0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg:          0 16px 48px rgba(0,0,0,0.18);
+  --shadow-lime:        0 0 40px rgba(198,255,36,0.35);
+
+  /* ── Z-INDEX ────────────────────────────────────────────── */
+  --z-base:             1;
+  --z-raised:           10;
+  --z-sticky:           100;
+  --z-overlay:          1000;
+  --z-modal:            2000;
+  --z-toast:            3000;
+}
+
+/* ============================================================
+   SEMANTIC ALIASES
+   Map tokens to roles. Use these in components, not raw colors.
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --surface-primary:    var(--bzr-void);
+  --surface-elevated:   var(--bzr-void-2);
+  --surface-card:       var(--bzr-void-3);
+  --surface-inverse:    var(--bzr-paper);
+
+  /* Text */
+  --text-primary:       var(--bzr-paper);
+  --text-secondary:     var(--bzr-ash-300);
+  --text-muted:         var(--bzr-ash-500);
+  --text-inverse:       var(--bzr-void);
+  --text-accent:        var(--bzr-lime);
+
+  /* Borders */
+  --border-default:     var(--bzr-void-4);
+  --border-strong:      var(--bzr-ash-500);
+  --border-accent:      var(--bzr-lime);
+
+  /* Interactive */
+  --action-primary-bg:  var(--bzr-lime);
+  --action-primary-fg:  var(--bzr-void);
+  --action-ghost-fg:    var(--bzr-paper);
+  --action-danger-bg:   var(--bzr-danger);
+}
+
+/* Light mode inversions — auto apply where --theme=light is set */
+[data-theme="light"] {
+  --surface-primary:    var(--bzr-paper);
+  --surface-elevated:   var(--bzr-snow);
+  --surface-card:       var(--bzr-bone);
+  --surface-inverse:    var(--bzr-void);
+
+  --text-primary:       var(--bzr-void);
+  --text-secondary:     var(--bzr-ash-700);
+  --text-muted:         var(--bzr-ash-500);
+  --text-inverse:       var(--bzr-paper);
+  --text-accent:        var(--bzr-lime-ink);     /* NOT Signal Lime — that would fail contrast */
+
+  --border-default:     var(--bzr-ash-100);
+  --border-strong:      var(--bzr-ash-500);
+  --border-accent:      var(--bzr-lime-ink);
+}

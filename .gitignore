@@ -7,6 +7,7 @@ IMPLEMENTATION-PLAN.md
 .claude/
 .claude-cache/
 .claude-plans/
+.design-fetch/
 .remember/
 .task/
 CLAUDE.md
@@ -38,6 +39,8 @@ web/node_modules/
 web/build/
 web/dist/
 web/package-lock.json
+web/*.tsbuildinfo
+web/.dev.log
 
 # IDE
 .vscode/

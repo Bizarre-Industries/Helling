@@ -18,6 +18,8 @@ import './api/client';
 import './shell.jsx';
 import './infra.jsx';
 import './pages.jsx';
+// Additional page registrations kept in a separate module by design.
+// Must load after `pages.jsx` so base page globals are available first.
 import './pages2.jsx';
 import App from './app.jsx';
 

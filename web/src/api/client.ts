@@ -1,4 +1,4 @@
-// Configures the hey-api-generated fetch client for Helling's runtime.
+// Configures the hey-api-generated fetch client for Helming's runtime.
 //
 // - Base URL defaults to same-origin; dev uses Vite's /api proxy from vite.config.ts,
 //   production serves through Caddy (ADR-037).
@@ -24,6 +24,12 @@ client.interceptors.request.use((request) => {
 client.interceptors.response.use((response) => {
   if (response.status === 401) {
     clearAccessToken();
+    console.warn('Session expired or unauthorized. Redirecting to login.');
+    window.dispatchEvent(
+      new CustomEvent('auth:session-expired', {
+        detail: { status: response.status, reason: 'unauthorized' },
+      }),
+    );
   }
   return response;
 });

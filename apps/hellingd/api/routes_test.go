@@ -371,6 +371,127 @@ func TestRegisterOperationsAuthTokenRevokeUnknown(t *testing.T) {
 	}
 }
 
+func TestRegisterOperationsUserCreateSuccess(t *testing.T) {
+	mux := testAPI()
+	body := `{"username":"bob","role":"user","password":"hunter2hunter"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d body=%s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"username":"bob"`) {
+		t.Fatalf("expected created username in body, got: %s", rec.Body.String())
+	}
+}
+
+func TestRegisterOperationsUserCreateConflict(t *testing.T) {
+	mux := testAPI()
+	body := `{"username":"admin","role":"admin","password":"hunter2hunter"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected %d, got %d", http.StatusConflict, rec.Code)
+	}
+}
+
+func TestRegisterOperationsUserGetSuccess(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/user_admin", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d", http.StatusOK, rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `"totp_enabled":true`) {
+		t.Fatalf("expected totp_enabled in body: %s", rec.Body.String())
+	}
+}
+
+func TestRegisterOperationsUserGetNotFound(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/user_missing", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected %d, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
+func TestRegisterOperationsUserUpdateSuccess(t *testing.T) {
+	mux := testAPI()
+	body := `{"role":"auditor","status":"active"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/users/user_admin", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d body=%s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"role":"auditor"`) {
+		t.Fatalf("expected updated role in body: %s", rec.Body.String())
+	}
+}
+
+func TestRegisterOperationsUserUpdateNotFound(t *testing.T) {
+	mux := testAPI()
+	body := `{"role":"user"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/users/user_missing", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected %d, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
+func TestRegisterOperationsUserDeleteSuccess(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/user_admin", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d", http.StatusOK, rec.Code)
+	}
+}
+
+func TestRegisterOperationsUserDeleteNotFound(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/user_missing", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected %d, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
+func TestRegisterOperationsUserSetScopeSuccess(t *testing.T) {
+	mux := testAPI()
+	body := `{"scope":"restricted"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/user_admin/scope", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected %d, got %d body=%s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"scope":"restricted"`) {
+		t.Fatalf("expected applied scope in body: %s", rec.Body.String())
+	}
+}
+
 func TestEnrichOpenAPIPatchesSchemaMetadata(t *testing.T) {
 	mux := http.NewServeMux()
 	api := humago.New(mux, huma.DefaultConfig(apiTitle, apiVersion))

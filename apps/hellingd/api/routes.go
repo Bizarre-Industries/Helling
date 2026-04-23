@@ -117,6 +117,168 @@ var stubUsers = []UserRecord{
 	{ID: "user_alice", Username: "alice", Role: "user", Status: "active"},
 }
 
+const userIDUnknown = "user_missing"
+
+// UserCreateRequest creates a new PAM-backed user account.
+type UserCreateRequest struct {
+	Username string `json:"username" minLength:"1" maxLength:"64" doc:"Unix-safe username. PAM constraints apply."`
+	Role     string `json:"role" doc:"Fixed role assignment." enum:"admin,user,auditor"`
+	Password string `json:"password" minLength:"8" maxLength:"256" doc:"Initial password, fed to passwd(1). Optional when delegating to external provisioning."`
+}
+
+// UserCreateInput wraps the create body.
+type UserCreateInput struct {
+	Body UserCreateRequest `doc:"User creation payload."`
+}
+
+// UserCreateData returns the created user summary.
+type UserCreateData struct {
+	ID       string `json:"id" doc:"New user identifier."`
+	Username string `json:"username" doc:"Username."`
+	Role     string `json:"role" doc:"Assigned role." enum:"admin,user,auditor"`
+	Status   string `json:"status" doc:"Account status." enum:"active,disabled"`
+}
+
+// UserCreateMeta contains request metadata.
+type UserCreateMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// UserCreateEnvelope follows the success envelope shape.
+type UserCreateEnvelope struct {
+	Data UserCreateData `json:"data"`
+	Meta UserCreateMeta `json:"meta"`
+}
+
+// UserCreateOutput is the response shape for POST /api/v1/users.
+type UserCreateOutput struct {
+	Body UserCreateEnvelope
+}
+
+// UserGetInput binds the path id.
+type UserGetInput struct {
+	ID string `path:"id" minLength:"1" maxLength:"64" doc:"User identifier."`
+}
+
+// UserGetData returns detailed user fields including MFA status.
+type UserGetData struct {
+	ID          string `json:"id" doc:"User identifier."`
+	Username    string `json:"username" doc:"Username."`
+	Role        string `json:"role" doc:"Assigned role." enum:"admin,user,auditor"`
+	Status      string `json:"status" doc:"Account status." enum:"active,disabled"`
+	TotpEnabled bool   `json:"totp_enabled" doc:"Whether TOTP is currently enrolled."`
+	LastLogin   string `json:"last_login,omitempty" doc:"ISO-8601 timestamp of last successful login." format:"date-time"`
+}
+
+// UserGetMeta contains request metadata.
+type UserGetMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// UserGetEnvelope follows the success envelope shape.
+type UserGetEnvelope struct {
+	Data UserGetData `json:"data"`
+	Meta UserGetMeta `json:"meta"`
+}
+
+// UserGetOutput is the response shape for GET /api/v1/users/{id}.
+type UserGetOutput struct {
+	Body UserGetEnvelope
+}
+
+// UserUpdateRequest applies a partial update to a user.
+type UserUpdateRequest struct {
+	Role   string `json:"role,omitempty" doc:"New role assignment." enum:"admin,user,auditor"`
+	Status string `json:"status,omitempty" doc:"New account status." enum:"active,disabled"`
+}
+
+// UserUpdateInput combines path id with update body.
+type UserUpdateInput struct {
+	ID   string            `path:"id" minLength:"1" maxLength:"64" doc:"User identifier."`
+	Body UserUpdateRequest `doc:"Partial update payload."`
+}
+
+// UserUpdateData returns the updated user summary.
+type UserUpdateData struct {
+	ID       string `json:"id" doc:"User identifier."`
+	Username string `json:"username" doc:"Username."`
+	Role     string `json:"role" doc:"Assigned role." enum:"admin,user,auditor"`
+	Status   string `json:"status" doc:"Account status." enum:"active,disabled"`
+}
+
+// UserUpdateMeta contains request metadata.
+type UserUpdateMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// UserUpdateEnvelope follows the success envelope shape.
+type UserUpdateEnvelope struct {
+	Data UserUpdateData `json:"data"`
+	Meta UserUpdateMeta `json:"meta"`
+}
+
+// UserUpdateOutput is the response shape for PATCH /api/v1/users/{id}.
+type UserUpdateOutput struct {
+	Body UserUpdateEnvelope
+}
+
+// UserDeleteInput binds the path id.
+type UserDeleteInput struct {
+	ID string `path:"id" minLength:"1" maxLength:"64" doc:"User identifier."`
+}
+
+// UserDeleteData is empty on success.
+type UserDeleteData struct{}
+
+// UserDeleteMeta contains request metadata.
+type UserDeleteMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// UserDeleteEnvelope follows the success envelope shape.
+type UserDeleteEnvelope struct {
+	Data UserDeleteData `json:"data"`
+	Meta UserDeleteMeta `json:"meta"`
+}
+
+// UserDeleteOutput is the response shape for DELETE /api/v1/users/{id}.
+type UserDeleteOutput struct {
+	Body UserDeleteEnvelope
+}
+
+// UserSetScopeRequest applies an Incus trust-scope change.
+type UserSetScopeRequest struct {
+	Scope string `json:"scope" doc:"Incus trust scope. Controls the set of Incus projects/resources the user's cert is allowed to touch." enum:"default,restricted,admin"`
+}
+
+// UserSetScopeInput combines path id with scope body.
+type UserSetScopeInput struct {
+	ID   string              `path:"id" minLength:"1" maxLength:"64" doc:"User identifier."`
+	Body UserSetScopeRequest `doc:"Trust-scope assignment payload."`
+}
+
+// UserSetScopeData returns the updated scope.
+type UserSetScopeData struct {
+	ID    string `json:"id" doc:"User identifier."`
+	Scope string `json:"scope" doc:"Applied trust scope." enum:"default,restricted,admin"`
+}
+
+// UserSetScopeMeta contains request metadata.
+type UserSetScopeMeta struct {
+	RequestID string `json:"request_id" doc:"Request correlation ID."`
+}
+
+// UserSetScopeEnvelope follows the success envelope shape.
+type UserSetScopeEnvelope struct {
+	Data UserSetScopeData `json:"data"`
+	Meta UserSetScopeMeta `json:"meta"`
+}
+
+// UserSetScopeOutput is the response shape for PUT /api/v1/users/{id}/scope.
+type UserSetScopeOutput struct {
+	Body UserSetScopeEnvelope
+}
+
 // AuthLogoutData is the payload returned on successful logout.
 // Empty object preserves the envelope contract (data + meta) without leaking session material.
 type AuthLogoutData struct{}
@@ -439,6 +601,11 @@ func RegisterOperations(api huma.API) {
 	registerAuthTokenCreate(api)
 	registerAuthTokenRevoke(api)
 	registerUserList(api)
+	registerUserCreate(api)
+	registerUserGet(api)
+	registerUserUpdate(api)
+	registerUserDelete(api)
+	registerUserSetScope(api)
 	registerHealth(api)
 }
 
@@ -843,6 +1010,161 @@ func registerAuthTokenCreate(api huma.API) {
 					Token: "htk_live_stubtokenvalue0123456789abcdef",
 				},
 				Meta: AuthTokenCreateMeta{RequestID: "req_auth_token_create"},
+			},
+		}, nil
+	})
+}
+
+func registerUserCreate(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "userCreate",
+		Method:      http.MethodPost,
+		Path:        "/api/v1/users",
+		Summary:     "Create a user",
+		Description: "Creates a new PAM-backed user and returns the summary. Stub accepts any payload and echoes the username back.",
+		Tags:        []string{"Users"},
+		RequestBody: &huma.RequestBody{
+			Description: "User creation payload.",
+			Required:    true,
+		},
+		Errors: []int{http.StatusConflict},
+	}, func(ctx context.Context, input *UserCreateInput) (*UserCreateOutput, error) {
+		_ = ctx
+		if input.Body.Username == "admin" {
+			return nil, huma.Error409Conflict("USER_ALREADY_EXISTS")
+		}
+		return &UserCreateOutput{
+			Body: UserCreateEnvelope{
+				Data: UserCreateData{
+					ID:       "user_" + input.Body.Username,
+					Username: input.Body.Username,
+					Role:     input.Body.Role,
+					Status:   "active",
+				},
+				Meta: UserCreateMeta{RequestID: "req_user_create"},
+			},
+		}, nil
+	})
+}
+
+func registerUserGet(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "userGet",
+		Method:      http.MethodGet,
+		Path:        "/api/v1/users/{id}",
+		Summary:     "Get a user",
+		Description: "Returns detailed user fields including TOTP enrollment state and last-login timestamp.",
+		Tags:        []string{"Users"},
+		Errors:      []int{http.StatusNotFound},
+	}, func(ctx context.Context, input *UserGetInput) (*UserGetOutput, error) {
+		_ = ctx
+		if input.ID == userIDUnknown {
+			return nil, huma.Error404NotFound("USER_NOT_FOUND")
+		}
+		return &UserGetOutput{
+			Body: UserGetEnvelope{
+				Data: UserGetData{
+					ID:          input.ID,
+					Username:    "admin",
+					Role:        "admin",
+					Status:      "active",
+					TotpEnabled: true,
+					LastLogin:   "2026-04-23T19:00:00Z",
+				},
+				Meta: UserGetMeta{RequestID: "req_user_get"},
+			},
+		}, nil
+	})
+}
+
+func registerUserUpdate(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "userUpdate",
+		Method:      http.MethodPatch,
+		Path:        "/api/v1/users/{id}",
+		Summary:     "Update a user",
+		Description: "Applies a partial update. Only role and status are mutable in v0.1.",
+		Tags:        []string{"Users"},
+		RequestBody: &huma.RequestBody{
+			Description: "Partial update payload.",
+			Required:    true,
+		},
+		Errors: []int{http.StatusNotFound},
+	}, func(ctx context.Context, input *UserUpdateInput) (*UserUpdateOutput, error) {
+		_ = ctx
+		if input.ID == userIDUnknown {
+			return nil, huma.Error404NotFound("USER_NOT_FOUND")
+		}
+		role := input.Body.Role
+		if role == "" {
+			role = "user"
+		}
+		status := input.Body.Status
+		if status == "" {
+			status = "active"
+		}
+		return &UserUpdateOutput{
+			Body: UserUpdateEnvelope{
+				Data: UserUpdateData{
+					ID:       input.ID,
+					Username: "admin",
+					Role:     role,
+					Status:   status,
+				},
+				Meta: UserUpdateMeta{RequestID: "req_user_update"},
+			},
+		}, nil
+	})
+}
+
+func registerUserDelete(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "userDelete",
+		Method:      http.MethodDelete,
+		Path:        "/api/v1/users/{id}",
+		Summary:     "Delete a user",
+		Description: "Removes a PAM-backed user. Deleting an unknown user returns 404.",
+		Tags:        []string{"Users"},
+		Errors:      []int{http.StatusNotFound},
+	}, func(ctx context.Context, input *UserDeleteInput) (*UserDeleteOutput, error) {
+		_ = ctx
+		if input.ID == userIDUnknown {
+			return nil, huma.Error404NotFound("USER_NOT_FOUND")
+		}
+		return &UserDeleteOutput{
+			Body: UserDeleteEnvelope{
+				Data: UserDeleteData{},
+				Meta: UserDeleteMeta{RequestID: "req_user_delete"},
+			},
+		}, nil
+	})
+}
+
+func registerUserSetScope(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "userSetScope",
+		Method:      http.MethodPut,
+		Path:        "/api/v1/users/{id}/scope",
+		Summary:     "Assign a trust scope to a user",
+		Description: "Applies an Incus trust-scope change. The scope controls which Incus projects the user's cert can touch.",
+		Tags:        []string{"Users"},
+		RequestBody: &huma.RequestBody{
+			Description: "Trust-scope assignment payload.",
+			Required:    true,
+		},
+		Errors: []int{http.StatusNotFound},
+	}, func(ctx context.Context, input *UserSetScopeInput) (*UserSetScopeOutput, error) {
+		_ = ctx
+		if input.ID == userIDUnknown {
+			return nil, huma.Error404NotFound("USER_NOT_FOUND")
+		}
+		return &UserSetScopeOutput{
+			Body: UserSetScopeEnvelope{
+				Data: UserSetScopeData{
+					ID:    input.ID,
+					Scope: input.Body.Scope,
+				},
+				Meta: UserSetScopeMeta{RequestID: "req_user_set_scope"},
 			},
 		}, nil
 	})

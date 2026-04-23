@@ -57,6 +57,13 @@ Thumbs.db
 coverage.out
 *.prof
 
+# Local dev SQLite artifacts
+.tmp/
+*.db
+*.db-wal
+*.db-shm
+helling-dev.db*
+
 # Secrets
 *.secret
 *.key

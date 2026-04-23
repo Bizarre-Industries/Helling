@@ -97,7 +97,8 @@
 
 ### Database
 
-- [ ] goose migrations apply cleanly and sqlc generation matches schema
+- [x] goose migrations apply cleanly (14 tables from docs/spec/sqlite-schema.md, verified via `task migrate` + `sqlite3 .tables`)
+- [ ] sqlc generation matches schema
 - [ ] Schema upgrade works without data loss
 
 ---

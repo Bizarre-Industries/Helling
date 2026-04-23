@@ -374,14 +374,47 @@ tasks:
         fi
 
   check:sql:goose:
+    desc: Apply and roll back hellingd goose migrations against a throwaway DB.
     cmds:
       - |
-        if [ ! -d db/migrations ]; then exit 0; fi
+        mig=apps/hellingd/internal/db/migrations
+        if [ ! -d "$mig" ]; then exit 0; fi
         tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
         export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="$tmp/test.db"
-        goose -dir db/migrations up
-        goose -dir db/migrations down-to 0
-        goose -dir db/migrations up
+        goose -dir "$mig" up
+        goose -dir "$mig" down-to 0
+        goose -dir "$mig" up
+
+  migrate:
+    desc: Apply hellingd goose migrations to $HELLING_DB (default ./helling-dev.db).
+    vars:
+      DB: '{{.HELLING_DB | default "helling-dev.db"}}'
+    cmds:
+      - |
+        mig=apps/hellingd/internal/db/migrations
+        export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
+        goose -dir "$mig" up
+
+  migrate:reset:
+    desc: Drop and re-apply hellingd migrations against $HELLING_DB (default ./helling-dev.db).
+    vars:
+      DB: '{{.HELLING_DB | default "helling-dev.db"}}'
+    cmds:
+      - |
+        mig=apps/hellingd/internal/db/migrations
+        export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
+        goose -dir "$mig" down-to 0
+        goose -dir "$mig" up
+
+  migrate:status:
+    desc: Show hellingd migration status against $HELLING_DB.
+    vars:
+      DB: '{{.HELLING_DB | default "helling-dev.db"}}'
+    cmds:
+      - |
+        mig=apps/hellingd/internal/db/migrations
+        export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
+        goose -dir "$mig" status
 
   # ============================================================
   # Secrets, spelling, links, parity

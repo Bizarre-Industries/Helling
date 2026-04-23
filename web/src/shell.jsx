@@ -1003,7 +1003,11 @@ const STATUS_BADGE = {
 
 const Kbd = ({ k }) => {
   // platform format: on mac, cmd-k => ⌘K
-  const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || '');
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /Mac/i.test(
+      navigator.userAgentData?.platform || navigator.userAgent || navigator.platform || ''
+    );
   const parts = String(k).split(/[-\s]/);
   const fmt = (p) => {
     if (isMac)

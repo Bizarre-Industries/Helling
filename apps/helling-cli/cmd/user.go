@@ -42,6 +42,7 @@ func userClient(ctx context.Context) (*client.Client, context.Context, context.C
 	return cli, c, cancel, nil
 }
 
+//nolint:dupl // list rendering parallels token.go list; kept separate for schema clarity.
 func newUserListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",

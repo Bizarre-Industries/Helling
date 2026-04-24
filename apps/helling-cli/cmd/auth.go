@@ -31,6 +31,7 @@ func NewAuthCmd() *cobra.Command {
 	cmd.AddCommand(newAuthLoginCmd())
 	cmd.AddCommand(newAuthLogoutCmd())
 	cmd.AddCommand(newAuthWhoamiCmd())
+	cmd.AddCommand(newAuthTokenCmd())
 	return cmd
 }
 

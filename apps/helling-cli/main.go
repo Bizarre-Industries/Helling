@@ -51,6 +51,8 @@ func newRootCmd(out, errOut io.Writer) *cobra.Command {
 	root.AddCommand(cmd.NewUserCmd())
 	root.AddCommand(cmd.NewWebhookCmd())
 	root.AddCommand(cmd.NewSystemCmd())
+	root.AddCommand(cmd.NewAuditCmd())
+	root.AddCommand(cmd.NewEventsCmd())
 
 	return root
 }

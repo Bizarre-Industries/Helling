@@ -14,7 +14,8 @@ func NewSystemCmd() *cobra.Command {
 		Short: "Inspect host info, hardware, config, and diagnostics",
 	}
 	c.AddCommand(newSystemInfoCmd(), newSystemHardwareCmd(), newSystemDiagnosticsCmd(),
-		newSystemConfigGetCmd(), newSystemConfigPutCmd(), newSystemUpgradeCmd())
+		newSystemConfigGetCmd(), newSystemConfigPutCmd(), newSystemUpgradeCmd(),
+		newSystemHealthCmd())
 	return c
 }
 
@@ -86,6 +87,14 @@ func newSystemConfigPutCmd() *cobra.Command {
 			_, werr := fmt.Fprintln(cmd.OutOrStdout(), string(raw))
 			return werr
 		},
+	}
+}
+
+func newSystemHealthCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "health",
+		Short: "Query hellingd health endpoint (liveness + subsystem checks)",
+		RunE:  func(cmd *cobra.Command, _ []string) error { return systemGet(cmd, "/api/v1/health") },
 	}
 }
 

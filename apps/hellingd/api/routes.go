@@ -1203,7 +1203,7 @@ func RegisterOperationsWith(api huma.API, deps Deps) {
 		registerAuthTokenCreateReal(api, deps.Auth)
 		registerAuthTokenRevokeReal(api, deps.Auth)
 		registerUserListReal(api, deps.Auth)
-		registerUserCreateReal(api, deps.Auth)
+		registerUserCreateReal(api, deps.Auth, deps.CertIssuer)
 		registerUserGetReal(api, deps.Auth)
 		registerUserDeleteReal(api, deps.Auth)
 		registerUserSetScopeReal(api, deps.Auth)

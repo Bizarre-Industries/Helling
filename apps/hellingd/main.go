@@ -104,7 +104,8 @@ func run(logger *slog.Logger, cfg runConfig, serve func(*http.Server) error) int
 		return 1
 	}
 
-	if _, err := ensureInternalCA(logger); err != nil {
+	ca, identity, err := ensureInternalCAWithIdentity(logger)
+	if err != nil {
 		logger.Error("ensure internal ca", slog.Any("err", err))
 		return 1
 	}
@@ -115,10 +116,16 @@ func run(logger *slog.Logger, cfg runConfig, serve func(*http.Server) error) int
 		return 1
 	}
 
+	var issuer hellingapi.CertIssuer
+	if ca != nil {
+		issuer = &pki.Issuer{CA: ca, Identity: identity, Repo: authSvc.Repo()}
+	}
+
 	mux := httpserver.NewMuxWith(hellingapi.Deps{
 		Auth:        authSvc,
 		IncusProxy:  proxyDeps.incus,
 		PodmanProxy: proxyDeps.podman,
+		CertIssuer:  issuer,
 	})
 
 	server := &http.Server{
@@ -170,25 +177,31 @@ func buildProxyDeps(logger *slog.Logger, authSvc *auth.Service) (proxyHandlers, 
 	return out, nil
 }
 
-// ensureInternalCA bootstraps or loads the Helling internal CA per ADR-024
-// when HELLING_CA_DIR is set. Dev runs without that env skip CA setup so we
-// don't touch /etc/helling. Returns nil CA when disabled (callers treat it
-// as "PKI off").
-func ensureInternalCA(logger *slog.Logger) (*pki.CA, error) {
+// ensureInternalCAWithIdentity bootstraps or loads the Helling internal CA
+// per ADR-024 when HELLING_CA_DIR is set, and returns both the live CA and
+// the on-host age identity needed to encrypt persisted user-cert blobs.
+// Dev runs without HELLING_CA_DIR get (nil, "", nil) so callers treat PKI
+// as off without writing anything to /etc/helling.
+func ensureInternalCAWithIdentity(logger *slog.Logger) (*pki.CA, string, error) {
 	dir := os.Getenv(caDirEnvVar)
 	if dir == "" {
 		logger.Info("internal ca disabled (HELLING_CA_DIR unset)")
-		return nil, nil //nolint:nilnil // explicit "feature off" sentinel
+		return nil, "", nil
 	}
-	ca, created, err := pki.EnsureCA(pki.NewTestPaths(dir), logger)
+	paths := pki.NewTestPaths(dir)
+	ca, created, err := pki.EnsureCA(paths, logger)
 	if err != nil {
-		return nil, err
+		return nil, "", err
+	}
+	identity, err := os.ReadFile(paths.Identity)
+	if err != nil {
+		return nil, "", fmt.Errorf("read ca identity: %w", err)
 	}
 	logger.Info("internal ca ready",
 		slog.String("dir", dir),
 		slog.Bool("bootstrapped", created),
 	)
-	return ca, nil
+	return ca, string(identity), nil
 }
 
 // buildAuthService wires the auth service from the DB pool, loading the

@@ -96,7 +96,7 @@ func registerUserListReal(api huma.API, svc *auth.Service) {
 	})
 }
 
-func registerUserCreateReal(api huma.API, svc *auth.Service) {
+func registerUserCreateReal(api huma.API, svc *auth.Service, issuer CertIssuer) {
 	huma.Register(api, huma.Operation{
 		OperationID: "userCreate",
 		Method:      http.MethodPost,
@@ -127,6 +127,15 @@ func registerUserCreateReal(api huma.API, svc *auth.Service) {
 		}
 		if err != nil {
 			return nil, huma.Error500InternalServerError("USER_CREATE_FAILED")
+		}
+		// Best-effort PKI issuance per ADR-024. We deliberately do not roll
+		// back the user on issuance failure: the operator can re-issue from
+		// the userSetScope path, and the user otherwise functions for
+		// non-Incus operations.
+		if issuer != nil {
+			if err := issuer.IssueForUser(ctx, u.ID, u.Username); err != nil {
+				return nil, huma.Error500InternalServerError("USER_CERT_ISSUE_FAILED")
+			}
 		}
 		return &UserCreateOutput{
 			Body: UserCreateEnvelope{

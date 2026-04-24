@@ -20,6 +20,7 @@ import (
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/db"
 	httpserver "github.com/Bizarre-Industries/Helling/apps/hellingd/internal/http"
+	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/proxy"
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/repo/authrepo"
 )
 
@@ -97,7 +98,17 @@ func run(logger *slog.Logger, cfg runConfig, serve func(*http.Server) error) int
 		return 1
 	}
 
-	mux := httpserver.NewMuxWith(hellingapi.Deps{Auth: authSvc})
+	proxyDeps, err := buildProxyDeps(logger, authSvc)
+	if err != nil {
+		logger.Error("build proxy", slog.Any("err", err))
+		return 1
+	}
+
+	mux := httpserver.NewMuxWith(hellingapi.Deps{
+		Auth:        authSvc,
+		IncusProxy:  proxyDeps.incus,
+		PodmanProxy: proxyDeps.podman,
+	})
 
 	server := &http.Server{
 		Addr:              cfg.addr,
@@ -112,6 +123,40 @@ func run(logger *slog.Logger, cfg runConfig, serve func(*http.Server) error) int
 	}
 
 	return 0
+}
+
+// proxyHandlers bundles the optional Incus/Podman reverse-proxy handlers.
+type proxyHandlers struct {
+	incus  http.Handler
+	podman http.Handler
+}
+
+// buildProxyDeps wires the Incus + Podman proxy handlers from environment
+// variables (see apps/hellingd/internal/proxy/proxy.go). Missing envs leave
+// the matching route unmounted so hellingd runs fine in dev without Incus or
+// Podman installed.
+func buildProxyDeps(logger *slog.Logger, authSvc *auth.Service) (proxyHandlers, error) {
+	cfg := proxy.ConfigFromEnv()
+	if cfg.IncusURL == "" && cfg.PodmanSocket == "" {
+		logger.Info("proxy disabled (HELLING_INCUS_URL and HELLING_PODMAN_SOCKET unset)")
+		return proxyHandlers{}, nil
+	}
+	p, err := proxy.New(&cfg, authSvc, logger)
+	if err != nil {
+		return proxyHandlers{}, err
+	}
+	out := proxyHandlers{}
+	if cfg.IncusURL != "" {
+		out.incus = p.IncusHandler()
+	}
+	if cfg.PodmanSocket != "" {
+		out.podman = p.PodmanHandler()
+	}
+	logger.Info("proxy enabled",
+		slog.Bool("incus", cfg.IncusURL != ""),
+		slog.Bool("podman", cfg.PodmanSocket != ""),
+	)
+	return out, nil
 }
 
 // buildAuthService wires the auth service from the DB pool, loading the

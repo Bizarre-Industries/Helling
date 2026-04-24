@@ -8,10 +8,13 @@
 
 ### Proxy
 
+Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy/`). Scaffolding complete; live end-to-end verification against real Incus + Podman is a v0.1-beta gate item once per-user mTLS certificates land (docs/spec/internal-ca.md).
+
+- [x] Proxy scaffold exists and forwards requests via httputil.ReverseProxy (unit + integration tests in `apps/hellingd/internal/proxy/`)
 - [ ] `curl -H "Authorization: Bearer $TOKEN" http://unix:/var/lib/helling/hellingd.sock:/api/incus/1.0/instances | jq '.metadata'` returns Incus instances
 - [ ] `curl -H "Authorization: Bearer $TOKEN" http://unix:/var/lib/helling/hellingd.sock:/api/podman/libpod/containers/json | jq '.[0].Names'` returns Podman containers
-- [ ] Unauthenticated request to proxy returns 401
-- [ ] Non-admin user sees only their Incus project resources
+- [x] Unauthenticated request to proxy returns 401 (covered by `TestProxy_Unauthenticated_Returns401`)
+- [ ] Non-admin user sees only their Incus project resources (blocked on per-user mTLS certificates — v0.1-beta)
 
 ### Auth
 

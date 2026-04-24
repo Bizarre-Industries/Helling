@@ -1012,7 +1012,7 @@ const Kbd = ({ k }) => {
   const isMac =
     typeof navigator !== 'undefined' &&
     /Mac/i.test(
-      navigator.userAgentData?.platform || navigator.userAgent || navigator.platform || ''
+      navigator.userAgentData?.platform || navigator.userAgent || navigator.platform || '',
     );
   const parts = String(k).split(/[-\s]/);
   const fmt = (p) => {

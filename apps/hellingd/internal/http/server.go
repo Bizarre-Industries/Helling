@@ -32,8 +32,16 @@ func NewMux() *http.ServeMux {
 }
 
 // NewMuxWith builds the daemon's top-level router using the supplied Deps.
+// When Deps.IncusProxy or Deps.PodmanProxy are non-nil the proxy routes are
+// mounted alongside the Huma API routes (ADR-014).
 func NewMuxWith(deps hellingapi.Deps) *http.ServeMux {
 	mux := http.NewServeMux()
 	_ = NewAPIWith(mux, deps)
+	if deps.HasIncusProxy() {
+		mux.Handle("/api/incus/", deps.IncusProxy)
+	}
+	if deps.HasPodmanProxy() {
+		mux.Handle("/api/podman/", deps.PodmanProxy)
+	}
 	return mux
 }

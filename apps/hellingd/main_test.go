@@ -300,7 +300,6 @@ func TestLoadSigningKey_EmptyFileErrors(t *testing.T) {
 
 // TestLoadSigningKey_BadKeyTypeErrors covers non-Ed25519 key material.
 func TestLoadSigningKey_BadKeyTypeErrors(t *testing.T) {
-	// Create a valid PEM that decodes but isn't PKCS8 / Ed25519.
 	pemBytes := pemEncodeForTest("PRIVATE KEY", []byte{0x00, 0x01, 0x02})
 	path := filepath.Join(t.TempDir(), "bad.pem")
 	if err := writeFile(path, pemBytes); err != nil {
@@ -309,5 +308,43 @@ func TestLoadSigningKey_BadKeyTypeErrors(t *testing.T) {
 	t.Setenv(jwtKeyPathEnvVar, path)
 	if _, err := loadOrGenerateSigningKey(newLogger(io.Discard)); err == nil {
 		t.Fatal("expected pkcs8 parse error")
+	}
+}
+
+// TestBuildProxyDeps_NoEnvDisabled covers the disabled-proxy branch.
+func TestBuildProxyDeps_NoEnvDisabled(t *testing.T) {
+	t.Setenv("HELLING_INCUS_URL", "")
+	t.Setenv("HELLING_PODMAN_SOCKET", "")
+	out, err := buildProxyDeps(newLogger(io.Discard), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.incus != nil || out.podman != nil {
+		t.Fatal("proxy handlers must be nil when env is empty")
+	}
+}
+
+// TestBuildProxyDeps_InvalidURL covers the proxy.New error branch.
+func TestBuildProxyDeps_InvalidURL(t *testing.T) {
+	t.Setenv("HELLING_INCUS_URL", "://broken")
+	t.Setenv("HELLING_PODMAN_SOCKET", "")
+	if _, err := buildProxyDeps(newLogger(io.Discard), nil); err == nil {
+		t.Fatal("expected proxy.New error for broken URL")
+	}
+}
+
+// TestBuildProxyDeps_IncusOnly wires the Incus proxy without Podman.
+func TestBuildProxyDeps_IncusOnly(t *testing.T) {
+	t.Setenv("HELLING_INCUS_URL", "https://127.0.0.1:8443")
+	t.Setenv("HELLING_PODMAN_SOCKET", "")
+	out, err := buildProxyDeps(newLogger(io.Discard), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.incus == nil {
+		t.Fatal("incus handler expected")
+	}
+	if out.podman != nil {
+		t.Fatal("podman handler must be nil")
 	}
 }

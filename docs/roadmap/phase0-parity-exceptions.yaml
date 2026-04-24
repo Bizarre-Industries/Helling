@@ -128,33 +128,33 @@ exceptions:
   # ── Webhooks ───────────────────────────────────────────────────────────────
   - operation_id: webhookList
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: webhookCreate
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: webhookGet
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: webhookUpdate
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: webhookDelete
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: webhookTest
     missing: both
-    reason: "Phase 0 — webhook surfaces not yet implemented"
-    target_version: "v0.5.0"
+    reason: "Server-side shipped in PR K (CRUD + test delivery). CLI + WebUI deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   # ── Kubernetes ─────────────────────────────────────────────────────────────
   - operation_id: kubernetesList

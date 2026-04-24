@@ -918,3 +918,103 @@ func TestEnrichOpenAPIPatchesSchemaMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestStubFirewallHostList(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/firewall/host?limit=1", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list: %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"limit":1`) {
+		t.Fatalf("no limit: %s", rec.Body.String())
+	}
+}
+
+func TestStubFirewallHostCreate(t *testing.T) {
+	mux := testAPI()
+	body := `{"chain":"input","priority":100,"action":"accept","expr":"tcp dport 22"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/firewall/host", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create: %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStubFirewallHostDelete(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/firewall/host/fwr_01JZFW00000000000000001", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+}
+
+func TestStubAuditQuery(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/audit?actor=admin&action=auth.login&limit=10", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("audit query: %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStubAuditExport(t *testing.T) {
+	mux := testAPI()
+	for _, f := range []string{"json", "csv"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/audit/export?format="+f, http.NoBody)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("export %s: %d", f, rec.Code)
+		}
+	}
+}
+
+func TestStubEventsSse(t *testing.T) {
+	mux := testAPI()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events?limit=2", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("events: %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStubSystemReachDefaults(t *testing.T) {
+	mux := testAPI()
+	for _, p := range []string{"/api/v1/system/info", "/api/v1/system/hardware", "/api/v1/system/diagnostics"} {
+		req := httptest.NewRequest(http.MethodGet, p, http.NoBody)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: %d body=%s", p, rec.Code, rec.Body.String())
+		}
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/config/auth.session_inactivity_timeout", http.NoBody)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("config get: %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := `{"value":"debug"}`
+	req = httptest.NewRequest(http.MethodPut, "/api/v1/system/config/auth.session_inactivity_timeout", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("config put: %d body=%s", rec.Code, rec.Body.String())
+	}
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/system/upgrade", strings.NewReader(`{"rollback":false}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("upgrade: %d body=%s", rec.Code, rec.Body.String())
+	}
+}

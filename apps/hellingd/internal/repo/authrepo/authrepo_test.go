@@ -378,3 +378,139 @@ func TestAPITokens_ExpiredNotReturned(t *testing.T) {
 		t.Fatalf("expected ErrNotFound for expired token, got %v", err)
 	}
 }
+
+func TestWebhook_CreateGetListUpdateDelete(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, _ := r.CreateUser(ctx, "wh", "admin", "h")
+
+	w, err := r.CreateWebhook(ctx, "ci", "https://example.com/h", []string{"instance.created"}, []byte("secret-bytes"), u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.ID == "" || !w.Enabled {
+		t.Fatalf("bad webhook: %+v", w)
+	}
+
+	got, err := r.GetWebhook(ctx, w.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.URL != "https://example.com/h" {
+		t.Fatalf("url mismatch: %s", got.URL)
+	}
+	if len(got.Events) != 1 || got.Events[0] != "instance.created" {
+		t.Fatalf("events mismatch: %+v", got.Events)
+	}
+
+	list, total, err := r.ListWebhooks(ctx, u.ID, 0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(list) != 1 {
+		t.Fatalf("total=%d list=%d", total, len(list))
+	}
+
+	newName := "renamed"
+	enabled := false
+	if err := r.UpdateWebhook(ctx, w.ID, &newName, nil, []string{"instance.deleted"}, &enabled); err != nil {
+		t.Fatal(err)
+	}
+	got2, _ := r.GetWebhook(ctx, w.ID)
+	if got2.Name != "renamed" || got2.Enabled {
+		t.Fatalf("update did not apply: %+v", got2)
+	}
+
+	if err := r.UpdateWebhook(ctx, w.ID, nil, nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.UpdateWebhook(ctx, "missing", &newName, nil, nil, nil); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+
+	if err := r.MarkWebhookDelivered(ctx, w.ID, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.DeleteWebhook(ctx, w.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.DeleteWebhook(ctx, w.ID); !errors.Is(err, authrepo.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound on re-delete, got %v", err)
+	}
+}
+
+func TestWebhook_CreateRequiresCreator(t *testing.T) {
+	r := newRepo(t)
+	if _, err := r.CreateWebhook(context.Background(), "x", "https://x", []string{"e"}, nil, ""); err == nil {
+		t.Fatal("expected error on empty createdBy")
+	}
+}
+
+func TestUser_DeleteAndSetScope(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, err := r.CreateUser(ctx, "scopey", "admin", "")
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if err := r.SetUserScope(ctx, u.ID, "incus:admin"); err != nil {
+		t.Fatalf("set scope: %v", err)
+	}
+	if err := r.DeleteUser(ctx, u.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if _, err := r.GetUserByID(ctx, u.ID); err == nil {
+		t.Fatal("expected ErrNotFound after delete")
+	}
+}
+
+func TestSystemConfig_PutGetUpsert(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	if _, err := r.GetSystemConfig(ctx, "missing"); err == nil {
+		t.Fatal("expected ErrNotFound for missing key")
+	}
+	if err := r.PutSystemConfig(ctx, "log.level", "info", ""); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+	v, err := r.GetSystemConfig(ctx, "log.level")
+	if err != nil || v != "info" {
+		t.Fatalf("get: v=%q err=%v", v, err)
+	}
+	u, err := r.CreateUser(ctx, "cfg-actor", "admin", "")
+	if err != nil {
+		t.Fatalf("actor: %v", err)
+	}
+	if err := r.PutSystemConfig(ctx, "log.level", "debug", u.ID); err != nil {
+		t.Fatalf("upsert: %v", err)
+	}
+	v, _ = r.GetSystemConfig(ctx, "log.level")
+	if v != "debug" {
+		t.Fatalf("upsert value: got %q", v)
+	}
+}
+
+func TestWebhook_MarkDelivered(t *testing.T) {
+	r := newRepo(t)
+	ctx := context.Background()
+	u, err := r.CreateUser(ctx, "whmark", "admin", "")
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	w, err := r.CreateWebhook(ctx, "mk", "https://x", []string{"e"}, []byte("s"), u.ID)
+	if err != nil {
+		t.Fatalf("wh: %v", err)
+	}
+	when := time.Unix(1700000000, 0)
+	if err := r.MarkWebhookDelivered(ctx, w.ID, when); err != nil {
+		t.Fatalf("mark: %v", err)
+	}
+	got, err := r.GetWebhook(ctx, w.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if !got.LastDeliveryAt.Valid || got.LastDeliveryAt.Int64 != when.Unix() {
+		t.Fatalf("last_delivery_at not stored: %+v", got.LastDeliveryAt)
+	}
+}

@@ -195,33 +195,33 @@ exceptions:
   # ── System ─────────────────────────────────────────────────────────────────
   - operation_id: systemInfo
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: systemHardware
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: systemConfigGet
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: systemConfigPut
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: systemUpgrade
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   - operation_id: systemDiagnostics
     missing: both
-    reason: "Phase 0 — system surfaces not yet implemented"
-    target_version: "v0.4.0"
+    reason: "Server-side shipped in PR J (info/hardware/config/upgrade/diagnostics). CLI + WebUI surfaces deferred to v0.1-beta"
+    target_version: "v0.1.0-alpha"
 
   # ── Firewall ───────────────────────────────────────────────────────────────
   - operation_id: firewallHostList

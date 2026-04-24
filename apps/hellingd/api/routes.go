@@ -1207,6 +1207,12 @@ func RegisterOperationsWith(api huma.API, deps Deps) {
 		registerUserGetReal(api, deps.Auth)
 		registerUserDeleteReal(api, deps.Auth)
 		registerUserSetScopeReal(api, deps.Auth)
+		registerSystemInfoReal(api, deps.Auth)
+		registerSystemHardwareReal(api, deps.Auth)
+		registerSystemConfigGetReal(api, deps.Auth)
+		registerSystemConfigPutReal(api, deps.Auth)
+		registerSystemUpgradeReal(api, deps.Auth)
+		registerSystemDiagnosticsReal(api, deps.Auth)
 	} else {
 		registerAuthSetup(api)
 		registerAuthLogin(api)
@@ -1224,6 +1230,12 @@ func RegisterOperationsWith(api huma.API, deps Deps) {
 		registerUserGet(api)
 		registerUserDelete(api)
 		registerUserSetScope(api)
+		registerSystemInfo(api)
+		registerSystemHardware(api)
+		registerSystemConfigGet(api)
+		registerSystemConfigPut(api)
+		registerSystemUpgrade(api)
+		registerSystemDiagnostics(api)
 	}
 	// userUpdate is stub-only for v0.1; the real handler lands with PAM
 	// integration in v0.1-beta. Registering it unconditionally keeps the
@@ -1249,12 +1261,6 @@ func RegisterOperationsWith(api huma.API, deps Deps) {
 	registerKubernetesScale(api)
 	registerKubernetesUpgrade(api)
 	registerKubernetesKubeconfig(api)
-	registerSystemInfo(api)
-	registerSystemHardware(api)
-	registerSystemConfigGet(api)
-	registerSystemConfigPut(api)
-	registerSystemUpgrade(api)
-	registerSystemDiagnostics(api)
 	registerFirewallHostList(api)
 	registerFirewallHostCreate(api)
 	registerFirewallHostDelete(api)

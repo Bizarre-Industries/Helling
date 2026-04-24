@@ -143,6 +143,34 @@ func (r *Repo) SetUserScope(ctx context.Context, id, scope string) error {
 	return nil
 }
 
+// GetSystemConfig fetches a runtime config value, or ErrNotFound.
+func (r *Repo) GetSystemConfig(ctx context.Context, key string) (string, error) {
+	var value string
+	err := r.db.QueryRowContext(ctx, `SELECT value FROM system_config WHERE key = ?`, key).Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("authrepo: get system config: %w", err)
+	}
+	return value, nil
+}
+
+// PutSystemConfig upserts a runtime config value. updatedBy may be empty for
+// boot-time writes.
+func (r *Repo) PutSystemConfig(ctx context.Context, key, value, updatedBy string) error {
+	const q = `INSERT INTO system_config (key, value, updated_at, updated_by)
+	           VALUES (?, ?, ?, NULLIF(?, ''))
+	           ON CONFLICT(key) DO UPDATE SET
+	             value      = excluded.value,
+	             updated_at = excluded.updated_at,
+	             updated_by = excluded.updated_by`
+	if _, err := r.db.ExecContext(ctx, q, key, value, r.now().Unix(), updatedBy); err != nil {
+		return fmt.Errorf("authrepo: put system config: %w", err)
+	}
+	return nil
+}
+
 // ListUsers returns users ordered by created_at ASC starting at the given
 // offset, up to limit rows. Used by userList API stub replacement.
 func (r *Repo) ListUsers(ctx context.Context, offset, limit int) ([]User, int, error) {

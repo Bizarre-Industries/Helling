@@ -63,11 +63,14 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 ### CLI
 
-- [ ] `helling auth login` works
-- [ ] `helling user list` works
-- [ ] `helling system info` works
-- [ ] `helling version` shows version + commit
-- [ ] No instance/container/storage/network/image CLI commands exist
+- [x] `helling auth login` works (interactive + --username/--password; MFA branch handled via `/api/v1/auth/mfa/complete`)
+- [x] `helling auth logout` clears local session
+- [x] `helling auth whoami` decodes the stored JWT claims
+- [x] `helling compute list` forwards to hellingd `/api/incus/1.0/instances` via the proxy (ADR-014)
+- [ ] `helling user list` works (v0.1-beta)
+- [ ] `helling system info` works (v0.1-beta)
+- [x] `helling version` shows version + commit
+- [x] No instance/container/storage/network/image CLI commands exist (compute, as the sole surfaced subcommand, forwards to Incus proxy rather than re-implementing per-resource CLIs)
 
 ### Automation
 

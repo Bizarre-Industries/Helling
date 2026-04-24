@@ -13,6 +13,8 @@ import (
 	"runtime/debug"
 
 	"github.com/spf13/cobra"
+
+	"github.com/Bizarre-Industries/Helling/apps/helling-cli/cmd"
 )
 
 // Build-time injected via -ldflags "-X main.version=... -X main.commit=... -X main.date=...".
@@ -44,6 +46,8 @@ func newRootCmd(out, errOut io.Writer) *cobra.Command {
 	root.PersistentFlags().Bool("quiet", false, "Minimal output")
 
 	root.AddCommand(newVersionCmd())
+	root.AddCommand(cmd.NewAuthCmd())
+	root.AddCommand(cmd.NewComputeCmd())
 
 	return root
 }

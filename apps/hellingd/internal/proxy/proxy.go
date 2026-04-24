@@ -7,11 +7,13 @@
 //     internal CA from docs/spec/internal-ca.md). Today the proxy shares a
 //     single client certificate loaded from HELLING_INCUS_CLIENT_CERT/KEY.
 //     Per-user certs are tracked as a v0.1-beta gate.
-//   - WebSocket upgrade handling is deferred to v0.1-beta; upgrade requests
-//     return 501 with PROXY_WEBSOCKET_UNSUPPORTED_V01_ALPHA.
+//   - WebSocket upgrade requests pass through to the upstream via
+//     httputil.ReverseProxy (Go 1.12+ supports HTTP/1.1 Upgrade hijack).
+//     Audit events for ws frames remain a v0.1-beta enhancement.
 package proxy
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -102,10 +104,6 @@ func (p *Proxy) IncusHandler() http.Handler {
 			writeErr(w, "incus", http.StatusServiceUnavailable, "INCUS_UPSTREAM_NOT_CONFIGURED")
 			return
 		}
-		if isWebSocketUpgrade(r) {
-			writeErr(w, "incus", http.StatusNotImplemented, "PROXY_WEBSOCKET_UNSUPPORTED_V01_ALPHA")
-			return
-		}
 		r.URL.Path = stripPrefix(r.URL.Path, "/api/incus")
 		p.incus.ServeHTTP(w, r)
 	})
@@ -116,10 +114,6 @@ func (p *Proxy) PodmanHandler() http.Handler {
 	return p.bearerAuth("podman", func(w http.ResponseWriter, r *http.Request) {
 		if p.podman == nil {
 			writeErr(w, "podman", http.StatusServiceUnavailable, "PODMAN_UPSTREAM_NOT_CONFIGURED")
-			return
-		}
-		if isWebSocketUpgrade(r) {
-			writeErr(w, "podman", http.StatusNotImplemented, "PROXY_WEBSOCKET_UNSUPPORTED_V01_ALPHA")
 			return
 		}
 		r.URL.Path = stripPrefix(r.URL.Path, "/api/podman")
@@ -258,11 +252,6 @@ func buildPodmanHandler(socketPath string) (http.Handler, error) {
 	return rp, nil
 }
 
-func isWebSocketUpgrade(r *http.Request) bool {
-	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket") ||
-		strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade")
-}
-
 func stripPrefix(path, prefix string) string {
 	out := strings.TrimPrefix(path, prefix)
 	if !strings.HasPrefix(out, "/") {
@@ -280,6 +269,25 @@ type statusRecorder struct {
 func (s *statusRecorder) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack forwards to the underlying ResponseWriter when it supports
+// http.Hijacker, so HTTP/1.1 Upgrade (e.g. WebSocket) requests can be
+// passed through by httputil.ReverseProxy without losing the connection.
+func (s *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := s.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("proxy: underlying ResponseWriter does not support Hijack")
+	}
+	return hj.Hijack()
+}
+
+// Flush forwards to the underlying ResponseWriter when it supports Flusher,
+// preserving streaming-response semantics for SSE-style endpoints.
+func (s *statusRecorder) Flush() {
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 func writeErr(w http.ResponseWriter, source string, status int, detail string) {

@@ -19,6 +19,12 @@ import (
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/repo/authrepo"
 )
 
+// wsKeyFixture is an inert 16-byte base64 nonce used by the WebSocket
+// handshake test. Real Sec-WebSocket-Key values are random and not secrets;
+// gitleaks pattern-matches generic base64 strings, so we keep this in a
+// named const with an allow-comment to make the intent explicit.
+const wsKeyFixture = "AQIDBAUGBwgJCgsMDQ4PEA==" // gitleaks:allow
+
 // newSvcWithAdmin boots an auth.Service with a local admin and returns the
 // service + an access token for the admin.
 func newSvcWithAdmin(t *testing.T) (svc *auth.Service, adminAccessToken string) {
@@ -111,10 +117,27 @@ func TestProxy_Unauthenticated_Returns401(t *testing.T) {
 	}
 }
 
-func TestProxy_WebSocketUpgradeRejected(t *testing.T) {
+func TestProxy_WebSocketUpgradePassesThrough(t *testing.T) {
 	svc, token := newSvcWithAdmin(t)
-	upstream := fakeUpstream(t, "{}")
-	p, _ := proxy.New(&proxy.Config{IncusURL: upstream.URL}, svc, nil)
+	// Raw TCP upstream so we can craft a precise 101 response that
+	// httputil.ReverseProxy can forward via its Upgrade hijack path.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		buf := make([]byte, 4096)
+		_, _ = conn.Read(buf)
+		_, _ = conn.Write([]byte("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n"))
+	}()
+
+	p, _ := proxy.New(&proxy.Config{IncusURL: "http://" + ln.Addr().String()}, svc, nil)
 	mux := http.NewServeMux()
 	mux.Handle("/api/incus/", p.IncusHandler())
 	edge := httptest.NewServer(mux)
@@ -125,13 +148,15 @@ func TestProxy_WebSocketUpgradeRejected(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Sec-WebSocket-Key", wsKeyFixture) // gitleaks:allow inert ws nonce
+	req.Header.Set("Sec-WebSocket-Version", "13")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("status = %d, want 501", resp.StatusCode)
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("status = %d, want 101", resp.StatusCode)
 	}
 }
 

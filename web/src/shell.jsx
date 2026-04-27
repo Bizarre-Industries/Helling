@@ -1,7 +1,7 @@
 /* Helling WebUI — shared data & small primitives */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ICONS } from './icons';
+import { I } from './primitives/icon';
 
 // ─── LIVE TICK — 1s heartbeat shared across the app ──────────
 const __tickListeners = new Set();
@@ -203,20 +203,9 @@ setInterval(() => {
   if (touched) __notifyStore();
 }, 1500);
 
-// ─── ICONS (lucide-react via tree-shakeable barrel; audit F-30 + F-51) ──
-const I = ({ n, s = 14, style, color }) => {
-  const Comp = ICONS[n] || null;
-  if (!Comp) {
-    return <span style={{ display: 'inline-block', width: s, height: s, ...style }} />;
-  }
-  return (
-    <Comp
-      size={s}
-      strokeWidth={1.75}
-      style={{ display: 'inline-block', flexShrink: 0, color, ...style }}
-    />
-  );
-};
+// ICONS: I component now lives in primitives/icon.tsx (Phase 2A extract).
+// shell.jsx re-exports via the import above + Object.assign(window, { I })
+// at the bottom of the file so legacy page modules keep working.
 
 // ─── MOCK DATA ────────────────────────────────────────────────
 const NODES = [

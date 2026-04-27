@@ -104,6 +104,12 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 - [x] **F-30 + F-51** (perf · 2D): `web/src/icons.ts` barrel; `shell.jsx` `I` component looks up from `ICONS`; bundle 1.26MB → 482KB initial chunk (gzip 265KB → 129KB) — commit `8a08cc5`
 - [x] **F-40** (testing · 2E): vitest scaffold + `web/vitest.config.ts` + `src/test-setup.ts` + 3 smoke tests (auth-store F-37, error-boundary F-39, icons F-30); 14 tests / 543ms — commit `ab83985`
 - [ ] **F-05** (arch · 2A): `pages.jsx` + `pages2.jsx` split into `web/src/pages/<route>/index.tsx` per-route folders; convert to `.tsx`; drop per-file `eslint-disable` banners
+  - [x] auth subfolder: `web/src/pages/auth/login.tsx` (commit `ceb9cf4`) + `web/src/pages/auth/setup.tsx` (commit `1912bfc`); also extracted `web/src/primitives/icon.tsx` (Phase 2A pilot) and `web/src/primitives/switch.tsx` (Phase 2A continues)
+  - [ ] datacenter subfolder: Dashboard, Instances, InstanceDetail, Containers, ContainerDetail, Kubernetes, Cluster, Console, NewInstance — needs Badge / Sparkline / MultiChart primitives + `legacy/mocks.ts` shim extracted first
+  - [ ] resources subfolder: Storage, Networking, Firewall, FirewallEditor, Images, Backups, Schedules, Templates, BMC, Marketplace, FileBrowser
+  - [ ] observability subfolder: Metrics, Alerts, Logs
+  - [ ] admin subfolder: Users, UserDetail, Audit, Ops, Settings, RBAC
+  - [ ] search subfolder: Search, SearchResults
 - [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx`
 - [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB
 - [ ] **F-08** (hygiene · 2A side): biome a11y errors no longer suppressed by per-file disable banners

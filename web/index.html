@@ -2,27 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=1440" />
+    <!-- Audit R-03: standard viewport so pinch-zoom + assistive zoom work; the
+         1440px desktop contract is enforced via #viewport-too-small below. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Helling — Datacenter Console</title>
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo-full-transparent.svg" />
-    <script>
-      // Swallow benign ResizeObserver loop warnings from third-party UI code.
-      // Mirrors the suppression from the design prototype.
-      window.addEventListener(
-        'error',
-        (e) => {
-          if (e.message && /ResizeObserver/.test(e.message)) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            return false;
-          }
-        },
-        true,
-      );
-    </script>
+    <!-- Audit F-47: the global 'ResizeObserver loop' suppression that lived
+         here was hiding real warnings from any consumer. Removed; if a chart
+         or autosize component starts logging it, fix the source instead. -->
   </head>
   <body>
+    <noscript>
+      <div style="padding: 24px; font-family: system-ui, sans-serif">
+        <h1>Helling needs JavaScript</h1>
+        <p>
+          The Helling Datacenter Console is a single-page application and
+          requires JavaScript to function. Enable JavaScript and reload, or use
+          the <code>helling</code> CLI to manage your cluster from the terminal.
+        </p>
+      </div>
+    </noscript>
     <div id="root"></div>
+    <div id="viewport-too-small" role="alert" aria-live="polite">
+      <div class="vts-card">
+        <div class="vts-eyebrow">✦ HELLING / DESKTOP ONLY</div>
+        <h1>This console needs more room</h1>
+        <p>
+          Helling targets 1440px+ desktops. Resize your window or use a larger
+          screen. The <code>helling</code> CLI works on any terminal.
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

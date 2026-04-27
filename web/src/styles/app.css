@@ -1612,3 +1612,74 @@ body.light-mode .card {
 body {
   transition: background-color 180ms ease, color 180ms ease;
 }
+
+/* Audit R-03/F-22: viewport-too-small gate. The 1440px contract is enforced
+   here in CSS (paired with width=device-width in index.html). Hidden by
+   default; the @media block below reveals it on smaller screens. */
+#viewport-too-small {
+  display: none;
+}
+.vts-card {
+  max-width: 480px;
+  width: 100%;
+  padding: 28px;
+  border: 1px solid var(--h-border, #2a2a28);
+  border-radius: 4px;
+  background: var(--h-surface, #1a1a18);
+}
+.vts-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--h-accent, #b8e043);
+  margin-bottom: 10px;
+}
+#viewport-too-small h1 {
+  font-family: "Big Shoulders Stencil Text", system-ui, sans-serif;
+  font-size: 28px;
+  margin: 0 0 12px;
+  color: var(--h-text, #e8e8e6);
+}
+#viewport-too-small p {
+  color: var(--h-text-2, #9a9a96);
+  margin: 0;
+  line-height: 1.5;
+}
+#viewport-too-small code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--h-accent, #b8e043);
+  background: rgba(184, 224, 67, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+@media (max-width: 1439px) {
+  #root {
+    display: none;
+  }
+  #viewport-too-small {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    background: var(--h-bg, #0a0a0a);
+    color: var(--h-text, #e8e8e6);
+  }
+}
+
+/* Audit F-44: respect operating-system motion preferences. Vestibular-disorder
+   users get the .page-fade slide on every navigation today; this kills it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .page-fade {
+    animation: none !important;
+  }
+}

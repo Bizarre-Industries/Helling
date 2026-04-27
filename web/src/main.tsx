@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ErrorBoundary } from './error-boundary';
 
 // Load design-system CSS first (tokens, type, fonts), then the Helling shell.
 import './styles/ds/tokens.css';
@@ -33,12 +34,15 @@ if (!container) {
   throw new Error('Helling WebUI: #root not found in document');
 }
 
+// refetchOnWindowFocus defaults true: Helling is a long-lived admin console;
+// operators tab away to Slack and back, expecting live state on return
+// (audit F-45). Per-query opt-out for expensive aggregations as needed.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
     },
     mutations: {
       retry: 0,
@@ -48,8 +52,10 @@ const queryClient = new QueryClient({
 
 createRoot(container).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <ErrorBoundary scope="root" variant="root">
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

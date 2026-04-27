@@ -1,6 +1,8 @@
 /* Helling WebUI — app root */
 /* eslint-disable */
 import { useCallback, useEffect, useState } from 'react';
+import { clearAccessToken, isAuthenticated, subscribeAuthChange } from './api/auth-store';
+import { ErrorBoundary } from './error-boundary';
 import './shell.jsx';
 import './infra.jsx';
 import './pages.jsx';
@@ -78,18 +80,29 @@ const CRUMBS = {
 };
 
 function App() {
-  const [authed, setAuthed] = useState(true);
+  const [authed, setAuthed] = useState(() => isAuthenticated());
   const [setupDone, setSetupDone] = useState(true); // once booted, skip setup
   const [page, setPage] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [density, setDensity] = useState('compact');
+  const [density, setDensity] = useState(() => {
+    try {
+      const v = localStorage.getItem('helling-density');
+      return v === 'comfortable' || v === 'compact' ? v : 'compact';
+    } catch {
+      return 'compact';
+    }
+  });
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('helling-theme') || 'dark';
-    } catch {
-      return 'dark';
-    }
+      const stored = localStorage.getItem('helling-theme');
+      if (stored === 'light' || stored === 'dark') return stored;
+    } catch {}
+    // Audit F-44 (b): first paint honors OS preference when no stored value.
+    try {
+      if (window.matchMedia?.('(prefers-color-scheme: light)').matches) return 'light';
+    } catch {}
+    return 'dark';
   });
   const [modalState, setModalState] = useState(null); // {kind, props}
 
@@ -100,9 +113,30 @@ function App() {
     } catch {}
   }, [theme]);
 
+  // Track auth-store transitions so login/logout/expired-session events flip
+  // the App route boundary without prop drilling. Per docs/spec/auth.md §2.2
+  // the access token lives in memory only, so a refresh starts unauthed.
+  useEffect(() => {
+    const sync = () => setAuthed(isAuthenticated());
+    const onExpired = () => {
+      clearAccessToken();
+      setAuthed(false);
+      setPage('dashboard');
+    };
+    const unsubscribe = subscribeAuthChange(sync);
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('auth:session-expired', onExpired);
+    };
+  }, []);
+
   // attach density + expose modal opener globally
   useEffect(() => {
     document.body.classList.toggle('density-comfortable', density === 'comfortable');
+    try {
+      localStorage.setItem('helling-density', density);
+    } catch {}
   }, [density]);
 
   useEffect(() => {
@@ -231,7 +265,7 @@ function App() {
         onDensity={setDensity}
         theme={theme}
         onTheme={setTheme}
-        onLogout={() => setAuthed(false)}
+        onLogout={() => clearAccessToken()}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <ResourceTree page={page} onNav={nav} />
@@ -244,7 +278,9 @@ function App() {
           }}
         >
           <div key={page} className="page-fade">
-            {body}
+            <ErrorBoundary scope={page} resetKey={page}>
+              {body}
+            </ErrorBoundary>
           </div>
         </main>
       </div>

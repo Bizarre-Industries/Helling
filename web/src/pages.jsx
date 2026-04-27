@@ -1,6 +1,8 @@
 /* Helling WebUI — page components */
 /* eslint-disable */
 import { useEffect, useState } from 'react';
+import { setAccessToken } from './api/auth-store';
+import { authLogin, authMfaComplete } from './api/generated/sdk.gen';
 import './shell.jsx';
 import './infra.jsx';
 
@@ -49,7 +51,12 @@ function PageDashboard({ onNav }) {
   // Real-data queries via the ADR-014 proxy. Falls back to mock counts when
   // the user is not logged in — preserves the dev-only local experience.
   const counts = window.useDashboardCounts
-    ? window.useDashboardCounts(INSTANCES.length, mockRunning, CONTAINERS.length, mockContainerRunning)
+    ? window.useDashboardCounts(
+        INSTANCES.length,
+        mockRunning,
+        CONTAINERS.length,
+        mockContainerRunning,
+      )
     : {
         live: false,
         totalInstances: INSTANCES.length,
@@ -664,9 +671,13 @@ function PageInstances({ onNav }) {
             onClick={() => {
               window.openModal?.('confirm', {
                 title: 'Stop ' + sel.length + ' instance' + (sel.length === 1 ? '' : 's') + '?',
-                body: sel.join(', '),
+                body:
+                  sel.length >= 3
+                    ? 'Targets: ' + sel.join(', ') + '. Type STOP to confirm a wide selection.'
+                    : sel.join(', '),
                 danger: true,
                 confirmLabel: 'Stop',
+                confirmMatch: sel.length >= 3 ? 'STOP' : undefined,
                 onConfirm: () => {
                   sel.forEach((n) => instanceAction(n, 'stop'));
                   setSel([]);
@@ -2490,9 +2501,10 @@ function PageImages() {
                   onClick={() =>
                     window.openModal?.('confirm', {
                       title: 'Delete ' + i.name + '?',
-                      body: 'This removes the image from pool-primary. Existing VMs will not be affected.',
+                      body: 'This removes the image from pool-primary. Existing VMs will not be affected. Type the image name to confirm.',
                       danger: true,
                       confirmLabel: 'Delete',
+                      confirmMatch: i.name,
                     })
                   }
                 >
@@ -3454,9 +3466,10 @@ function PageOps() {
               onClick={() =>
                 window.openModal?.('confirm', {
                   title: 'Shutdown entire cluster?',
-                  body: 'All VMs stop. Storage stays intact. Requires out-of-band access to restart.',
+                  body: 'All VMs stop. Storage stays intact. Requires out-of-band access to restart. Type SHUTDOWN to confirm.',
                   danger: true,
                   confirmLabel: 'Shutdown',
+                  confirmMatch: 'SHUTDOWN',
                 })
               }
             >
@@ -3659,8 +3672,90 @@ function Toggle({ on }) {
 }
 
 // ─── LOGIN / SETUP ──────────────────────────────────────────────
-function PageLogin({ onLogin }) {
+function PageLogin({ onLogin, onEnterSetup }) {
   const [stage, setStage] = useState('creds'); // creds | totp
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
+  const [mfaToken, setMfaToken] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const completeLogin = (accessToken) => {
+    setAccessToken(accessToken);
+    if (typeof onLogin === 'function') onLogin();
+  };
+
+  const submitCreds = async () => {
+    if (!username || !password) {
+      setError('Username and password required.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await authLogin({ body: { username, password } });
+      const payload = res?.data?.data;
+      if (res?.error || !payload) {
+        const detail = res?.error?.detail || res?.error?.title || 'Login failed.';
+        setError(detail);
+        return;
+      }
+      if (payload.mfa_required && payload.mfa_token) {
+        setMfaToken(payload.mfa_token);
+        setTotp('');
+        setStage('totp');
+        return;
+      }
+      if (payload.access_token) {
+        completeLogin(payload.access_token);
+        return;
+      }
+      setError('Login response missing access token.');
+    } catch (e) {
+      setError(e?.message || 'Network error.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitTotp = async () => {
+    if (!mfaToken) {
+      setError('MFA session expired. Sign in again.');
+      setStage('creds');
+      return;
+    }
+    if (totp.length !== 6 && totp.length !== 16) {
+      setError('Enter the 6-digit TOTP code or 16-character recovery code.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await authMfaComplete({
+        body: { mfa_token: mfaToken, totp_code: totp },
+      });
+      const payload = res?.data?.data;
+      if (res?.error || !payload?.access_token) {
+        const detail = res?.error?.detail || res?.error?.title || 'MFA verification failed.';
+        setError(detail);
+        return;
+      }
+      completeLogin(payload.access_token);
+    } catch (e) {
+      setError(e?.message || 'Network error.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onCredsKey = (e) => {
+    if (e.key === 'Enter' && !busy) submitCreds();
+  };
+  const onTotpKey = (e) => {
+    if (e.key === 'Enter' && !busy) submitTotp();
+  };
+
   return (
     <div
       style={{
@@ -3716,6 +3811,23 @@ function PageLogin({ onLogin }) {
           Access your cluster
         </h1>
 
+        {error && (
+          <div
+            role="alert"
+            className="mono"
+            style={{
+              fontSize: 12,
+              padding: '8px 10px',
+              marginBottom: 14,
+              borderRadius: 4,
+              border: '1px solid var(--bzr-danger, #d4554b)',
+              color: 'var(--bzr-danger, #d4554b)',
+              background: 'rgba(212, 85, 75, 0.08)',
+            }}
+          >
+            {error}
+          </div>
+        )}
         {stage === 'creds' ? (
           <>
             <label
@@ -3727,7 +3839,12 @@ function PageLogin({ onLogin }) {
             <input
               className="input"
               style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
-              defaultValue="admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={onCredsKey}
+              autoComplete="username"
+              autoFocus
+              disabled={busy}
             />
             <label
               className="mono dim"
@@ -3739,32 +3856,37 @@ function PageLogin({ onLogin }) {
               type="password"
               className="input"
               style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
-              defaultValue="••••••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={onCredsKey}
+              autoComplete="current-password"
+              disabled={busy}
             />
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 12,
-                color: 'var(--h-text-2)',
-                marginBottom: 18,
-              }}
-            >
-              <input type="checkbox" /> Remember this device for 30 days
-            </label>
             <button
               className="btn btn--primary"
               style={{ width: '100%', justifyContent: 'center' }}
-              onClick={() => setStage('totp')}
+              onClick={submitCreds}
+              disabled={busy}
             >
-              Continue <I n="arrow-right" s={13} />
+              {busy ? 'Signing in…' : 'Continue'} <I n="arrow-right" s={13} />
             </button>
             <div className="mono dim" style={{ fontSize: 11, marginTop: 16, textAlign: 'center' }}>
-              Authenticated via PAM ·{' '}
-              <a className="link" href="#">
-                Forgot password
-              </a>
+              Authenticated via PAM
+              {typeof onEnterSetup === 'function' && (
+                <>
+                  {' · '}
+                  <a
+                    href="#"
+                    className="link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onEnterSetup();
+                    }}
+                  >
+                    First-time setup
+                  </a>
+                </>
+              )}
             </div>
           </>
         ) : (
@@ -3782,36 +3904,45 @@ function PageLogin({ onLogin }) {
             >
               Enter the 6-digit code from your
               <br />
-              authenticator app.
+              authenticator app or a 16-char recovery code.
             </div>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 18 }}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <input
-                  key={i}
-                  maxLength={1}
-                  className="input mono"
-                  style={{ width: 42, height: 48, textAlign: 'center', fontSize: 22, padding: 0 }}
-                />
-              ))}
-            </div>
+            <input
+              className="input mono"
+              style={{
+                width: '100%',
+                marginBottom: 18,
+                textAlign: 'center',
+                fontSize: 20,
+                letterSpacing: '0.3em',
+                padding: '12px 8px',
+              }}
+              value={totp}
+              onChange={(e) => setTotp(e.target.value.replace(/\s/g, '').toLowerCase())}
+              onKeyDown={onTotpKey}
+              maxLength={16}
+              autoComplete="one-time-code"
+              autoFocus
+              inputMode="text"
+              disabled={busy}
+              aria-label="TOTP or recovery code"
+            />
             <button
               className="btn btn--primary"
               style={{ width: '100%', justifyContent: 'center' }}
-              onClick={onLogin}
+              onClick={submitTotp}
+              disabled={busy}
             >
-              Sign in <I n="arrow-right" s={13} />
+              {busy ? 'Verifying…' : 'Sign in'} <I n="arrow-right" s={13} />
             </button>
             <div className="mono dim" style={{ fontSize: 11, marginTop: 14, textAlign: 'center' }}>
-              <a href="#" className="link">
-                Use recovery code
-              </a>{' '}
-              ·{' '}
               <a
                 href="#"
                 className="link"
                 onClick={(e) => {
                   e.preventDefault();
                   setStage('creds');
+                  setError(null);
+                  setTotp('');
                 }}
               >
                 Back

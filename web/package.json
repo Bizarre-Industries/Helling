@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "gen:api": "openapi-ts -f hey-api.config.ts",
     "check": "biome check src",
-    "fmt": "biome format --write src"
+    "fmt": "biome format --write src",
+    "prepare": "bun run gen:api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "0.13.1",

@@ -104,6 +104,10 @@ pre-push:
     check:
       run: task check
 
+    webui-tracking:
+      tags: docs webui
+      run: bash scripts/check-webui-tracking.sh --strict --range "@{u}..HEAD"
+
 # ============================================================
 # COMMIT-MSG — conventional commits
 # ============================================================

@@ -116,6 +116,72 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 - [ ] **F-09** (arch · 2A side): all `web/src/pages/*` are `.tsx` (full TS migration of remaining `.jsx` is Phase 6)
 - [ ] **2F**: fresh-clone build still works post-restructure (`git clean -fdx web/ && cd web && bun install && bun run dev`)
 
+### WebUI Audit Phase 3 — Real data layer + SSE (audit 2026-04-27)
+
+> Source: `docs/plans/webui-phase-2-6.md` Phase 3. Blocked on Phase 2 (`F-05` page split must complete so each page can swap mock-array imports for hooks). F-42 stage-2 SSE blocked on backend (`api/openapi.yaml` L777 says full streaming v0.1-beta) — ship snapshot-poll first.
+
+- [ ] **F-01** (data · 3A): components stop importing `INSTANCES`/`CONTAINERS`/`TASKS`/`ALERTS`/`BACKUPS`/`SNAPSHOTS` directly; consume `useInstancesQuery`/`useContainersQuery`/`useTasksQuery`/`useAlertsQuery`/`useBackupsQuery`/`useSnapshotsQuery` hooks; mocks live behind MSW handlers in `web/src/api/mocks/`
+- [ ] **F-02** (data · 3B): canonical `Instance` type + normalizer at API boundary; Incus `"Running"` ↔ mock `"running"` casing reconciled
+- [ ] **F-03** (data · 3C): 1.5s mock interval in `shell.jsx` removed; SSE consumer at `web/src/api/use-events-stream.ts` updates query cache via `queryClient.setQueryData`
+- [ ] **F-04** (ux · 3D): `<QueryStateView>` wrapper renders skeleton on loading, error card on error, empty card on empty; applied to every list page
+- [ ] **F-31** (perf): subsumed by F-01 + F-42 — verify `useStore()` global re-render trigger removed once hooks ship
+- [ ] **F-42** (data · 3C stage-1): `useEventsStream()` polls `GET /api/v1/events?limit=50` every 5s, dedupes by event id, dispatches by type
+- [ ] **F-42** (data · 3C stage-2): EventSource swap once hellingd ships real SSE on `/api/v1/events` (cross-team ticket)
+- [ ] **F-43** (types): `IncusInstanceDetail` + `PodmanContainerDetail` hand-written from upstream OpenAPI; mock seeds match real shape
+- [ ] **F-45** (verify): no Phase 3 query reverts `refetchOnWindowFocus: true` default
+- [ ] **F-04 + F-38 sequencing**: token-expired path renders error state cleanly (post Phase 1 wiring)
+- [ ] **logout flow** (Phase 1 follow-up): TopBar `onLogout` calls `useLogoutMutation` → `POST /api/v1/auth/logout` → `clearAccessToken()` (currently only clears local token; refresh-cookie not revoked server-side)
+
+### WebUI Audit Phase 4 — Layout primitives + antd migration spike (audit 2026-04-27)
+
+> Source: `docs/plans/webui-phase-2-6.md` Phase 4. ADR-051 chose spec → 3-page spike onto antd 6 + pro-components, feature-flagged via `localStorage.getItem('helling.spike') === '1'` for A/B compare.
+
+- [ ] **F-36 spike** (4A): `bun add antd@^6 @ant-design/pro-components @ant-design/charts dayjs` in `web/`; bundle budget 400KB gzipped initial post-Phase 2 lazy-loading
+- [ ] **token bridge** (4B): `web/src/theme/tokens.ts` exports typed `ThemeConfig` with `colorPrimary: var(--bzr-lime)`, `colorBgLayout: var(--bzr-void)`, etc.; `<ConfigProvider>` wraps `<App />` in `web/src/main.tsx`
+- [ ] **F-06 + F-23 + F-25 + F-26 (spike)**: Instances list → ProTable, Instance Detail → ProDescriptions + Tabs, New Instance wizard → StepsForm; spike hidden behind `localStorage.helling.spike` flag
+- [ ] **F-20** (4D): light mode resolves via `ConfigProvider` `algorithm: theme.defaultAlgorithm` swap; `mark.png` light variant added; vestigial `body.light-mode` CSS removed Phase 6
+- [ ] **F-11** (4E): TanStack Router replaces `setPage('instance:vm-1')` string-route hack; URLs `/instances`, `/instances/:name`, `/instances/:name/console` etc.; bookmarkable + refresh-safe
+- [ ] **F-21** (4F): 87 hardcoded `rgba(255,255,255,0.x)` literals across `web/src/pages/*` replaced with `--h-tint-hover`/`--h-tint-pressed`/`--h-tint-selected`/`--h-divider-soft` tokens added to `:root`
+- [ ] **F-24** (4F): `--h-success`/`--h-info`/`--h-warn`/`--h-danger` map to `var(--bzr-success)` etc. in `:root`
+- [ ] **F-44** (verify): `prefers-reduced-motion` + `prefers-color-scheme` first-load read still in place after ConfigProvider wrap
+- [ ] **F-50** (verify): density localStorage persistence still works after ConfigProvider density-config integration
+- [ ] **F-23** (verify): page-header drift gone after ProLayout PageHeader port
+
+### WebUI Audit Phase 5 — Operator polish + a11y rollout (audit 2026-04-27)
+
+> Source: `docs/plans/webui-phase-2-6.md` Phase 5. Closes the operator-ergonomics findings + the a11y leftovers from Phase 1.
+
+- [ ] **F-10** (nav · 5E): collapsible sidebar section headers persisted to user settings; real `Recent` from route history (last 8); pin/unpin from any row, persisted server-side
+- [ ] **F-14** (wizard): F-36 → spec → StepsForm absorbs validation + preview natively (lands with Phase 4 spike port for `New Instance`)
+- [ ] **F-16** (bulk · 5C): bulk-action menu (Snapshot, Backup, Restart, Delete, Migrate-to); when >3 items, single tracked task in drawer aggregates child progress
+- [ ] **F-17** (keyboard · 5F): standard kit `1`–`9` jumps to tab N, `[`/`]` previous/next tab, `Esc` cancel/close, `Enter` primary action; single keyboard overlay (`?`)
+- [ ] **F-18** (feedback · 5G): persist last 20 toasts behind bell, alongside alerts, in a "history" tab
+- [ ] **F-19** (feedback honesty): `notImplemented('feature-name')` helper produces "Not yet wired" warning toast + visual disabled state on stub buttons
+- [ ] **F-25** (a11y · modals): focus trap + `role="dialog"` + `aria-modal` + `aria-labelledby` + focus restore on close (subsumed by Phase 4 antd Modal port for migrated pages; explicit fix for any non-ported modals)
+- [ ] **F-26** (a11y · tables): `role="table"`/`role="row"`/`role="cell"` + `aria-sort` on hand-rolled tables until Phase 4 ports them to ProTable (subsumed for ported pages)
+- [ ] **F-27** (a11y · color reliance): sidebar dot/icon `aria-label="Running"`/`aria-label="Stopped"`; "off" text or icon variant for stopped rows
+- [ ] **F-28** (a11y · toasts): `aria-live="polite"` + `role="status"` on toast region; danger toasts → `role="alert"`; action toasts TTL ≥ 8s
+- [ ] **F-32** (ops · 5B): dashboard greeter replaced with digest stripe consuming audit + tasks + alerts query keys; click any segment to filter destination
+- [ ] **F-33** (ops · 5A): instance list `backupAge` column with severity color; SLA configuration in Schedules; Backups page header "**N out of SLA · M failed last night**"
+- [ ] **F-34** (ops · 5D): `bun add react-diff-viewer-continued`; use in snapshot detail (vs current), cloud-init pre-apply (vs last applied), firewall rule preview
+- [ ] **F-35** (brand): topbar crumbs root separator `/` → `✦`; bullet in empty-state copy `✦`
+
+### WebUI Audit Phase 6 — Hardening + leftover decisions (audit 2026-04-27)
+
+> Source: `docs/plans/webui-phase-2-6.md` Phase 6. Last mile: supply-chain + security hygiene + IA cleanup + TS migration completion.
+
+- [ ] **F-09** (arch · full TS): all `web/src/*.jsx` converted to `.tsx`; `find web/src -name '*.jsx' | wc -l` → 0
+- [ ] **F-12** (ia): Firewall + FirewallEditor consolidated into one page with list + drawer (Portainer model), or editor becomes a modal
+- [ ] **F-13** (ia): Marketplace + Templates renamed ("Templates" → "VM Images", "Marketplace" → "App Catalog") or merged into single Catalog with Type filter
+- [ ] **F-22** (responsive policy): documented decision in `web/README.md` — "1440 desktop minimum" gate stays, OR add 1–2 breakpoints (sidebar collapse < 1280, console sidebar drop < 1180)
+- [ ] **F-46** (security · CSP): `<meta http-equiv="Content-Security-Policy">` in `web/index.html` as belt-and-braces alongside Caddy headers; `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'`; tighten `style-src` once F-06 reduces inline styles
+- [ ] **F-46** (security · SRI policy): documented in `CONTRIBUTING.md`; required for any future CDN-loaded asset
+- [ ] **F-47** (verify): global `ResizeObserver` warning suppression still absent from `web/index.html` post-Phase 3 (F-03/F-42 may make the warning naturally disappear)
+- [ ] **F-48** (perf · HMR): `setInterval` calls in `web/src/shell.jsx` (or its post-Phase-2 location) wrapped in `import.meta.hot?.accept(() => clearInterval(handle))`; no interval leak after 30 minutes of HMR
+- [ ] **F-49** (supply chain): `.github/renovate.json` (or extend `dependabot.yml`) groups bumps by category (react, query, build, antd); weekly minor/patch; majors gated on manual review
+- [ ] **F-51** (verify): direct lucide imports outside the `I` wrapper still absent; icon barrel single source of truth
+- [ ] **`bun run check`** zero errors (Phase 1 had ~84 pre-existing biome errors; this is the cleanup gate after Phase 5 a11y work lands)
+
 ### WebUI Audit Phase 0 — Stack Decision (locked)
 
 - [x] ADR-051 written and accepted: WebUI commits to antd 6 + pro-components per `docs/spec/webui-spec.md`

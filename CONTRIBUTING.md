@@ -105,6 +105,23 @@ If API behavior changes:
 
 Do not hand-edit generated files unless explicitly documented.
 
+## WebUI Audit Tracking
+
+The WebUI v0.2 audit (`docs/audits/webui-2026-04-27.md`) catalogues 51 findings labelled `F-01`..`F-51`. Sequencing lives in `docs/plans/webui-phase-2-6.md`. Per-PR ticking surface is `docs/roadmap/checklist.md`.
+
+When a PR closes a finding:
+
+1. Reference the F-ID in the commit subject or body (e.g. `Refs: F-15, F-22`).
+2. Tick the matching `[ ] **F-XX**` line in `docs/roadmap/checklist.md` to `[x]` and append the commit SHA.
+3. Update the per-phase status snapshot in `docs/audits/webui-2026-04-27.md` if the close moves a phase to ✅.
+
+Two automated guardrails enforce this:
+
+- **Git pre-push** (`lefthook.yml` → `webui-tracking`): runs `scripts/check-webui-tracking.sh --strict` on the upstream-divergent range. Push fails if any commit references an F-ID not strict-ticked in the checklist.
+- **Claude Code PostToolUse** (`.claude/settings.local.json`): runs the same script in warn mode after any `git commit`, `git push`, or `gh pr create`, so the agent sees the reminder before opening a PR.
+
+Bypass once with `LEFTHOOK_EXCLUDE=webui-tracking git push ...` if you intentionally split docs into a follow-up PR. CI does not duplicate this gate today; the goal is to catch drift at push time.
+
 ## Testing Expectations
 
 - Add or update tests close to changed code.

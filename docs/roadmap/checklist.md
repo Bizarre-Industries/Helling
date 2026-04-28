@@ -108,7 +108,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
   - [ ] datacenter subfolder: Dashboard, Instances, InstanceDetail, Containers, ContainerDetail, Kubernetes, Cluster, Console, NewInstance — needs Badge / Sparkline / MultiChart primitives + `legacy/mocks.ts` shim extracted first
   - [ ] resources subfolder: Storage, Networking, Firewall, FirewallEditor, Images, Backups, Schedules, Templates, BMC, Marketplace, FileBrowser
   - [ ] observability subfolder: Metrics, Alerts, Logs
-  - [ ] admin subfolder: Users, UserDetail, Audit, Ops, Settings, RBAC
+  - [ ] admin subfolder: Audit (commit `8d1a3bf`) + Ops (commit `14caf91`) + Users (commit `<users-pending>`) shipped; UserDetail, Settings, RBAC pending
   - [ ] search subfolder: Search, SearchResults
 - [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx`
 - [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB

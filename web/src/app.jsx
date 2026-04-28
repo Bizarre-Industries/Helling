@@ -6,6 +6,7 @@ import { ErrorBoundary } from './error-boundary';
 import PageAudit from './pages/admin/audit';
 import PageLogs from './pages/admin/logs';
 import PageOps from './pages/admin/ops';
+import PageUsers from './pages/admin/users';
 import PageLogin from './pages/auth/login';
 import PageSetup from './pages/auth/setup';
 import './shell.jsx';
@@ -35,7 +36,6 @@ const {
   PageTemplates,
   PageBMC,
   PageCluster,
-  PageUsers,
   PageSettings,
   PageNewInstance,
   PageConsole,

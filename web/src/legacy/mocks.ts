@@ -62,6 +62,12 @@ export interface MockWarning extends Record<string, unknown> {
   msg: string;
   target: string;
 }
+export interface MockUser extends Record<string, unknown> {
+  name: string;
+  role: string;
+  twofa: boolean;
+  lastLogin: string;
+}
 
 interface MocksGlobal {
   NODES?: MockNode[];
@@ -75,7 +81,7 @@ interface MocksGlobal {
   NETWORKS?: Record<string, unknown>[];
   FW_RULES?: Record<string, unknown>[];
   SCHEDULES?: Record<string, unknown>[];
-  USERS?: Record<string, unknown>[];
+  USERS?: MockUser[];
   TEMPLATES?: Record<string, unknown>[];
   SNAPSHOTS?: Record<string, unknown>[];
   BACKUPS?: Record<string, unknown>[];
@@ -96,7 +102,7 @@ export const getPools = (): Record<string, unknown>[] => w().POOLS ?? [];
 export const getNetworks = (): Record<string, unknown>[] => w().NETWORKS ?? [];
 export const getFirewallRules = (): Record<string, unknown>[] => w().FW_RULES ?? [];
 export const getSchedules = (): Record<string, unknown>[] => w().SCHEDULES ?? [];
-export const getUsers = (): Record<string, unknown>[] => w().USERS ?? [];
+export const getUsers = (): MockUser[] => w().USERS ?? [];
 export const getTemplates = (): Record<string, unknown>[] => w().TEMPLATES ?? [];
 export const getSnapshots = (): Record<string, unknown>[] => w().SNAPSHOTS ?? [];
 export const getBackups = (): Record<string, unknown>[] => w().BACKUPS ?? [];

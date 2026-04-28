@@ -287,8 +287,8 @@ function ActionButton({ connected, onClick, children, ...props }: ActionButtonPr
 
 - `docs/design/identity.md` -- lines 169-215: loading, error, offline behavior rules
 - `docs/design/philosophy.md` -- Rule 5 (data loads instantly or shows why)
-- `CLAUDE.md` -- Graceful degradation: Incus down = empty arrays, not 404/500
-- `CLAUDE.md` -- Real-time = SSE, no polling
+- `docs/spec/errors.md` -- Graceful degradation: Incus down = empty arrays, not 404/500
+- `docs/spec/events.md` -- Real-time = SSE, no polling
 
 ## Pages Using This Pattern
 

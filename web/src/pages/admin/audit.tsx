@@ -3,8 +3,8 @@
 // Reads audit events from the legacy mocks shim. Phase 3A swaps to a
 // real `useAuditQuery` against /api/v1/audit (ADR-019).
 
-import { I } from '../../primitives/icon';
 import { getAudit } from '../../legacy/mocks';
+import { I } from '../../primitives/icon';
 
 export default function PageAudit() {
   const audit = getAudit();

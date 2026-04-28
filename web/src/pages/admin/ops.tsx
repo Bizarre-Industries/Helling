@@ -28,11 +28,7 @@ export default function PageOps() {
               <div key={`${w.target}-${i}`} className={`alert alert--${w.sev}`}>
                 <I
                   n={
-                    w.sev === 'danger'
-                      ? 'octagon-x'
-                      : w.sev === 'warn'
-                        ? 'triangle-alert'
-                        : 'info'
+                    w.sev === 'danger' ? 'octagon-x' : w.sev === 'warn' ? 'triangle-alert' : 'info'
                   }
                   s={14}
                 />

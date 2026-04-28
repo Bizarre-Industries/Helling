@@ -28,12 +28,7 @@ export interface ConfirmModalProps {
   onConfirm?: () => void;
 }
 
-export type ModalKind =
-  | 'confirm'
-  | 'create-vm'
-  | 'install-app'
-  | 'new-rule'
-  | 'edit-cloud-init';
+export type ModalKind = 'confirm' | 'create-vm' | 'install-app' | 'new-rule' | 'edit-cloud-init';
 
 interface UIGlobals {
   toast?: ToastBus;
@@ -42,8 +37,7 @@ interface UIGlobals {
   __nav?: (page: string) => void;
 }
 
-const ui = (): UIGlobals =>
-  typeof window === 'undefined' ? {} : (window as unknown as UIGlobals);
+const ui = (): UIGlobals => (typeof window === 'undefined' ? {} : (window as unknown as UIGlobals));
 
 export const toast = (kind: ToastKind, title: string, msg?: string): void => {
   const bus = ui().toast;
@@ -56,10 +50,7 @@ export const openConfirm = (props: ConfirmModalProps): void => {
   ui().openModal?.('confirm', props as unknown as Record<string, unknown>);
 };
 
-export const openModal = (
-  kind: ModalKind,
-  props?: Record<string, unknown>,
-): void => {
+export const openModal = (kind: ModalKind, props?: Record<string, unknown>): void => {
   ui().openModal?.(kind, props);
 };
 

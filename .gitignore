@@ -3,7 +3,7 @@ helling.md
 helling-complete.md
 IMPLEMENTATION-PLAN.md
 
-# Claude Code
+# Editor and agent caches (project-local; never tracked)
 .claude/
 .claude-cache/
 .claude-plans/

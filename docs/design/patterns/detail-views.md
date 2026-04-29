@@ -202,7 +202,7 @@ function HardwareConfig({ instance }: { instance: Instance }) {
 
 - `docs/design/philosophy.md` -- Rule 6 (Summary tab shows everything), Rule 7 (two-click max)
 - `docs/spec/webui-spec.md` -- 8 tabs per instance, Descriptions for summary, ProTable for sub-lists
-- `CLAUDE.md` -- Descriptions replaces PropertyGrid, zero custom CSS
+- `docs/decisions/051-webui-stack-lock-antd-pro-components.md` -- Descriptions replaces PropertyGrid, zero custom CSS
 
 ## Pages Using This Pattern
 

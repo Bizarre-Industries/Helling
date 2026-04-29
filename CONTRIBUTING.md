@@ -105,6 +105,36 @@ If API behavior changes:
 
 Do not hand-edit generated files unless explicitly documented.
 
+## Docs / Plans / Checklists Sync
+
+Every PR that touches source (`apps/`, `web/`, `api/openapi.yaml`, `deploy/`, `scripts/`) must also update at least one of:
+
+- `docs/spec/`, `docs/standards/`, `docs/decisions/` (domain spec / standards / ADRs)
+- `docs/roadmap/checklist.md` (release gates + per-PR ticking)
+- `docs/plans/` (multi-phase plans)
+- `docs/audits/` (audit findings + status snapshots)
+- `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`
+
+Or include a recognized doc-bypass marker in the commit body: `Refs: F-XX`, `Refs: ADR-NNN`, `Refs: #NN`, or `[skip-docs]` for genuine docs-irrelevant changes (formatting, test-only, CI-only, dependency bumps).
+
+### WebUI audit findings
+
+The WebUI v0.2 audit (`docs/audits/webui-2026-04-27.md`) catalogues 51 findings labelled `F-01`..`F-51`. Sequencing lives in `docs/plans/webui-phase-2-6.md`. Per-PR ticking surface is `docs/roadmap/checklist.md`.
+
+When a PR closes a finding:
+
+1. Add `Closes: F-XX` to the commit body (one F-ID per line for multiples). `Refs: F-XX` is for advisory mentions and does not force a tick.
+2. Tick the matching `[ ] **F-XX**` line in `docs/roadmap/checklist.md` to `[x]` and append the commit SHA.
+3. Update the per-phase status snapshot in `docs/audits/webui-2026-04-27.md` if the close moves a phase to ✅.
+
+### Automated guardrails
+
+- **Git pre-push** (`lefthook.yml` → `docs-sync`): runs `scripts/check-docs-sync.sh --strict` on the upstream-divergent range. Push fails if (a) commits touch source without docs and lack a bypass marker, or (b) any commit declares `Closes: F-XX` for an unticked finding.
+- **Editor sanity-check hook** (project-local config; outside the repo because agent / editor caches are gitignored — see `scripts/docs-snapshot.sh`): runs the snapshot script at session start so an editor or coding-agent session sees current release-gate progress, the WebUI status snapshot, recent ADRs, and uncommitted changes before deciding tasks.
+- **Editor PostToolUse hook** (project-local config, gitignored): runs `scripts/check-docs-sync.sh` in warn mode after any `git commit`, `git push`, or `gh pr create`, surfacing reminders before a PR opens.
+
+Bypass once with `LEFTHOOK_EXCLUDE=docs-sync git push ...` if you intentionally split docs into a follow-up PR. CI does not duplicate this gate today; the goal is to catch drift at push time.
+
 ## Testing Expectations
 
 - Add or update tests close to changed code.

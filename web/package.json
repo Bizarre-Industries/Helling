@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "gen:api": "openapi-ts -f hey-api.config.ts",
     "check": "biome check src",
-    "fmt": "biome format --write src"
+    "fmt": "biome format --write src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "bun run gen:api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "0.13.1",
@@ -21,10 +24,15 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@hey-api/openapi-ts": "0.96.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
     "@vitejs/plugin-react": "5.0.4",
+    "jsdom": "^29.1.0",
     "typescript": "5.8.3",
-    "vite": "7.3.2"
+    "vite": "7.3.2",
+    "vitest": "^4.1.5"
   }
 }

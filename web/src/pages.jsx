@@ -49,7 +49,12 @@ function PageDashboard({ onNav }) {
   // Real-data queries via the ADR-014 proxy. Falls back to mock counts when
   // the user is not logged in — preserves the dev-only local experience.
   const counts = window.useDashboardCounts
-    ? window.useDashboardCounts(INSTANCES.length, mockRunning, CONTAINERS.length, mockContainerRunning)
+    ? window.useDashboardCounts(
+        INSTANCES.length,
+        mockRunning,
+        CONTAINERS.length,
+        mockContainerRunning,
+      )
     : {
         live: false,
         totalInstances: INSTANCES.length,
@@ -664,9 +669,13 @@ function PageInstances({ onNav }) {
             onClick={() => {
               window.openModal?.('confirm', {
                 title: 'Stop ' + sel.length + ' instance' + (sel.length === 1 ? '' : 's') + '?',
-                body: sel.join(', '),
+                body:
+                  sel.length >= 3
+                    ? 'Targets: ' + sel.join(', ') + '. Type STOP to confirm a wide selection.'
+                    : sel.join(', '),
                 danger: true,
                 confirmLabel: 'Stop',
+                confirmMatch: sel.length >= 3 ? 'STOP' : undefined,
                 onConfirm: () => {
                   sel.forEach((n) => instanceAction(n, 'stop'));
                   setSel([]);
@@ -2490,9 +2499,10 @@ function PageImages() {
                   onClick={() =>
                     window.openModal?.('confirm', {
                       title: 'Delete ' + i.name + '?',
-                      body: 'This removes the image from pool-primary. Existing VMs will not be affected.',
+                      body: 'This removes the image from pool-primary. Existing VMs will not be affected. Type the image name to confirm.',
                       danger: true,
                       confirmLabel: 'Delete',
+                      confirmMatch: i.name,
                     })
                   }
                 >
@@ -3125,350 +3135,6 @@ function PageCluster() {
   );
 }
 
-// ─── USERS ──────────────────────────────────────────────────────
-function PageUsers() {
-  return (
-    <div>
-      <div className="toolbar">
-        <div className="lft">
-          <div className="seg">
-            <button className="on">
-              Users{' '}
-              <span className="mono dim" style={{ marginLeft: 4 }}>
-                {USERS.length}
-              </span>
-            </button>
-            <button>
-              Tokens{' '}
-              <span className="mono dim" style={{ marginLeft: 4 }}>
-                6
-              </span>
-            </button>
-            <button>
-              Roles{' '}
-              <span className="mono dim" style={{ marginLeft: 4 }}>
-                3
-              </span>
-            </button>
-            <button>SSH keys</button>
-          </div>
-        </div>
-        <div className="rgt">
-          <button className="btn btn--sm">
-            <I n="key-round" s={13} /> Create API token
-          </button>
-          <button className="btn btn--sm btn--primary">
-            <I n="user-plus" s={13} /> Invite user
-          </button>
-        </div>
-      </div>
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Role</th>
-            <th>2FA</th>
-            <th>Last login</th>
-            <th>Sessions</th>
-            <th style={{ textAlign: 'right' }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {USERS.map((u) => (
-            <tr key={u.name}>
-              <td>
-                <span className="mono" style={{ fontWeight: 600 }}>
-                  {u.name}
-                </span>{' '}
-                <span className="dim">· {u.name}@helling.local</span>
-              </td>
-              <td>
-                <span
-                  className="badge mono"
-                  style={{ color: u.role === 'admin' ? 'var(--h-accent)' : 'var(--h-text-2)' }}
-                >
-                  {u.role}
-                </span>
-              </td>
-              <td>
-                {u.twofa ? (
-                  <span style={{ color: 'var(--h-success)' }}>✓ enabled</span>
-                ) : (
-                  <span style={{ color: 'var(--h-warn)' }}>! disabled</span>
-                )}
-              </td>
-              <td className="mono dim">{u.lastLogin}</td>
-              <td className="mono">1</td>
-              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                <button className="btn btn--sm btn--ghost">Impersonate</button>
-                <button className="btn btn--sm btn--ghost">
-                  <I n="pencil" s={13} />
-                </button>
-                <button className="btn btn--sm btn--ghost">
-                  <I n="trash-2" s={13} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ─── AUDIT ──────────────────────────────────────────────────────
-function PageAudit() {
-  return (
-    <div>
-      <div className="toolbar">
-        <div className="lft">
-          <input
-            className="input"
-            style={{ width: 260, height: 28, fontSize: 12 }}
-            placeholder="Filter by user, action, target…"
-          />
-          <div className="seg">
-            <button className="on">24h</button>
-            <button>7d</button>
-            <button>30d</button>
-            <button>Custom</button>
-          </div>
-        </div>
-        <div className="rgt">
-          <button className="btn btn--sm">
-            <I n="download" s={13} /> Export CSV
-          </button>
-        </div>
-      </div>
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>User</th>
-            <th>Action</th>
-            <th>Target</th>
-            <th>Status</th>
-            <th>IP</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {AUDIT.map((a, i) => (
-            <tr key={i}>
-              <td className="mono dim">{a.ts}</td>
-              <td className="mono">{a.user}</td>
-              <td className="mono">{a.action}</td>
-              <td className="mono" style={{ color: 'var(--h-accent)' }}>
-                {a.target}
-              </td>
-              <td>
-                {a.status === 'ok' ? (
-                  <span style={{ color: 'var(--h-success)' }}>✓ ok</span>
-                ) : (
-                  <span style={{ color: 'var(--h-danger)' }}>✕ fail</span>
-                )}
-              </td>
-              <td className="mono dim">{a.ip}</td>
-              <td style={{ textAlign: 'right' }}>
-                <button className="btn btn--sm btn--ghost">
-                  <I n="chevron-right" s={13} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ─── LOGS ───────────────────────────────────────────────────────
-function PageLogs() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="toolbar">
-        <div className="lft">
-          <select className="input" style={{ height: 28, fontSize: 12, width: 160 }}>
-            <option>hellingd</option>
-            <option>hellingd-api</option>
-            <option>node-1/kernel</option>
-            <option>node-1/systemd</option>
-          </select>
-          <div className="seg">
-            <button>All</button>
-            <button className="on">Info</button>
-            <button>
-              Warn{' '}
-              <span className="mono" style={{ marginLeft: 4, color: 'var(--h-warn)' }}>
-                3
-              </span>
-            </button>
-            <button>
-              Error{' '}
-              <span className="mono" style={{ marginLeft: 4, color: 'var(--h-danger)' }}>
-                1
-              </span>
-            </button>
-          </div>
-          <input
-            className="input"
-            style={{ width: 260, height: 28, fontSize: 12 }}
-            placeholder="grep…"
-          />
-        </div>
-        <div className="rgt">
-          <button className="btn btn--sm">
-            <I n="play" s={13} /> Follow
-          </button>
-          <button className="btn btn--sm">
-            <I n="download" s={13} /> Export
-          </button>
-        </div>
-      </div>
-      <div
-        className="term"
-        style={{ margin: 14, flex: 1, minHeight: 400, borderRadius: 'var(--h-radius)' }}
-      >
-        {[
-          ['14:22:03', 'INFO', 'hellingd', 'task T-8814 started: snapshot vm-web-1'],
-          ['14:21:59', 'INFO', 'api', 'POST /v1/instances/vm-web-1/snapshot (admin)'],
-          ['14:21:02', 'INFO', 'hellingd', 'backup verify ok: vm-db-1 (8.2 GB, 6.2s)'],
-          ['14:19:45', 'INFO', 'hellingd', 'task T-8813 completed: backup-verify'],
-          ['14:15:02', 'INFO', 'podman', 'pulled linuxserver/jellyfin:latest'],
-          ['14:12:40', 'WARN', 'storage', 'pool default: 72% full — consider adding capacity'],
-          ['13:58:11', 'INFO', 'hellingd', 'migrate vm-build node-1 → node-2 (53s)'],
-          ['13:40:00', 'INFO', 'hellingd', 'ct-gitea started'],
-          ['13:12:00', 'ERROR', 'backup', 'vm-old failed: pool full (code=STORAGE_FULL, 2)'],
-          ['12:08:15', 'INFO', 'auth', 'user.2fa.enable: alice (TOTP)'],
-          ['11:44:01', 'INFO', 'firewall', 'rule added: accept tcp 22 → vm-web-1'],
-          ['10:02:09', 'INFO', 'hellingd', 'instance.create vm-build (4 vcpu, 8 GB)'],
-          ['09:15:00', 'INFO', 'scheduler', 'schedule created: daily-backup (0 2 * * *)'],
-        ].map(([t, l, c, m], i) => (
-          <div key={i}>
-            <span className="c-dim">{t}</span>{' '}
-            <span className={l === 'INFO' ? 'c-lime' : l === 'WARN' ? 'c-warn' : 'c-err'}>
-              {l.padEnd(5)}
-            </span>{' '}
-            <span className="c-dim">[{c}]</span>{' '}
-            <span style={{ color: l === 'ERROR' ? 'var(--h-danger)' : '#d8d8d8' }}>{m}</span>
-          </div>
-        ))}
-        <div style={{ marginTop: 8, color: 'var(--h-accent)' }}>● tailing…</div>
-      </div>
-    </div>
-  );
-}
-
-// ─── OPERATIONS ─────────────────────────────────────────────────
-function PageOps() {
-  return (
-    <div style={{ padding: 20, display: 'grid', gap: 14 }}>
-      <div>
-        <div className="eyebrow">OPS / SYSTEM HEALTH</div>
-        <h1 className="stencil" style={{ fontSize: 22, margin: '6px 0 0' }}>
-          Operations
-        </h1>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-        <div className="card">
-          <header>
-            <span className="title">Warnings & failures</span>
-          </header>
-          <div style={{ padding: 14, display: 'grid', gap: 8 }}>
-            {WARNINGS.map((w, i) => (
-              <div key={i} className={'alert alert--' + w.sev}>
-                <I
-                  n={
-                    w.sev === 'danger' ? 'octagon-x' : w.sev === 'warn' ? 'triangle-alert' : 'info'
-                  }
-                  s={14}
-                />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 600 }}>{w.msg}</span>
-                  <span className="mono dim" style={{ marginLeft: 8, fontSize: 11 }}>
-                    · {w.target}
-                  </span>
-                </div>
-                <button className="btn btn--sm btn--ghost" style={{ color: 'inherit' }}>
-                  Resolve
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="card">
-          <header>
-            <span className="title">Quick actions</span>
-          </header>
-          <div style={{ padding: 14, display: 'grid', gap: 6 }}>
-            <button
-              className="btn"
-              onClick={() =>
-                window.toast?.info('helling doctor', 'Checking 42 system invariants — all green')
-              }
-            >
-              <I n="stethoscope" s={13} /> Run `helling doctor`
-            </button>
-            <button
-              className="btn"
-              onClick={() =>
-                window.toast?.info('Verifying backups', 'Running fsck on 14 snapshots — est. 4 min')
-              }
-            >
-              <I n="shield-check" s={13} /> Verify all backups
-            </button>
-            <button
-              className="btn"
-              onClick={() =>
-                window.openModal?.('confirm', {
-                  title: 'Restart hellingd?',
-                  body: 'Control-plane daemon will briefly restart. Running VMs are not affected.',
-                  confirmLabel: 'Restart',
-                })
-              }
-            >
-              <I n="rotate-cw" s={13} /> Restart hellingd
-            </button>
-            <button
-              className="btn"
-              onClick={() =>
-                window.toast?.info('Check for updates', 'You are on 0.1.0-rc3 — latest release')
-              }
-            >
-              <I n="download" s={13} /> Check for updates
-            </button>
-            <button
-              className="btn"
-              onClick={() =>
-                window.openModal?.('confirm', {
-                  title: 'Drain node-2?',
-                  body: 'Migrates all VMs to other nodes, then marks unschedulable. ~3 min.',
-                  confirmLabel: 'Drain',
-                })
-              }
-            >
-              <I n="power" s={13} /> Drain node-2
-            </button>
-            <button
-              className="btn btn--danger"
-              onClick={() =>
-                window.openModal?.('confirm', {
-                  title: 'Shutdown entire cluster?',
-                  body: 'All VMs stop. Storage stays intact. Requires out-of-band access to restart.',
-                  danger: true,
-                  confirmLabel: 'Shutdown',
-                })
-              }
-            >
-              <I n="power-off" s={13} /> Shutdown cluster
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── SETTINGS ───────────────────────────────────────────────────
 function PageSettings() {
   const [tab, setTab] = useState('general');
@@ -3658,172 +3324,6 @@ function Toggle({ on }) {
   );
 }
 
-// ─── LOGIN / SETUP ──────────────────────────────────────────────
-function PageLogin({ onLogin }) {
-  const [stage, setStage] = useState('creds'); // creds | totp
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'var(--h-bg)',
-        display: 'grid',
-        placeItems: 'center',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: 20,
-          left: 20,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <img src="assets/mark-inverse.png" style={{ width: 28, height: 28 }} />
-        <div>
-          <div className="stencil" style={{ fontSize: 16 }}>
-            HELLING
-          </div>
-          <div className="mono dim" style={{ fontSize: 10, letterSpacing: '0.18em' }}>
-            v0.1 · node-1
-          </div>
-        </div>
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          fontSize: 11,
-          color: 'var(--h-text-3)',
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
-        className="mono"
-      >
-        <span>CATCH THE STARS.</span>
-        <span>Debian · Incus · Podman · k3s</span>
-      </div>
-
-      <div className="card" style={{ width: 380, padding: 28, background: 'var(--h-surface)' }}>
-        <div className="eyebrow" style={{ marginBottom: 14 }}>
-          SIGN IN
-        </div>
-        <h1 className="stencil" style={{ fontSize: 24, margin: '0 0 22px' }}>
-          Access your cluster
-        </h1>
-
-        {stage === 'creds' ? (
-          <>
-            <label
-              className="mono dim"
-              style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase' }}
-            >
-              Username
-            </label>
-            <input
-              className="input"
-              style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
-              defaultValue="admin"
-            />
-            <label
-              className="mono dim"
-              style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase' }}
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              className="input"
-              style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
-              defaultValue="••••••••••••"
-            />
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 12,
-                color: 'var(--h-text-2)',
-                marginBottom: 18,
-              }}
-            >
-              <input type="checkbox" /> Remember this device for 30 days
-            </label>
-            <button
-              className="btn btn--primary"
-              style={{ width: '100%', justifyContent: 'center' }}
-              onClick={() => setStage('totp')}
-            >
-              Continue <I n="arrow-right" s={13} />
-            </button>
-            <div className="mono dim" style={{ fontSize: 11, marginTop: 16, textAlign: 'center' }}>
-              Authenticated via PAM ·{' '}
-              <a className="link" href="#">
-                Forgot password
-              </a>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <I n="shield" s={28} color="var(--h-accent)" />
-            </div>
-            <div
-              style={{
-                textAlign: 'center',
-                color: 'var(--h-text-2)',
-                marginBottom: 18,
-                fontSize: 13,
-              }}
-            >
-              Enter the 6-digit code from your
-              <br />
-              authenticator app.
-            </div>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 18 }}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <input
-                  key={i}
-                  maxLength={1}
-                  className="input mono"
-                  style={{ width: 42, height: 48, textAlign: 'center', fontSize: 22, padding: 0 }}
-                />
-              ))}
-            </div>
-            <button
-              className="btn btn--primary"
-              style={{ width: '100%', justifyContent: 'center' }}
-              onClick={onLogin}
-            >
-              Sign in <I n="arrow-right" s={13} />
-            </button>
-            <div className="mono dim" style={{ fontSize: 11, marginTop: 14, textAlign: 'center' }}>
-              <a href="#" className="link">
-                Use recovery code
-              </a>{' '}
-              ·{' '}
-              <a
-                href="#"
-                className="link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setStage('creds');
-                }}
-              >
-                Back
-              </a>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 Object.assign(window, {
   PageDashboard,
   PageInstances,
@@ -3839,10 +3339,5 @@ Object.assign(window, {
   PageTemplates,
   PageBMC,
   PageCluster,
-  PageUsers,
-  PageAudit,
-  PageLogs,
-  PageOps,
   PageSettings,
-  PageLogin,
 });

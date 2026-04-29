@@ -1,6 +1,7 @@
 /* Helling — shared UI infra: modals, toasts, empties, charts, switch */
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
+import { Switch } from './primitives/switch';
 
 // ─── Toast system ───────────────────────────────────────────────
 const ToastBus = {
@@ -191,30 +192,9 @@ function EmptyState({ icon = 'inbox', title, body, action }) {
 }
 
 // ─── Switch ─────────────────────────────────────────────────────
-function Switch({ on, onChange, label }) {
-  const sw = (
-    <label className={'switch' + (on ? ' on' : '')}>
-      <input type="checkbox" checked={!!on} onChange={(e) => onChange?.(e.target.checked)} />
-      <span className="s-track" />
-      <span className="s-thumb" />
-    </label>
-  );
-  if (!label) return sw;
-  return (
-    <label
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        cursor: 'pointer',
-        fontSize: 13,
-      }}
-    >
-      {sw}
-      <span>{label}</span>
-    </label>
-  );
-}
+// Switch primitive moved to primitives/switch.tsx (Phase 2A); imported above.
+// infra.jsx still re-exports via Object.assign(window, { Switch }) below for
+// the un-split page modules.
 
 // ─── Sparkline ──────────────────────────────────────────────────
 function Sparkline({ data, color = 'var(--h-accent)', w = 120, h = 24, fill = true }) {

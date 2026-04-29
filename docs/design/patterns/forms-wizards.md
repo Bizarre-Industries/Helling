@@ -349,7 +349,7 @@ export function AddFirewallRuleButton({ instanceName }: { instanceName: string }
 - `docs/design/philosophy.md` -- Rule 2 (information density), Rule 9 (no framework bloat)
 - `docs/spec/compute.md` -- Part 5: progressive disclosure pattern, simple vs advanced mode
 - `docs/spec/webui-spec.md` -- StepsForm for create wizards, ModalForm for quick adds
-- `CLAUDE.md` -- ProForm/StepsForm replaces custom forms, no Zod
+- `docs/decisions/051-webui-stack-lock-antd-pro-components.md` -- ProForm/StepsForm replaces custom forms, no Zod
 
 ## Pages Using This Pattern
 

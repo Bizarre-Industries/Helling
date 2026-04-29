@@ -338,7 +338,8 @@ export function NotificationSettings() {
 - `docs/design/identity.md` -- lines 219-256: notification channels, event routing, quiet hours
 - `docs/design/magic.md` -- auto-snapshot enables Undo toast (magic touch #1)
 - `docs/design/philosophy.md` -- Rule 3 (toast slide in/out <200ms, no other animation)
-- `CLAUDE.md` -- Real-time = SSE, audit everything
+- `docs/spec/events.md` -- Real-time = SSE
+- `docs/spec/audit.md` -- audit everything
 
 ## Pages Using This Pattern
 

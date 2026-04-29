@@ -170,7 +170,7 @@ export function InstanceList() {
 
 - `docs/design/philosophy.md` -- Rule 1 (tables by default), Rule 2 (information density), Rule 7 (two-click max)
 - `docs/spec/webui-spec.md` -- per-page ProTable column definitions
-- `CLAUDE.md` -- ProTable replaces custom tables, ~30 lines per page
+- `docs/decisions/051-webui-stack-lock-antd-pro-components.md` -- ProTable replaces custom tables, ~30 lines per page
 
 ## Pages Using This Pattern
 

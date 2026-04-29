@@ -104,6 +104,10 @@ pre-push:
     check:
       run: task check
 
+    docs-sync:
+      tags: docs
+      run: bash scripts/check-docs-sync.sh --strict --range "@{u}..HEAD"
+
 # ============================================================
 # COMMIT-MSG — conventional commits
 # ============================================================

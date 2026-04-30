@@ -117,7 +117,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
   - [ ] resources subfolder: Storage, Networking, Firewall, FirewallEditor, Images, Backups, Schedules, Templates, BMC, Marketplace, FileBrowser
   - [ ] observability subfolder: Metrics, Alerts, Logs
   - [ ] admin subfolder: Audit (commit `8d1a3bf`) + Ops (commit `14caf91`) + Users (commit `<users-pending>`) shipped; UserDetail, Settings, RBAC pending
-  - [ ] search subfolder: Search, SearchResults
+  - [x] search subfolder: Search + SearchResults extracted to `web/src/pages/search/{index,results}.tsx` — commit `c98ec3f`
 - [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx` — _scaffold landed `1367cad`; shell.jsx + main.tsx rewire pending_
 - [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB
 - [ ] **F-08** (hygiene · 2A side): biome a11y errors no longer suppressed by per-file disable banners

@@ -13,6 +13,7 @@ const PageUsers = lazy(() => import('./pages/admin/users'));
 const PageLogin = lazy(() => import('./pages/auth/login'));
 const PageSetup = lazy(() => import('./pages/auth/setup'));
 const PageNetworking = lazy(() => import('./pages/networking'));
+const PageBMC = lazy(() => import('./pages/bmc'));
 const PageSchedules = lazy(() => import('./pages/schedules'));
 const PageSearchResults = lazy(() => import('./pages/search/results'));
 import './shell.jsx';
@@ -53,7 +54,6 @@ const {
   PageImages,
   PageBackups,
   PageTemplates,
-  PageBMC,
   PageCluster,
   PageSettings,
   PageNewInstance,

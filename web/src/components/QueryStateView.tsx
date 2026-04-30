@@ -54,7 +54,14 @@ function defaultIsEmpty<T>(data: T): boolean {
 }
 
 export function QueryStateView<T>(props: QueryStateViewProps<T>) {
-  const { query, isEmpty = defaultIsEmpty, loadingFallback, errorFallback, emptyFallback, children } = props;
+  const {
+    query,
+    isEmpty = defaultIsEmpty,
+    loadingFallback,
+    errorFallback,
+    emptyFallback,
+    children,
+  } = props;
 
   if (query.isLoading) {
     return <div style={skeletonStyle}>{loadingFallback ?? 'Loading…'}</div>;

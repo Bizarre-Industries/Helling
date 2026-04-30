@@ -125,7 +125,11 @@ async function fetchIncusList<T>(path: string, label: string): Promise<T[]> {
 export function useStoragePoolsQuery() {
   return useQuery<IncusStoragePool[], Error>({
     queryKey: ['incus', 'storage-pools'],
-    queryFn: () => fetchIncusList<IncusStoragePool>('/api/incus/1.0/storage-pools?recursion=1', 'incus storage-pools'),
+    queryFn: () =>
+      fetchIncusList<IncusStoragePool>(
+        '/api/incus/1.0/storage-pools?recursion=1',
+        'incus storage-pools',
+      ),
     staleTime: STALE_TIME_MS,
     enabled: Boolean(getAccessToken()),
     retry: false,
@@ -135,7 +139,8 @@ export function useStoragePoolsQuery() {
 export function useNetworksQuery() {
   return useQuery<IncusNetwork[], Error>({
     queryKey: ['incus', 'networks'],
-    queryFn: () => fetchIncusList<IncusNetwork>('/api/incus/1.0/networks?recursion=1', 'incus networks'),
+    queryFn: () =>
+      fetchIncusList<IncusNetwork>('/api/incus/1.0/networks?recursion=1', 'incus networks'),
     staleTime: STALE_TIME_MS,
     enabled: Boolean(getAccessToken()),
     retry: false,
@@ -155,7 +160,8 @@ export function useImagesQuery() {
 export function useTasksQuery() {
   return useQuery<IncusOperation[], Error>({
     queryKey: ['incus', 'operations'],
-    queryFn: () => fetchIncusList<IncusOperation>('/api/incus/1.0/operations?recursion=1', 'incus operations'),
+    queryFn: () =>
+      fetchIncusList<IncusOperation>('/api/incus/1.0/operations?recursion=1', 'incus operations'),
     staleTime: STALE_TIME_MS,
     enabled: Boolean(getAccessToken()),
     retry: false,

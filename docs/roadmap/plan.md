@@ -88,7 +88,7 @@ Exit criteria:
 | 030 | Argon2id password hashing                                     | Accepted              |
 | 031 | Ed25519 JWT signing                                           | Accepted              |
 | 032 | Three fixed roles for v0.1                                    | Accepted              |
-| 034 | Lima dev environment                                          | Accepted              |
+| 034 | Lima dev environment                                          | Accepted (fallback)   |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
 | 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
 | 037 | Caddy as edge service                                         | Accepted              |
@@ -103,6 +103,7 @@ Exit criteria:
 | 046 | live-build for ISO build tooling                              | Accepted              |
 | 047 | v0.1 light-only, dark mode in v0.5+                           | Accepted              |
 | 048 | v0.1 responsive per philosophy.md Rule 8                      | Accepted              |
+| 052 | Parallels Desktop primary dev VM (Lima fallback)              | Accepted              |
 
 ---
 

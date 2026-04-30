@@ -4,7 +4,7 @@ Standard local environment and workflow for Helling contributors.
 
 ## Scope
 
-Applies to all contributors. Linux-native development is supported. macOS/Windows should use Lima (ADR-034) for Linux-native Incus/systemd behavior.
+Applies to all contributors. Linux-native development is supported. macOS contributors should use Parallels Desktop (ADR-052) as the primary path; Lima (ADR-034) remains a documented fallback for contributors without Parallels. Windows contributors continue to use Lima.
 
 ## Required Toolchain
 
@@ -17,13 +17,46 @@ Applies to all contributors. Linux-native development is supported. macOS/Window
 ## Recommended Environments
 
 1. Linux host: develop directly on host.
-2. macOS/Windows: Lima Debian VM.
+2. macOS with Parallels Desktop: Debian VM provisioned via `scripts/parallels-vm-bootstrap.sh` and `task vm:parallels:up` (per ADR-052). Primary macOS path.
+3. macOS or Windows with Lima: Debian VM (per ADR-034). Fallback path; supported but secondary.
 
-## Lima Baseline (macOS/Windows)
+## Parallels Baseline (macOS — primary)
 
-- VM manager: Lima
-- Guest OS: Debian stable
-- Sizing: enough CPU/RAM/disk for Go + web builds and local checks
+- VM manager: Parallels Desktop (commercial; user-supplied license).
+- Guest OS: Debian stable.
+- VM name: `helling-dev`.
+- Sizing defaults: 4 vCPU, 8 GB RAM, 40 GB disk. Override via `HELLING_VM_CPUS`, `HELLING_VM_MEM_MB`, `HELLING_VM_DISK_GB`.
+- Networking: Parallels bridged interface so the host can reach the VM by IP for `rsync` + `ssh`.
+- Auth: contributor's SSH public key (`HELLING_VM_SSHKEY`, default `~/.ssh/id_ed25519.pub`) injected via cloud-init.
+
+Bootstrap (one-time):
+
+```bash
+bash scripts/parallels-vm-bootstrap.sh
+```
+
+This installs `build-essential git curl make ca-certificates dbus policykit-1 systemd incus podman` plus Go and Bun inside the VM, and lays down a `hellingd` systemd unit drop-in so `systemctl restart hellingd` works after the first deploy.
+
+Daily loop:
+
+```bash
+task vm:parallels:up      # boot VM if stopped
+task vm:parallels:dev     # build:linux + rsync + restart hellingd
+task vm:parallels:smoke   # health probe + smoke checks
+task vm:parallels:logs    # journalctl -fu hellingd
+```
+
+Release-shaped path:
+
+```bash
+task vm:parallels:release-test  # builds .deb (ADR-045), installs in VM, smokes
+```
+
+## Lima Baseline (macOS/Windows — fallback)
+
+- VM manager: Lima.
+- Guest OS: Debian stable.
+- Sizing: enough CPU/RAM/disk for Go + web builds and local checks.
 
 Inside VM:
 

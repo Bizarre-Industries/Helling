@@ -20,16 +20,17 @@ Out of scope:
 
 - CI pipeline behavior (see `docs/spec/ci.md`)
 - Git hook behavior (see `docs/spec/pre-commit.md`)
-- Lima VM setup (see `docs/standards/development-environment.md`)
+- Parallels and Lima VM setup (see `docs/standards/development-environment.md`)
 
 ## Supported host platforms
 
 - Debian 13 (native — no VM required)
 - Ubuntu 24.04+ (native)
-- macOS with Lima (per ADR-034)
+- macOS with Parallels Desktop (per ADR-052) — primary macOS path
+- macOS or Windows with Lima (per ADR-034) — fallback path
 - Linux distributions with `apt`-equivalent package managers (manual install)
 
-Windows is not a supported development host.
+Windows is supported only via the Lima fallback path. Native Windows development is not supported.
 
 ## First-time setup
 
@@ -84,9 +85,22 @@ task check
 
 Expected: all checks pass (on a clean checkout). If something fails on the first run, it's either a tooling install issue (fix via `scripts/install-tools.sh`) or a repo drift issue (file an issue).
 
-### 6. Lima (macOS / non-Linux only)
+### 6. Parallels Desktop (macOS — primary)
 
-Per ADR-034. See `docs/standards/development-environment.md`.
+Per ADR-052. See `docs/standards/development-environment.md` for the full Parallels Baseline.
+
+```bash
+bash scripts/parallels-vm-bootstrap.sh
+task vm:parallels:up
+task vm:parallels:dev
+task vm:parallels:smoke
+```
+
+This provisions a Debian 13 VM named `helling-dev`, installs the toolchain plus systemd / DBus / polkit / Incus / Podman, deploys the current `hellingd` + `helling` binaries, and verifies `/api/v1/health` returns 200 from the VM.
+
+### 7. Lima (macOS or Windows — fallback)
+
+Per ADR-034. See `docs/standards/development-environment.md`. Use this path if Parallels Desktop is not available (license cost, organizational policy, Windows host).
 
 ## Daily command surface
 
@@ -272,6 +286,8 @@ Always run a manual smoke test before submitting a PR for anything beyond docs c
 
 - `docs/spec/ci.md` — what this workflow mirrors in CI
 - `docs/spec/pre-commit.md` — what runs automatically on commit and push
-- `docs/standards/development-environment.md` — Lima bootstrap
+- `docs/standards/development-environment.md` — Parallels (primary) and Lima (fallback) baselines
+- `docs/decisions/052-parallels-primary-dev-environment.md` — primary macOS dev/test VM
+- `docs/decisions/034-lima-dev-environment.md` — fallback macOS/Windows dev VM
 - `docs/standards/quality-assurance.md` — normative quality gates
 - `CONTRIBUTING.md` — PR workflow, DCO, commit conventions

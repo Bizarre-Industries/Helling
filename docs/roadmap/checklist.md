@@ -34,6 +34,12 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 - [ ] `make check-generated` — generated code matches spec
 - [ ] `cd web && bun run build` succeeds
 
+### Dev Environment (ADR-052)
+
+- [ ] Parallels Desktop dev VM bootstrap (`scripts/parallels-vm-bootstrap.sh`) provisions Debian 13 guest with Go, Bun, systemd, DBus, polkit, Incus, Podman
+- [ ] rsync inner-loop deploy task (`task vm:parallels:dev`) cross-builds linux/$(arch), syncs to VM, restarts hellingd, returns 0
+- [ ] `.deb` release-gate deploy task (`task vm:parallels:release-test`) builds via reprepro (ADR-045), installs in VM, smoke passes — or skips cleanly if reprepro tooling not yet wired
+
 ### Code Hygiene
 
 - [ ] No `docker/docker` in go.mod

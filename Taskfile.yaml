@@ -487,6 +487,109 @@ tasks:
           fi
         done
 
+  build:linux:
+    desc: Cross-build linux binaries for the Parallels/Lima VM (ADR-052).
+    vars:
+      ARCH: '{{.ARCH | default "arm64"}}'
+    cmds:
+      - |
+        if [ ! -f go.mod ]; then echo "no go.mod yet; nothing to build"; exit 0; fi
+        mkdir -p "bin/linux-{{.ARCH}}"
+        for cmd in apps/hellingd apps/helling-cli; do
+          if [ -d "$cmd" ]; then
+            name=$(basename "$cmd")
+            GOOS=linux GOARCH={{.ARCH}} CGO_ENABLED=0 \
+              go build -trimpath -ldflags='-s -w' -o "bin/linux-{{.ARCH}}/$name" "./$cmd" \
+              || echo "warn: pure cross-compile of $name failed (CGO needed); deploy-rsync.sh falls back to in-VM build"
+          fi
+        done
+
+  # ============================================================
+  # VM (Parallels primary, Lima fallback) — ADR-052
+  # ============================================================
+
+  vm:parallels:up:
+    desc: Bootstrap VM if missing, then start it.
+    cmds:
+      - |
+        if ! command -v prlctl >/dev/null 2>&1; then
+          echo "prlctl not found. Install Parallels Desktop, or use vm:lima:* fallback."
+          exit 1
+        fi
+        VM="${HELLING_VM_NAME:-helling-dev}"
+        if ! prlctl list -a 2>/dev/null | awk '{print $NF}' | grep -qx "$VM"; then
+          bash scripts/parallels-vm-bootstrap.sh
+        else
+          state=$(prlctl list -a 2>/dev/null | awk -v n="$VM" '$NF==n {print $2}')
+          [ "$state" = "running" ] || prlctl start "$VM"
+        fi
+
+  vm:parallels:down:
+    desc: Stop the Parallels dev VM.
+    cmds:
+      - prlctl stop "${HELLING_VM_NAME:-helling-dev}"
+
+  vm:parallels:destroy:
+    desc: Delete the Parallels dev VM (prompts for confirmation).
+    cmds:
+      - |
+        VM="${HELLING_VM_NAME:-helling-dev}"
+        printf "Delete VM '%s' and all its disks? Type 'yes' to confirm: " "$VM"
+        read -r confirm
+        [ "$confirm" = "yes" ] || { echo "Aborted."; exit 1; }
+        prlctl stop "$VM" 2>/dev/null || true
+        prlctl delete "$VM"
+
+  vm:parallels:status:
+    desc: Show VM state, IP, and hellingd service status.
+    cmds:
+      - |
+        VM="${HELLING_VM_NAME:-helling-dev}"
+        prlctl list -a | awk -v n="$VM" 'NR==1 || $NF==n'
+        if [ -n "${HELLING_VM_HOST:-}" ]; then
+          ssh -o BatchMode=yes -o ConnectTimeout=3 "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" \
+            'systemctl is-active hellingd 2>/dev/null || echo "hellingd: not running"'
+        else
+          echo "(set HELLING_VM_HOST to query hellingd over SSH)"
+        fi
+
+  vm:parallels:sync:
+    desc: Cross-build linux binaries, rsync to VM, restart hellingd.
+    deps: [build:linux]
+    cmds:
+      - bash scripts/parallels-vm-deploy-rsync.sh
+
+  vm:parallels:dev:
+    desc: Inner-loop deploy. Build + sync + restart. Run on every save.
+    cmds:
+      - task: vm:parallels:sync
+
+  vm:parallels:smoke:
+    desc: Probe /api/v1/health on the VM.
+    cmds:
+      - |
+        : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
+        port="${HELLING_API_PORT:-8443}"
+        curl -fsS "http://$HELLING_VM_HOST:$port/api/v1/health" || {
+          echo "FAIL: hellingd health probe non-200 on $HELLING_VM_HOST:$port"
+          exit 1
+        }
+        echo
+        echo "✓ hellingd health probe green"
+
+  vm:parallels:logs:
+    desc: Tail hellingd journal on the VM.
+    cmds:
+      - |
+        : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
+        ssh "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" sudo journalctl -fu hellingd
+
+  vm:parallels:release-test:
+    desc: Build .deb (ADR-045), install in VM, smoke. Skips cleanly if reprepro tooling absent.
+    cmds:
+      - bash scripts/parallels-vm-deploy-deb.sh
+      - task: vm:parallels:smoke
+
   # ============================================================
   # Generation sub-tasks
   # ============================================================

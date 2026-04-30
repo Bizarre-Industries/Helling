@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Helling dev (Debian 13)",
+  "image": "mcr.microsoft.com/devcontainers/base:debian-12",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": { "version": "1.26" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" },
+    "ghcr.io/devcontainers/features/common-utils:2": { "configureZshAsDefaultShell": true }
+  },
+  "containerEnv": {
+    "GOFLAGS": "-mod=readonly"
+  },
+  "forwardPorts": [5173, 8443, 8006],
+  "portsAttributes": {
+    "5173": { "label": "Vite dev server (web/)", "onAutoForward": "openBrowser" },
+    "8443": { "label": "hellingd HTTPS (Incus loopback)", "onAutoForward": "silent" },
+    "8006": { "label": "hellingd dashboard (alt)", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "curl -fsSL https://bun.sh/install | bash && export PATH=$HOME/.bun/bin:$PATH && bash scripts/install-tools.sh && task hooks",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "biomejs.biome",
+        "editorconfig.editorconfig",
+        "davidanson.vscode-markdownlint",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "timonwong.shellcheck"
+      ],
+      "settings": {
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": ["--fast"],
+        "editor.formatOnSave": true,
+        "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+        "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" }
+      }
+    }
+  },
+  "remoteUser": "vscode"
+}

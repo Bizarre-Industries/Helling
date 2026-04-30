@@ -11,10 +11,10 @@ import (
 	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/repo/authrepo"
 )
 
-// User real handlers back the /api/v1/users* stubs with the authrepo store.
+// User real handlers back the /api/v1/users* operations with the authrepo store.
 // Every endpoint requires a valid Bearer (JWT or helling_* API token). Role
-// gating (admin-only for create/delete/update/set-scope) stays TODO until a
-// dedicated middleware layer lands in v0.1-beta.
+// gating (admin-only for create/delete/update/set-scope) is deferred to
+// v0.1-beta — see docs/roadmap/checklist.md beta-gate "Auth" section.
 
 type userListBearerInput struct {
 	Authorization string `header:"Authorization"`

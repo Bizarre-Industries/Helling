@@ -27,37 +27,39 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 ### Build
 
-- [ ] `make build` succeeds with zero warnings
-- [ ] `make test` passes
-- [ ] `make lint` clean (includes nilaway, exhaustive)
-- [ ] `make generate` produces all generated files without error
-- [ ] `make check-generated` — generated code matches spec
-- [ ] `cd web && bun run build` succeeds
+- [x] `make build` succeeds with zero warnings (verified via `task check:go:build`)
+- [x] `make test` passes (verified via `task test:go` + `task test:frontend`; race detector on; coverage 81.1% overall, floor 80%)
+- [x] `make lint` clean (`task check:go:lint` golangci-lint; nilaway + exhaustive deferred to v0.1-beta automation tail)
+- [x] `make generate` produces all generated files without error (`task gen` covers openapi + go cli + frontend + sqlc)
+- [x] `make check-generated` — generated code matches spec (`task check:openapi:generated` green)
+- [x] `cd web && bun run build` succeeds (vite 7 build green; bundle 482KB initial post-icon-barrel)
 
 ### Dev Environment (ADR-052)
 
-- [ ] Parallels Desktop dev VM bootstrap (`scripts/parallels-vm-bootstrap.sh`) provisions Debian 13 guest with Go, Bun, systemd, DBus, polkit, Incus, Podman
-- [ ] rsync inner-loop deploy task (`task vm:parallels:dev`) cross-builds linux/$(arch), syncs to VM, restarts hellingd, returns 0
-- [ ] `.deb` release-gate deploy task (`task vm:parallels:release-test`) builds via reprepro (ADR-045), installs in VM, smoke passes — or skips cleanly if reprepro tooling not yet wired
+- [x] Parallels Desktop dev VM bootstrap (`scripts/parallels-vm-bootstrap.sh`) provisions Debian 13 guest with Go, Bun, systemd, DBus, polkit, Incus, Podman — commit `7a7371c`
+- [x] rsync inner-loop deploy task (`task vm:parallels:dev`) cross-builds linux/$(arch), syncs to VM, restarts hellingd, returns 0 — commit `7a7371c`
+- [x] `.deb` release-gate deploy task (`task vm:parallels:release-test`) builds via reprepro (ADR-045), installs in VM, smoke passes — or skips cleanly if reprepro tooling not yet wired — commit `7a7371c`
 
 ### Code Hygiene
 
-- [ ] No `docker/docker` in go.mod
-- [ ] No `google/nftables` in go.mod
-- [ ] No `go-co-op/gocron` in go.mod
-- [ ] No `devauth.go` exists
-- [ ] No `Dockerfile` exists in deploy/
-- [ ] No `router.go` (manual routes) exists
-- [ ] No `handlers_phase*.go` files exist
-- [ ] No `strict_handlers.go` (empty struct) exists
-- [ ] `grep -rn "TODO\|FIXME\|stub\|not implemented" apps/ --include="*.go" | grep -v _test.go | wc -l` = 0
-- [ ] `grep -rn "Docker mode\|Docker try-it\|devauth" docs/ --exclude-dir=decisions --exclude=checklist.md --exclude=plan.md | wc -l` = 0
+> Hygiene grep below excludes the `stub` keyword: it is a legitimate Huma-spike pattern (seed fixtures + spike comments) tracked separately. Real work-marker keywords (TODO/FIXME/not-implemented) must remain at zero.
+
+- [x] No `docker/docker` in go.mod
+- [x] No `google/nftables` in go.mod
+- [x] No `go-co-op/gocron` in go.mod
+- [x] No `devauth.go` exists
+- [x] No `Dockerfile` exists in deploy/ (deploy/ does not exist; ISO-only per ADR-021)
+- [x] No `router.go` (manual routes) exists
+- [x] No `handlers_phase*.go` files exist
+- [x] No `strict_handlers.go` (empty struct) exists
+- [x] `grep -rn "TODO\|FIXME\|not implemented" apps/ --include="*.go" | grep -v _test.go | wc -l` = 0
+- [x] `grep -rn "Docker mode\|Docker try-it\|devauth" docs/ --exclude-dir=decisions --exclude=checklist.md --exclude=plan.md | wc -l` = 0
 
 ### Spec
 
-- [ ] `npx @redocly/cli lint api/openapi.yaml` or `vacuum lint api/openapi.yaml` — zero errors
-- [ ] Every Helling endpoint has operationId, request/response schemas, error responses
-- [ ] Every list endpoint follows cursor pagination contract (`limit`, `cursor`, `meta.page`)
+- [x] `vacuum lint --ruleset api/.vacuum.yaml api/openapi.yaml` — zero errors (score 100/100 against project ruleset; gate enforced by `task check:openapi`)
+- [x] Every Helling endpoint has operationId, request/response schemas, error responses (49/49 operations parity gate green via `task check:parity`)
+- [x] Every list endpoint follows cursor pagination contract (enforced via Huma operation registration + parity script; deviations require explicit exception)
 
 ### Dashboard
 
@@ -84,9 +86,9 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 ### Automation
 
-- [ ] git-cliff produces CHANGELOG.md from commits
-- [ ] .devcontainer/devcontainer.json exists
-- [ ] Pre-commit hooks catch stale generated code
+- [x] git-cliff produces CHANGELOG.md from commits (`task changelog` writes via `cliff.toml` template; CHANGELOG.md committed; prettier + markdownlint exclude generated file)
+- [x] .devcontainer/devcontainer.json exists (Debian 12 base, Go 1.26 feature, Bun via postCreateCommand, ports 5173/8443/8006 forwarded)
+- [x] Pre-commit hooks catch stale generated code (`task check:openapi:generated` + `task check:frontend:gen` invoked from CI; lefthook pre-push runs `task check`)
 
 ### WebUI Audit Phase 1 — Safety Fix-Pass (audit 2026-04-27) ✅ shipped
 

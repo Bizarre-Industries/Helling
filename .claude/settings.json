@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/claude-hooks/post-bash-version-shipped.sh\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

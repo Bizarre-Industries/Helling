@@ -171,12 +171,12 @@ tasks:
     cmds:
       # Globs and ignores live in .markdownlint-cli2.yaml. No CLI args needed.
       - markdownlint-cli2
-      - prettier --check "**/*.md" --ignore-path .gitignore
+      - prettier --check "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
 
   fmt:markdown:
     cmds:
       - markdownlint-cli2 --fix || true
-      - prettier --write "**/*.md" --ignore-path .gitignore
+      - prettier --write "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
 
   # ============================================================
   # YAML — excludes refs/ and api/openapi.yaml
@@ -589,6 +589,31 @@ tasks:
     cmds:
       - bash scripts/parallels-vm-deploy-deb.sh
       - task: vm:parallels:smoke
+
+  # ============================================================
+  # Release tooling — git-cliff CHANGELOG + version-ship hook
+  # ============================================================
+
+  changelog:
+    desc: Regenerate CHANGELOG.md from conventional commits via git-cliff.
+    cmds:
+      - |
+        if ! command -v git-cliff >/dev/null 2>&1; then
+          echo "git-cliff not installed. Install: brew install git-cliff (macOS) | cargo install git-cliff"
+          exit 1
+        fi
+        git-cliff --config cliff.toml --output CHANGELOG.md
+        echo "✓ CHANGELOG.md regenerated"
+
+  changelog:unreleased:
+    desc: Print pending CHANGELOG entries since the last tag (no file write).
+    cmds:
+      - git-cliff --config cliff.toml --unreleased
+
+  plan:next-version:
+    desc: Generate a tracking plan for the next version after a tag ships (ADR-053).
+    cmds:
+      - bash scripts/plan-next-version.sh
 
   # ============================================================
   # Generation sub-tasks

@@ -4,7 +4,13 @@ helling-complete.md
 IMPLEMENTATION-PLAN.md
 
 # Editor and agent caches (project-local; never tracked)
-.claude/
+# .claude/settings.json is project-shared (PostToolUse version-ship hook per ADR-053).
+# Everything else under .claude/ is per-contributor / per-machine local state.
+.claude/agents/
+.claude/launch.json
+.claude/rules/
+.claude/settings.local.json
+.claude/worktrees/
 .claude-cache/
 .claude-plans/
 .design-fetch/

@@ -118,7 +118,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
   - [ ] observability subfolder: Metrics, Alerts, Logs
   - [ ] admin subfolder: Audit (commit `8d1a3bf`) + Ops (commit `14caf91`) + Users (commit `<users-pending>`) shipped; UserDetail, Settings, RBAC pending
   - [ ] search subfolder: Search, SearchResults
-- [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx`
+- [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx` — _scaffold landed `1367cad`; shell.jsx + main.tsx rewire pending_
 - [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB
 - [ ] **F-08** (hygiene · 2A side): biome a11y errors no longer suppressed by per-file disable banners
 - [ ] **F-09** (arch · 2A side): all `web/src/pages/*` are `.tsx` (full TS migration of remaining `.jsx` is Phase 6)
@@ -129,11 +129,11 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 > Source: `docs/plans/webui-phase-2-6.md` Phase 3. Blocked on Phase 2 (`F-05` page split must complete so each page can swap mock-array imports for hooks). F-42 stage-2 SSE blocked on backend (`api/openapi.yaml` L777 says full streaming v0.1-beta) — ship snapshot-poll first.
 
 - [ ] **F-01** (data · 3A): components stop importing `INSTANCES`/`CONTAINERS`/`TASKS`/`ALERTS`/`BACKUPS`/`SNAPSHOTS` directly; consume `useInstancesQuery`/`useContainersQuery`/`useTasksQuery`/`useAlertsQuery`/`useBackupsQuery`/`useSnapshotsQuery` hooks; mocks live behind MSW handlers in `web/src/api/mocks/`
-- [ ] **F-02** (data · 3B): canonical `Instance` type + normalizer at API boundary; Incus `"Running"` ↔ mock `"running"` casing reconciled
-- [ ] **F-03** (data · 3C): 1.5s mock interval in `shell.jsx` removed; SSE consumer at `web/src/api/use-events-stream.ts` updates query cache via `queryClient.setQueryData`
-- [ ] **F-04** (ux · 3D): `<QueryStateView>` wrapper renders skeleton on loading, error card on error, empty card on empty; applied to every list page
+- [ ] **F-02** (data · 3B): canonical `Instance` type + normalizer at API boundary; Incus `"Running"` ↔ mock `"running"` casing reconciled — _scaffold landed `1367cad` at `web/src/api/normalize.ts`; page consumers pending_
+- [ ] **F-03** (data · 3C): 1.5s mock interval in `shell.jsx` removed; SSE consumer at `web/src/api/use-events-stream.ts` updates query cache via `queryClient.setQueryData` — _hook landed `1367cad`; shell.jsx interval removal + main.tsx wiring pending_
+- [ ] **F-04** (ux · 3D): `<QueryStateView>` wrapper renders skeleton on loading, error card on error, empty card on empty; applied to every list page — _component landed `1367cad` at `web/src/components/QueryStateView.tsx`; per-page application pending_
 - [ ] **F-31** (perf): subsumed by F-01 + F-42 — verify `useStore()` global re-render trigger removed once hooks ship
-- [ ] **F-42** (data · 3C stage-1): `useEventsStream()` polls `GET /api/v1/events?limit=50` every 5s, dedupes by event id, dispatches by type
+- [ ] **F-42** (data · 3C stage-1): `useEventsStream()` polls `GET /api/v1/events?limit=50` every 5s, dedupes by event id, dispatches by type — _hook landed `1367cad` at `web/src/api/use-events-stream.ts`; main.tsx mount pending_
 - [ ] **F-42** (data · 3C stage-2): EventSource swap once hellingd ships real SSE on `/api/v1/events` (cross-team ticket)
 - [ ] **F-43** (types): `IncusInstanceDetail` + `PodmanContainerDetail` hand-written from upstream OpenAPI; mock seeds match real shape
 - [ ] **F-45** (verify): no Phase 3 query reverts `refetchOnWindowFocus: true` default

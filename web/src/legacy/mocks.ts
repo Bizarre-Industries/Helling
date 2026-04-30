@@ -99,7 +99,7 @@ export const getAlerts = (): MockAlert[] => w().ALERTS ?? [];
 export const getTasks = (): MockTask[] => w().TASKS ?? [];
 export const getAudit = (): MockAuditEntry[] => w().AUDIT ?? [];
 export const getPools = (): Record<string, unknown>[] => w().POOLS ?? [];
-export const getNetworks = (): Record<string, unknown>[] => w().NETWORKS ?? [];
+export const getNetworks = (): MockNetwork[] => w().NETWORKS ?? [];
 export const getFirewallRules = (): Record<string, unknown>[] => w().FW_RULES ?? [];
 export const getSchedules = (): Record<string, unknown>[] => w().SCHEDULES ?? [];
 export const getUsers = (): MockUser[] => w().USERS ?? [];

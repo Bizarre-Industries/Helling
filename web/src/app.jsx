@@ -9,6 +9,7 @@ import PageOps from './pages/admin/ops';
 import PageUsers from './pages/admin/users';
 import PageLogin from './pages/auth/login';
 import PageSetup from './pages/auth/setup';
+import PageNetworking from './pages/networking';
 import PageSearchResults from './pages/search/results';
 import './shell.jsx';
 import './infra.jsx';
@@ -29,7 +30,6 @@ const {
   PageContainers,
   PageKubernetes,
   PageStorage,
-  PageNetworking,
   PageFirewall,
   PageImages,
   PageBackups,

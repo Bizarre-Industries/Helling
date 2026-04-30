@@ -119,7 +119,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
   - [ ] admin subfolder: Audit (commit `8d1a3bf`) + Ops (commit `14caf91`) + Users (commit `<users-pending>`) shipped; UserDetail, Settings, RBAC pending
   - [x] search subfolder: Search + SearchResults extracted to `web/src/pages/search/{index,results}.tsx` — commit `c98ec3f`
 - [ ] **F-07** (arch · 2B): replace `window.*` coupling with `web/src/stores/ui-store.ts` + `system-store.ts` using `useSyncExternalStore`; drop `(window as any)` cast from `main.tsx` — _scaffold landed `1367cad`; shell.jsx + main.tsx rewire pending_
-- [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB
+- [ ] **F-29** (perf · 2C): each page lazy-loaded via `React.lazy`; `<Suspense fallback={<PageSkeleton />}>` wraps body; per-route chunks under 100KB — _8/33 pages lazy-loaded `5c449e0` (auth + admin + networking + search; chunks 0.7-3.3KB gzip); rest blocked on extraction_
 - [ ] **F-08** (hygiene · 2A side): biome a11y errors no longer suppressed by per-file disable banners
 - [ ] **F-09** (arch · 2A side): all `web/src/pages/*` are `.tsx` (full TS migration of remaining `.jsx` is Phase 6)
 - [ ] **2F**: fresh-clone build still works post-restructure (`git clean -fdx web/ && cd web && bun install && bun run dev`)

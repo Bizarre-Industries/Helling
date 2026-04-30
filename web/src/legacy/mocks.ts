@@ -77,6 +77,16 @@ export interface MockNetwork {
   insts: number;
 }
 
+export interface MockSchedule {
+  name: string;
+  target: string;
+  action: string;
+  cron: string;
+  next: string;
+  last: string;
+  on: boolean;
+}
+
 interface MocksGlobal {
   NODES?: MockNode[];
   INSTANCES?: MockInstance[];
@@ -88,7 +98,7 @@ interface MocksGlobal {
   POOLS?: Record<string, unknown>[];
   NETWORKS?: MockNetwork[];
   FW_RULES?: Record<string, unknown>[];
-  SCHEDULES?: Record<string, unknown>[];
+  SCHEDULES?: MockSchedule[];
   USERS?: MockUser[];
   TEMPLATES?: Record<string, unknown>[];
   SNAPSHOTS?: Record<string, unknown>[];
@@ -109,7 +119,7 @@ export const getAudit = (): MockAuditEntry[] => w().AUDIT ?? [];
 export const getPools = (): Record<string, unknown>[] => w().POOLS ?? [];
 export const getNetworks = (): MockNetwork[] => w().NETWORKS ?? [];
 export const getFirewallRules = (): Record<string, unknown>[] => w().FW_RULES ?? [];
-export const getSchedules = (): Record<string, unknown>[] => w().SCHEDULES ?? [];
+export const getSchedules = (): MockSchedule[] => w().SCHEDULES ?? [];
 export const getUsers = (): MockUser[] => w().USERS ?? [];
 export const getTemplates = (): Record<string, unknown>[] => w().TEMPLATES ?? [];
 export const getSnapshots = (): Record<string, unknown>[] => w().SNAPSHOTS ?? [];

@@ -9,6 +9,7 @@ import PageOps from './pages/admin/ops';
 import PageUsers from './pages/admin/users';
 import PageLogin from './pages/auth/login';
 import PageSetup from './pages/auth/setup';
+import PageSearchResults from './pages/search/results';
 import './shell.jsx';
 import './infra.jsx';
 import './pages.jsx';
@@ -45,7 +46,6 @@ const {
   PageFirewallEditor,
   PageMarketplace,
   PageFileBrowser,
-  PageSearchResults,
   PageContainerDetail,
   PageUserDetail,
   WizardCreateInstance,

@@ -15,6 +15,7 @@ type Service struct {
 	signer     *Signer
 	hashP      Argon2idParams
 	mfaPending mfaPendingStore
+	attempts   *loginAttemptStore
 }
 
 // NewService wires a Service. params default to DefaultArgon2idParams when zero.
@@ -27,6 +28,7 @@ func NewService(repo *authrepo.Repo, signer *Signer, params Argon2idParams) *Ser
 		signer:     signer,
 		hashP:      params,
 		mfaPending: newMfaPendingStore(),
+		attempts:   newLoginAttemptStore(),
 	}
 }
 
@@ -97,15 +99,24 @@ func (s *Service) Setup(ctx context.Context, username, password, ip, userAgent s
 
 // Login verifies the password against a Helling-managed argon2id hash and
 // issues a fresh token pair. Returns ErrInvalidCredentials for unknown users
-// and password mismatches alike to avoid user enumeration.
+// and password mismatches alike to avoid user enumeration. Returns
+// ErrRateLimited once the (username, ip) pair has accrued too many recent
+// failures (see ratelimit.go).
 func (s *Service) Login(ctx context.Context, username, password, ip, userAgent string) (Identity, error) {
 	if username == "" || password == "" {
 		return Identity{}, ErrInvalidCredentials
 	}
 
+	rateKey := loginRateKey(username, ip)
+	if !s.attempts.allow(rateKey) {
+		_ = s.repo.RecordEvent(ctx, "", "auth.login_fail", ip, userAgent, `{"reason":"rate_limited"}`)
+		return Identity{}, ErrRateLimited
+	}
+
 	u, err := s.repo.GetUserByUsername(ctx, username)
 	if errors.Is(err, authrepo.ErrNotFound) {
 		_ = s.repo.RecordEvent(ctx, "", "auth.login_fail", ip, userAgent, `{"reason":"unknown_user"}`)
+		s.attempts.fail(rateKey)
 		return Identity{}, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -113,14 +124,18 @@ func (s *Service) Login(ctx context.Context, username, password, ip, userAgent s
 	}
 	if u.Status != userStatusActive {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"disabled"}`)
+		// Disabled users do not increment the limiter — they cannot succeed
+		// regardless, and counting their attempts would amplify lockouts.
 		return Identity{}, ErrUserDisabled
 	}
 	if !u.PasswordHash.Valid {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"no_local_hash"}`)
+		s.attempts.fail(rateKey)
 		return Identity{}, ErrInvalidCredentials
 	}
 	if err := VerifyPassword(password, u.PasswordHash.String); err != nil {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"bad_password"}`)
+		s.attempts.fail(rateKey)
 		return Identity{}, ErrInvalidCredentials
 	}
 
@@ -128,6 +143,7 @@ func (s *Service) Login(ctx context.Context, username, password, ip, userAgent s
 	if err != nil {
 		return Identity{}, err
 	}
+	s.attempts.reset(rateKey)
 	_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_ok", ip, userAgent, "")
 	return ident, nil
 }

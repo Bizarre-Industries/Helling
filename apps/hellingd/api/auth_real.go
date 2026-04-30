@@ -126,6 +126,9 @@ func registerAuthLoginReal(api huma.API, svc *auth.Service) {
 		// If TOTP code inlined, try the classic one-call path: login + MFA in a single request.
 		if input.Body.TOTPCode != "" {
 			res, err := svc.LoginWithMFA(ctx, input.Body.Username, input.Body.Password, input.XRealIP, input.UserAgent)
+			if errors.Is(err, auth.ErrRateLimited) {
+				return nil, huma.Error429TooManyRequests("AUTH_RATE_LIMITED")
+			}
 			if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserDisabled) {
 				return nil, huma.Error401Unauthorized("AUTH_INVALID_CREDENTIALS")
 			}

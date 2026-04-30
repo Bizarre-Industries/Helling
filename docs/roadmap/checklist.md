@@ -14,16 +14,16 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 - [x] WebSocket upgrades pass through to upstream (covered by `TestProxy_WebSocketUpgradePassesThrough` in PR O-4)
 - [x] Internal CA bootstrap + per-user cert issuance on userCreate (PRs O-1..O-5; gated behind `HELLING_CA_DIR`)
 - [x] Per-user mTLS Transport selector (covered by `TestProxy_UserTLSProvider_ForwardsCert` + fallback variants in PR R / O-6)
-- [ ] `curl -H "Authorization: Bearer $TOKEN" http://unix:/var/lib/helling/hellingd.sock:/api/incus/1.0/instances | jq '.metadata'` returns Incus instances
-- [ ] `curl -H "Authorization: Bearer $TOKEN" http://unix:/var/lib/helling/hellingd.sock:/api/podman/libpod/containers/json | jq '.[0].Names'` returns Podman containers
+- [x] `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8443/api/incus/1.0/instances | jq '.metadata'` returns Incus instances (live verify via `task test:integration:vm` against the Parallels VM with `HELLING_VM_HOST` + `HELLING_VM_TOKEN` set; ADR-052)
+- [x] `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8443/api/podman/libpod/containers/json | jq '.[0].Names'` returns Podman containers (same target)
 - [x] Unauthenticated request to proxy returns 401 (covered by `TestProxy_Unauthenticated_Returns401`)
 - [x] Non-admin user gets per-user Incus identity via mTLS (per-user Transport selector — PR R / O-6)
 
 ### Auth
 
-- [ ] Setup → login → JWT → protected routes → refresh → TOTP → recovery codes: full flow
-- [ ] Rate limiting: 6 failed logins → 429
-- [ ] API token: create → auth with token → revoke → rejected
+- [x] Setup → login → JWT → protected routes → refresh → TOTP → recovery codes: full flow (covered by `TestRealAuth_SetupLoginRefreshLogout`, `TestService_SetupThenLoginAndRefresh`, `TestRealTotp_EnrollVerifyLoginFlow`, `TestService_EnrollVerifyTOTP_Flow`, `TestService_CompleteMFA_RecoveryCodeFlow`)
+- [x] Rate limiting: 6 failed logins → 429 (sliding-window limiter at `apps/hellingd/internal/auth/ratelimit.go`; covered by `TestService_LoginRateLimit` + `TestService_LoginRateLimit_ResetsAfterSuccess`; api maps `auth.ErrRateLimited` → `huma.Error429TooManyRequests` in `auth_real.go`)
+- [x] API token: create → auth with token → revoke → rejected (covered by `TestRealApiTokens_CreateListRevoke` end-to-end including post-revoke 401 assertion)
 
 ### Build
 

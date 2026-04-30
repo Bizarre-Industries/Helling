@@ -96,15 +96,23 @@ type LoginResult struct {
 }
 
 // LoginWithMFA is Login + TOTP gate. When the user has an active TOTP row,
-// the caller receives a Pending challenge instead of session tokens.
+// the caller receives a Pending challenge instead of session tokens. Shares
+// the failed-login limiter with Login (see ratelimit.go).
 func (s *Service) LoginWithMFA(ctx context.Context, username, password, ip, userAgent string) (LoginResult, error) {
 	if username == "" || password == "" {
 		return LoginResult{}, ErrInvalidCredentials
 	}
 
+	rateKey := loginRateKey(username, ip)
+	if !s.attempts.allow(rateKey) {
+		_ = s.repo.RecordEvent(ctx, "", "auth.login_fail", ip, userAgent, `{"reason":"rate_limited"}`)
+		return LoginResult{}, ErrRateLimited
+	}
+
 	u, err := s.repo.GetUserByUsername(ctx, username)
 	if errors.Is(err, authrepo.ErrNotFound) {
 		_ = s.repo.RecordEvent(ctx, "", "auth.login_fail", ip, userAgent, `{"reason":"unknown_user"}`)
+		s.attempts.fail(rateKey)
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -116,12 +124,19 @@ func (s *Service) LoginWithMFA(ctx context.Context, username, password, ip, user
 	}
 	if !u.PasswordHash.Valid {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"no_local_hash"}`)
+		s.attempts.fail(rateKey)
 		return LoginResult{}, ErrInvalidCredentials
 	}
 	if err := VerifyPassword(password, u.PasswordHash.String); err != nil {
 		_ = s.repo.RecordEvent(ctx, u.ID, "auth.login_fail", ip, userAgent, `{"reason":"bad_password"}`)
+		s.attempts.fail(rateKey)
 		return LoginResult{}, ErrInvalidCredentials
 	}
+
+	// Password OK — clear the limiter regardless of MFA outcome. MFA failure
+	// has its own counter (TOTP secret validation runs server-side and is
+	// already non-trivial to brute force).
+	s.attempts.reset(rateKey)
 
 	totp, err := s.repo.GetTOTPSecret(ctx, u.ID)
 	switch {

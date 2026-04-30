@@ -77,6 +77,91 @@ export function useContainersQuery() {
   });
 }
 
+/** Incus storage pool row as returned by /api/incus/1.0/storage-pools?recursion=1. */
+export type IncusStoragePool = {
+  name: string;
+  driver: string;
+  status?: string;
+  used_by?: string[];
+};
+
+/** Incus network row as returned by /api/incus/1.0/networks?recursion=1. */
+export type IncusNetwork = {
+  name: string;
+  type: string;
+  managed?: boolean;
+  used_by?: string[];
+};
+
+/** Incus image row as returned by /api/incus/1.0/images?recursion=1. */
+export type IncusImage = {
+  fingerprint: string;
+  filename?: string;
+  size?: number;
+  public?: boolean;
+};
+
+/** Incus operation row as returned by /api/incus/1.0/operations?recursion=1. */
+export type IncusOperation = {
+  id: string;
+  description?: string;
+  status?: string;
+  status_code?: number;
+  created_at?: string;
+};
+
+async function fetchIncusList<T>(path: string, label: string): Promise<T[]> {
+  const resp = await authedFetch(path);
+  if (!resp.ok) {
+    throw new Error(`${label}: HTTP ${resp.status}`);
+  }
+  const body = (await resp.json()) as { metadata?: T[] } | T[];
+  if (Array.isArray(body)) {
+    return body;
+  }
+  return body.metadata ?? [];
+}
+
+export function useStoragePoolsQuery() {
+  return useQuery<IncusStoragePool[], Error>({
+    queryKey: ['incus', 'storage-pools'],
+    queryFn: () => fetchIncusList<IncusStoragePool>('/api/incus/1.0/storage-pools?recursion=1', 'incus storage-pools'),
+    staleTime: STALE_TIME_MS,
+    enabled: Boolean(getAccessToken()),
+    retry: false,
+  });
+}
+
+export function useNetworksQuery() {
+  return useQuery<IncusNetwork[], Error>({
+    queryKey: ['incus', 'networks'],
+    queryFn: () => fetchIncusList<IncusNetwork>('/api/incus/1.0/networks?recursion=1', 'incus networks'),
+    staleTime: STALE_TIME_MS,
+    enabled: Boolean(getAccessToken()),
+    retry: false,
+  });
+}
+
+export function useImagesQuery() {
+  return useQuery<IncusImage[], Error>({
+    queryKey: ['incus', 'images'],
+    queryFn: () => fetchIncusList<IncusImage>('/api/incus/1.0/images?recursion=1', 'incus images'),
+    staleTime: STALE_TIME_MS,
+    enabled: Boolean(getAccessToken()),
+    retry: false,
+  });
+}
+
+export function useTasksQuery() {
+  return useQuery<IncusOperation[], Error>({
+    queryKey: ['incus', 'operations'],
+    queryFn: () => fetchIncusList<IncusOperation>('/api/incus/1.0/operations?recursion=1', 'incus operations'),
+    staleTime: STALE_TIME_MS,
+    enabled: Boolean(getAccessToken()),
+    retry: false,
+  });
+}
+
 /** Summary counts used by PageDashboard. Returns mock fallbacks when queries
  * are disabled (no access token) or still loading. */
 export function useDashboardCounts(

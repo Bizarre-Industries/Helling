@@ -590,6 +590,31 @@ tasks:
       - bash scripts/parallels-vm-deploy-deb.sh
       - task: vm:parallels:smoke
 
+  test:integration:vm:
+    desc: Run integration tests against the live Parallels VM (proxy + auth E2E). Requires HELLING_VM_HOST.
+    cmds:
+      - |
+        : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>; run task vm:parallels:up first}"
+        VM_USER="${HELLING_VM_USER:-helling}"
+        TOKEN="${HELLING_VM_TOKEN:-}"
+        if [ -z "$TOKEN" ]; then
+          echo "Skipping live-data assertions: set HELLING_VM_TOKEN=<bearer> after task vm:parallels:dev + login"
+          echo "(Health probe still runs.)"
+        fi
+        echo "▶ Health"
+        ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS http://127.0.0.1:${HELLING_API_PORT:-8443}/api/v1/health" || {
+          echo "FAIL: hellingd /api/v1/health non-200"; exit 1
+        }
+        if [ -n "$TOKEN" ]; then
+          echo "▶ Incus instances via proxy"
+          ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS -H 'Authorization: Bearer $TOKEN' http://127.0.0.1:${HELLING_API_PORT:-8443}/api/incus/1.0/instances | head -c 200"
+          echo
+          echo "▶ Podman containers via proxy"
+          ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS -H 'Authorization: Bearer $TOKEN' http://127.0.0.1:${HELLING_API_PORT:-8443}/api/podman/libpod/containers/json | head -c 200"
+          echo
+        fi
+        echo "✓ test:integration:vm passed"
+
   # ============================================================
   # Release tooling — git-cliff CHANGELOG + version-ship hook
   # ============================================================

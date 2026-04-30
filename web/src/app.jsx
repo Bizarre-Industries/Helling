@@ -1,20 +1,38 @@
 /* Helling WebUI — app root */
 /* eslint-disable */
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { clearAccessToken, isAuthenticated, subscribeAuthChange } from './api/auth-store';
 import { ErrorBoundary } from './error-boundary';
-import PageAudit from './pages/admin/audit';
-import PageLogs from './pages/admin/logs';
-import PageOps from './pages/admin/ops';
-import PageUsers from './pages/admin/users';
-import PageLogin from './pages/auth/login';
-import PageSetup from './pages/auth/setup';
-import PageNetworking from './pages/networking';
-import PageSearchResults from './pages/search/results';
+// Phase 2C (audit F-29): each extracted page is lazy-loaded so the initial
+// chunk only ships shell + dashboard, and per-route navigation triggers a
+// dedicated chunk fetch.
+const PageAudit = lazy(() => import('./pages/admin/audit'));
+const PageLogs = lazy(() => import('./pages/admin/logs'));
+const PageOps = lazy(() => import('./pages/admin/ops'));
+const PageUsers = lazy(() => import('./pages/admin/users'));
+const PageLogin = lazy(() => import('./pages/auth/login'));
+const PageSetup = lazy(() => import('./pages/auth/setup'));
+const PageNetworking = lazy(() => import('./pages/networking'));
+const PageSearchResults = lazy(() => import('./pages/search/results'));
 import './shell.jsx';
 import './infra.jsx';
 import './pages.jsx';
 import './pages2.jsx';
+
+function PageSkeleton() {
+  return (
+    <div
+      style={{
+        padding: 24,
+        color: 'var(--h-text-muted, #888)',
+        fontSize: 13,
+        textAlign: 'center',
+      }}
+    >
+      Loading…
+    </div>
+  );
+}
 
 const {
   TopBar,
@@ -172,7 +190,9 @@ function App() {
   if (!setupDone) {
     return (
       <>
-        <PageSetup onDone={() => setSetupDone(true)} />
+        <Suspense fallback={<PageSkeleton />}>
+          <PageSetup onDone={() => setSetupDone(true)} />
+        </Suspense>
         <ToastStack />
         {modalState && <ModalHost state={modalState} onClose={() => setModalState(null)} />}
       </>
@@ -182,7 +202,9 @@ function App() {
   if (!authed) {
     return (
       <>
-        <PageLogin onLogin={() => setAuthed(true)} onEnterSetup={() => setSetupDone(false)} />
+        <Suspense fallback={<PageSkeleton />}>
+          <PageLogin onLogin={() => setAuthed(true)} onEnterSetup={() => setSetupDone(false)} />
+        </Suspense>
         <ToastStack />
       </>
     );
@@ -279,7 +301,7 @@ function App() {
         >
           <div key={page} className="page-fade">
             <ErrorBoundary scope={page} resetKey={page}>
-              {body}
+              <Suspense fallback={<PageSkeleton />}>{body}</Suspense>
             </ErrorBoundary>
           </div>
         </main>

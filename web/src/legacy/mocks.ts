@@ -69,6 +69,14 @@ export interface MockUser extends Record<string, unknown> {
   lastLogin: string;
 }
 
+export interface MockNetwork {
+  name: string;
+  type: string;
+  cidr: string;
+  dhcp: boolean;
+  insts: number;
+}
+
 interface MocksGlobal {
   NODES?: MockNode[];
   INSTANCES?: MockInstance[];
@@ -78,7 +86,7 @@ interface MocksGlobal {
   TASKS?: MockTask[];
   AUDIT?: MockAuditEntry[];
   POOLS?: Record<string, unknown>[];
-  NETWORKS?: Record<string, unknown>[];
+  NETWORKS?: MockNetwork[];
   FW_RULES?: Record<string, unknown>[];
   SCHEDULES?: Record<string, unknown>[];
   USERS?: MockUser[];

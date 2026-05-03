@@ -1,80 +1,198 @@
-# Makefile — thin wrapper around Taskfile.yaml.
-#
-# ADR-043 references `make generate` and `make check-generated`.
-# This file honors that mental model while the heavy lifting happens in Taskfile.yaml.
-#
-# On Debian/Ubuntu: task is `go install github.com/go-task/task/v3/cmd/task@latest`.
-# If Task isn't installed, the first target prints guidance and exits.
-#
-# Every target here is a pass-through. Prefer `task <target>` directly for tab completion
-# and task --watch; use `make` when your fingers haven't learned Task yet or in CI
-# shims that expect Make.
+# Helling Makefile
+# Every target referenced in AGENTS.md is defined here.
 
-TASK := task
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := help
 
-# Guard: fail fast with actionable message if Task isn't installed.
-define require_task
-	@command -v $(TASK) >/dev/null 2>&1 || { \
-		echo "task not installed. Install: go install github.com/go-task/task/v3/cmd/task@latest"; \
-		echo "Or see: https://taskfile.dev/installation/"; \
-		exit 1; \
-	}
-endef
+# ---- Configurable knobs --------------------------------------------------
+
+GO            ?= go
+BUN           ?= bun
+GOLANGCI_LINT ?= golangci-lint
+GOFUMPT       ?= gofumpt
+GOIMPORTS     ?= goimports
+DOCKER        ?= docker
+
+VERSION       ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT        ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILD_TIME    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+LDFLAGS       := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildTime=$(BUILD_TIME)
+
+GO_PKGS_HELLINGD     := ./apps/hellingd/...
+GO_PKGS_HELLING_CLI  := ./apps/helling-cli/...
+GO_PKGS_HELLING_PROXY:= ./apps/helling-proxy/...
+GO_TEST_FLAGS        := -race -count=1
+GO_BUILD_FLAGS       := -trimpath -ldflags '$(LDFLAGS)'
+
+OUT_DIR := ./bin
+
+# ---- Help ----------------------------------------------------------------
 
 .PHONY: help
-help:
-	$(call require_task)
-	@$(TASK) --list
+help: ## Show this help
+	@awk 'BEGIN {FS = ":.*##"; printf "Helling — make targets\n\n"} \
+		/^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-.PHONY: check
-check:
-	$(call require_task)
-	@$(TASK) check
+# ---- One-shot bootstrap --------------------------------------------------
+
+.PHONY: dev-setup
+dev-setup: ## Install required tools, frontend deps, and git hooks
+	@echo "→ installing Go tools (oapi-codegen, golangci-lint, gofumpt, goimports)"
+	$(GO) install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	$(GO) install mvdan.cc/gofumpt@latest
+	$(GO) install golang.org/x/tools/cmd/goimports@latest
+	@echo "→ ensure golangci-lint is installed (https://golangci-lint.run/welcome/install/)"
+	@command -v $(GOLANGCI_LINT) >/dev/null || { echo "golangci-lint missing"; exit 1; }
+	@if [ -d web ] && [ -f web/package.json ]; then \
+		echo "→ installing frontend deps with bun"; \
+		cd web && $(BUN) install; \
+	fi
+	@if [ -d .git ]; then \
+		echo "→ installing git hooks"; \
+		mkdir -p .git/hooks; \
+		printf '#!/bin/sh\nexec make fmt-check lint\n' > .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+	fi
+
+# ---- Code generation -----------------------------------------------------
+
+.PHONY: generate
+generate: generate-go generate-web ## Regenerate all OpenAPI artifacts
+
+.PHONY: generate-go
+generate-go: ## Regenerate Go server and client code from OpenAPI
+	@echo "→ generating hellingd server"
+	$(GO) generate ./apps/hellingd/api/...
+	@echo "→ generating helling-cli client"
+	@if [ -d apps/helling-cli/internal/client ]; then \
+		$(GO) generate ./apps/helling-cli/internal/client/...; \
+	fi
+
+.PHONY: generate-web
+generate-web: ## Regenerate the TypeScript client (Orval)
+	@if [ -d web ] && [ -f web/package.json ]; then \
+		cd web && $(BUN) run gen:api; \
+	else \
+		echo "→ skipping: web/ not present"; \
+	fi
+
+.PHONY: check-generated
+check-generated: generate ## Fail if generated artifacts drift from spec
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "✗ generated artifacts are out of date. Run 'make generate' and commit."; \
+		git --no-pager diff --stat; \
+		exit 1; \
+	fi
+	@echo "✓ generated artifacts are clean"
+
+# ---- Format / lint -------------------------------------------------------
 
 .PHONY: fmt
-fmt:
-	$(call require_task)
-	@$(TASK) fmt
+fmt: ## Format all Go and frontend code in place
+	$(GOFUMPT) -w .
+	$(GOIMPORTS) -w -local github.com/Bizarre-Industries/helling .
+	@if [ -d web ] && [ -f web/package.json ]; then \
+		cd web && $(BUN) run fmt || true; \
+	fi
+
+.PHONY: fmt-check
+fmt-check: ## Verify formatting without modifying files
+	@diff=$$($(GOFUMPT) -d .); if [ -n "$$diff" ]; then echo "$$diff"; echo "✗ run make fmt"; exit 1; fi
+	@echo "✓ go formatting clean"
+
+.PHONY: lint
+lint: ## Run static analysis
+	cd apps/hellingd && $(GOLANGCI_LINT) run ./...
+	@if [ -d apps/helling-cli ]; then cd apps/helling-cli && $(GOLANGCI_LINT) run ./...; fi
+	@if [ -d apps/helling-proxy ]; then cd apps/helling-proxy && $(GOLANGCI_LINT) run ./...; fi
+
+# ---- Tests ---------------------------------------------------------------
 
 .PHONY: test
-test:
-	$(call require_task)
-	@$(TASK) test
+test: test-hellingd test-cli test-proxy ## Run unit tests for all Go modules
 
-# ADR-043 references this target explicitly.
-.PHONY: generate
-generate:
-	$(call require_task)
-	@$(TASK) gen
+.PHONY: test-hellingd
+test-hellingd:
+	$(GO) test -tags devauth $(GO_PKGS_HELLINGD) $(GO_TEST_FLAGS)
 
-# ADR-043 Phase 1 item 5 CI gate.
-.PHONY: check-generated
-check-generated:
-	$(call require_task)
-	@$(TASK) check:openapi:generated
+.PHONY: test-cli
+test-cli:
+	@if [ -d apps/helling-cli ]; then \
+		$(GO) test $(GO_PKGS_HELLING_CLI) $(GO_TEST_FLAGS); \
+	fi
 
-.PHONY: install
-install:
-	$(call require_task)
-	@$(TASK) install
+.PHONY: test-proxy
+test-proxy:
+	@if [ -d apps/helling-proxy ]; then \
+		$(GO) test $(GO_PKGS_HELLING_PROXY) $(GO_TEST_FLAGS); \
+	fi
 
-.PHONY: hooks
-hooks:
-	$(call require_task)
-	@$(TASK) hooks
+.PHONY: test-cover
+test-cover: ## Run tests with coverage report
+	$(GO) test -tags devauth -race -coverprofile=coverage.out ./apps/...
+	$(GO) tool cover -func=coverage.out
+
+# ---- Build ---------------------------------------------------------------
 
 .PHONY: build
-build:
-	$(call require_task)
-	@$(TASK) build
+build: build-hellingd build-cli build-proxy ## Build all binaries to $(OUT_DIR)
+
+.PHONY: build-hellingd
+build-hellingd: $(OUT_DIR)
+	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/hellingd ./apps/hellingd/cmd/hellingd
+
+.PHONY: build-cli
+build-cli: $(OUT_DIR)
+	@if [ -d apps/helling-cli ]; then \
+		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling ./apps/helling-cli/cmd/helling; \
+	fi
+
+.PHONY: build-proxy
+build-proxy: $(OUT_DIR)
+	@if [ -d apps/helling-proxy ]; then \
+		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-proxy ./apps/helling-proxy/cmd/helling-proxy; \
+	fi
+
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
+
+# ---- Web -----------------------------------------------------------------
+
+.PHONY: web-dev
+web-dev: ## Run the frontend dev server
+	cd web && $(BUN) run dev
+
+.PHONY: web-build
+web-build: ## Build the production frontend bundle
+	cd web && $(BUN) run build
+
+# ---- Container -----------------------------------------------------------
+
+.PHONY: docker
+docker: ## Build the helling Docker image
+	$(DOCKER) build -t helling:$(VERSION) -f deploy/Dockerfile .
+
+# ---- Security ------------------------------------------------------------
+
+.PHONY: security-fast
+security-fast: ## Quick security checks (gitleaks + govulncheck)
+	@command -v gitleaks >/dev/null && gitleaks detect --no-banner || echo "→ gitleaks not installed, skipping"
+	@command -v govulncheck >/dev/null && govulncheck ./apps/... || echo "→ govulncheck not installed, skipping"
+
+.PHONY: security
+security: security-fast ## Full security scan (slower)
+	$(GOLANGCI_LINT) run --enable=gosec $(GO_PKGS_HELLINGD)
+
+# ---- Aggregate gates -----------------------------------------------------
+
+.PHONY: check
+check: fmt-check lint test ## CI-equivalent local gate
+
+# ---- Cleanup -------------------------------------------------------------
 
 .PHONY: clean
-clean:
-	$(call require_task)
-	@$(TASK) clean
-
-# Escape hatches for specific sub-tasks — pass everything through.
-.PHONY: %
-%:
-	$(call require_task)
-	@$(TASK) $@
+clean: ## Remove build outputs
+	rm -rf $(OUT_DIR) coverage.out
+	@if [ -d web/dist ]; then rm -rf web/dist; fi

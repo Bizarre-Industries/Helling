@@ -1,0 +1,14 @@
+go 1.26.0
+
+toolchain go1.26.2
+
+// Helling workspace.
+//
+// Per-app module layout per docs/v0.1.md Stage 1. helling-proxy lands as
+// a separate module later (stage 6); add its path here when that go.mod
+// file exists.
+
+use (
+	./apps/hellingd
+	./apps/helling-cli
+)

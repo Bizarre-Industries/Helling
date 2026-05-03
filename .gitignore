@@ -11,6 +11,7 @@ IMPLEMENTATION-PLAN.md
 .claude/rules/
 .claude/settings.local.json
 .claude/worktrees/
+.claude/.last-shipped-tag
 .claude-cache/
 .claude-plans/
 .design-fetch/

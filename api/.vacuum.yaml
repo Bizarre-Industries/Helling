@@ -139,22 +139,17 @@ rules:
 
   helling-tag-declared:
     description: |
-      Every tag referenced by an operation must be declared at the root level.
+      Every tag referenced by an operation must be one of the v0.1 declared tags.
     severity: error
     given: "$.paths..tags[*]"
     then:
       function: enumeration
       functionOptions:
         values:
-          - Auth
-          - Users
-          - Schedules
-          - Webhooks
-          - Kubernetes
-          - System
-          - Firewall
-          - Audit
-          - Events
+          - auth
+          - instances
+          - operations
+          - meta
 
   helling-servers-present:
     description: OpenAPI spec must declare at least one server.

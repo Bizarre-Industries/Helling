@@ -37,6 +37,10 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
             | sh -s -- -b "$(go env GOPATH)/bin" v1.60.3
 
+      - name: Install web deps
+        working-directory: web
+        run: bun install --frozen-lockfile
+
       - name: Format check
         run: make fmt-check
 
@@ -62,4 +66,5 @@ jobs:
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./apps/...
+          (cd apps/hellingd && govulncheck ./...)
+          (cd apps/helling-cli && govulncheck ./...)

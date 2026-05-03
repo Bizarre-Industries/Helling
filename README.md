@@ -84,7 +84,7 @@ See [docs/spec/architecture.md](docs/spec/architecture.md) for the canonical des
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). The TL;DR:
+See [CONTRIBUTING.md](CONTRIBUTING.md). The TL;DR:
 
 1. Read [docs/spec/architecture.md](docs/spec/architecture.md) before changing behavior.
 2. Spec changes go through `api/openapi.yaml` first, then `make generate`.
@@ -98,7 +98,7 @@ If AGPL doesn't work for your use case, get in touch.
 
 ## Project status and roadmap
 
-- v0.1: see [docs/roadmap/v0.1.md](docs/roadmap/v0.1.md). Minimum viable platform — auth + container CRUD + dashboard shell.
+- v0.1: see [docs/v0.1.md](docs/v0.1.md). Minimum viable platform — auth + container CRUD + dashboard shell.
 - Beyond v0.1: VM support, storage volumes, network management, multi-user RBAC tied to Incus projects, OIDC SSO. Not committed; will be tracked in versioned roadmap docs.
 
 ## Naming

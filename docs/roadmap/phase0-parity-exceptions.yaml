@@ -250,3 +250,66 @@ exceptions:
 
   # eventsSse has CLI surface (`helling events tail`) and is consumed
   # internally by the WebUI for task/log streaming. Parity gap closed.
+
+  # ── v0.1 vertical-slice (docs/v0.1.md, openapi.yaml rewrite 2026-05-03) ────
+  # CLI commands land in v0.1.0-beta Stage 5; WebUI pages in Stage 4.
+  # Server stubs return 501 until real handlers ship per docs/v0.1.md Stage 3.
+  - operation_id: getHealth
+    missing: both
+    reason: "v0.1 spec; CLI helling health and WebUI healthz indicator land in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: getVersion
+    missing: both
+    reason: "v0.1 spec; CLI helling version exists but spec sync pending; WebUI About panel in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: logout
+    missing: webui
+    reason: "v0.1 spec; CLI helling auth logout shipped; WebUI logout button in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: getCurrentUser
+    missing: both
+    reason: "v0.1 spec; CLI auth whoami exists but spec sync pending; WebUI top-bar profile in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: listInstances
+    missing: both
+    reason: "v0.1 spec; CLI helling instance ls and WebUI Instances page land in v0.1.0-beta Stages 3-5"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: createInstance
+    missing: cli
+    reason: "v0.1 spec; CLI helling instance create lands in v0.1.0-beta Stage 5"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: getInstance
+    missing: both
+    reason: "v0.1 spec; CLI helling instance get and WebUI Instance Detail in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: deleteInstance
+    missing: both
+    reason: "v0.1 spec; CLI helling instance rm and WebUI Delete action in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: startInstance
+    missing: both
+    reason: "v0.1 spec; CLI helling instance start and WebUI Start button in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: stopInstance
+    missing: both
+    reason: "v0.1 spec; CLI helling instance stop and WebUI Stop button in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: listOperations
+    missing: both
+    reason: "v0.1 spec; CLI helling op ls and WebUI Operations panel in v0.1.0-beta"
+    target_version: "v0.1.0-beta"
+
+  - operation_id: getOperation
+    missing: both
+    reason: "v0.1 spec; CLI helling op get and WebUI poll-on-detail in v0.1.0-beta"
+    target_version: "v0.1.0-beta"

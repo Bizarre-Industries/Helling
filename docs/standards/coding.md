@@ -1,517 +1,171 @@
 # Coding Standards
 
-<!-- markdownlint-disable MD040 -->
+Last reviewed: 2026-05-02
 
-Rules for writing code in Helling. Not preferences. Standards. Violations are bugs.
+These rules apply to all Go code in this repository. Frontend rules are at the bottom.
 
----
+## Layout
 
-## 1. Go Backend
+- `apps/<binary>/cmd/<binary>/main.go` — entrypoint only. Wiring, no logic.
+- `apps/<binary>/internal/...` — unexported, application-specific packages.
+- `apps/<binary>/api/` — generated OpenAPI types and server stubs. Hand-edits forbidden.
+- Shared code across binaries goes in `libs/helling-<name>/` with its own `go.mod` (post-v0.1).
 
-### File Structure (per handler/service)
+## Module discipline
 
-```text
-internal/
-  incus/
-    incus.go          # Client wrapper, connection management
-    instances.go      # Instance CRUD operations
-    instances_test.go # Tests adjacent to code
-    storage.go        # Storage operations
-    storage_test.go
-    errors.go         # Domain-specific error types
-```
+- Module path: `github.com/Bizarre-Industries/helling/apps/<binary>` for now.
+- Each binary is a separate Go module.
+- `go.work` ties them together for local development.
+- Pin `go 1.26.0` and `toolchain go1.26.2` (or current minor) explicitly.
 
-No `utils/`, `helpers/`, `common/`, `misc/`. If a function doesn't have a home, the package structure is wrong.
+## Architectural patterns
 
-### Error Handling
+### Service layer
+
+API handlers do **not** call the store, the Incus client, or any other infrastructure directly. They go through a service interface.
 
 ```go
-// RULE: Every error wraps with context. No naked returns.
-// BAD:
-return err
+// internal/server/handlers.go
+func (s *Server) ListInstances(w http.ResponseWriter, r *http.Request, params api.ListInstancesParams) {
+    instances, err := s.svc.ListInstances(r.Context(), userFromCtx(r.Context()), params)
+    // ...
+}
 
-// GOOD:
-return fmt.Errorf("create instance %q: %w", name, err)
-
-// RULE: Errors at API boundary are translated to structured responses.
-// Internal errors NEVER leak to the client.
-// BAD:
-http.Error(w, err.Error(), 500)
-
-// GOOD:
-writeError(w, http.StatusBadGateway, &APIError{
-    Error:   "Failed to create instance",
-    Code:    "INCUS_ERROR",
-    Action:  "Check that incusd is running: systemctl status incusd",
-    DocLink: "https://bizarre.industries/docs/troubleshooting#incus",
-})
-
-// RULE: Use sentinel errors for expected conditions. Wrap for unexpected.
-var (
-    ErrNotFound      = errors.New("not found")
-    ErrAlreadyExists = errors.New("already exists")
-    ErrDependencyExists = errors.New("resource has dependents")
-    ErrQuotaExceeded = errors.New("quota exceeded")
-)
-
-// RULE: Check errors immediately. No error accumulation patterns.
-// RULE: Use errors.Is() and errors.As() for comparison, not == or type assertion.
-
-// RULE: Errors MUST NOT contain secrets, credentials, tokens, or PII.
-// Redact before wrapping:
-return fmt.Errorf("auth failed for user %q from %s", username, sourceIP)
-// NEVER: return fmt.Errorf("auth failed: password %q invalid", password)
+// internal/service/instances.go
+type InstanceService interface {
+    ListInstances(ctx context.Context, u *User, params api.ListInstancesParams) ([]api.Instance, error)
+    // ...
+}
 ```
 
-### Shell-Out Conventions (ADR-018)
+The service interface exists so handlers are testable without spinning up Incus or SQLite.
 
-```text
-For host operations (nft, smartctl, systemctl, lvs, zpool), shell out to CLI tools:
-- Always use exec.CommandContext with a timeout
-- Parse JSON output where available (nft --json, smartctl --json, lvs --reportformat json)
-- Wrap errors with context: fmt.Errorf("firewall.ListRules: %w", err)
-- Tools are guaranteed present (shipped in ISO)
-```
+### Storage access
 
-### systemd Timer Conventions (ADR-017)
+- Always go through the `store` package. Never `db.Exec` outside it.
+- Every store function takes `context.Context` first.
+- Use `database/sql` directly with prepared statements. No ORM in v0.1.
+- Read-only paths use `sql.DB.QueryContext`. Write paths that need atomicity use `sql.DB.BeginTx`.
 
-```text
-Scheduled operations write .timer + .service unit files to /etc/systemd/system/:
-- Timer names: helling-<type>-<resource>.timer
-- Service names: helling-<type>-<resource>.service
-- Always call systemctl daemon-reload after writing units
-- Use Persistent=true to catch up on missed runs
-- Use RandomizedDelaySec to prevent thundering herd
+### Incus access
+
+- Always through `internal/incus`. Never call `lxc/incus` packages from handlers.
+- The Incus client is a single shared instance. Do not reconnect per request.
+- Wrap Incus operations in our own `Operation` type. Don't surface Incus's IDs or error shapes to API consumers.
+
+### Error handling
+
+- Wrap with `fmt.Errorf("doing X: %w", err)`. The verb form, with context, lower case, no period.
+- Sentinel errors live in the package they belong to: `var ErrNotFound = errors.New("not found")`.
+- API handlers translate domain errors to HTTP via a single `respondError(w, err)` helper.
+- Never leak internal error text to API responses. Map to a stable `code` and a sanitized `message`.
+
+```go
+// good
+if err != nil {
+    return fmt.Errorf("loading instance %q: %w", name, err)
+}
+
+// bad — loses cause
+if err != nil {
+    return errors.New("could not load instance")
+}
 ```
 
 ### Logging
 
-```go
-// RULE: All logging via slog. No fmt.Println, no log.Println.
-// RULE: Structured fields, not string formatting.
+- `log/slog` only. No `log`, no `logrus`, no `zap`.
+- JSON handler in production, text in dev. Selected by `HELLING_LOG_FORMAT` env var.
+- Mandatory fields on every request log: `request_id`, `method`, `path`, `status`, `duration_ms`.
+- User-identifiable fields go on authenticated requests only: `user_id`, `username`. Never log passwords, session tokens, or password hashes.
+- Use the request-scoped logger from context: `slog.FromContext(ctx)`. Don't use `slog.Default()` inside request handlers.
 
-// BAD:
-log.Printf("Instance %s created by %s", name, user)
+### Validation
 
-// GOOD:
-slog.Info("instance created",
-    "instance", name,
-    "type", instanceType,
-    "user", user,
-    "source_ip", sourceIP,
-    "duration_ms", elapsed.Milliseconds(),
-)
-
-// RULE: Log levels have meaning:
-//   Debug: internal state, only for development
-//   Info:  normal operations (instance created, backup completed)
-//   Warn:  recoverable issues (retry, degraded mode, approaching limit)
-//   Error: failures that need attention (API error, connection lost)
-
-// RULE: Never log at Error for expected conditions (404 is not an error).
-// RULE: Include request_id in all request-scoped logs.
-// RULE: Never log passwords, tokens, keys, certificates, or PII.
-// RULE: Sensitive fields use a Redactor:
-slog.Info("config loaded", "db_password", slog.String("REDACTED"))
-```
-
-### Context
-
-```go
-// RULE: context.Context is always the first parameter.
-func (s *InstanceService) Create(ctx context.Context, req CreateInstanceRequest) (*Instance, error)
-
-// RULE: Pass context through entire call chain. Never store in struct.
-// RULE: Use context for cancellation, deadlines, request-scoped values.
-// RULE: Set timeouts on all external calls:
-ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-defer cancel()
-
-// RULE: Check context cancellation before expensive operations:
-select {
-case <-ctx.Done():
-    return nil, ctx.Err()
-default:
-}
-```
+- Input validation happens at the API boundary, via `oapi-codegen/nethttp-middleware` running the OpenAPI spec. Trust the validated types after that.
+- Domain-level invariants (e.g. "instance name unique per project") live in the service layer, not the handler.
 
 ### Concurrency
 
-```go
-// RULE: Use errgroup for parallel operations with error handling.
-g, ctx := errgroup.WithContext(ctx)
-for _, instance := range instances {
-    inst := instance
-    g.Go(func() error {
-        return s.StartInstance(ctx, inst.Name)
-    })
-}
-if err := g.Wait(); err != nil {
-    return fmt.Errorf("bulk start: %w", err)
-}
+- Goroutines that outlive a single request must be tracked. The daemon has a single `errgroup.Group` rooted in `main`; all background workers live there.
+- A handler that spawns a goroutine for fire-and-forget work passes a derived context bound to the daemon's lifecycle, never the request context (which is cancelled on response).
+- No `time.Sleep` in production code paths. Use `time.NewTicker` or `context.WithDeadline`.
 
-// RULE: Never start goroutines without a termination path.
-// RULE: Use channels for communication, mutexes for state protection.
-// RULE: Run tests with -race flag. Zero race conditions allowed.
-// RULE: Use sync.Once for one-time initialization, not manual flags.
-```
+### Configuration
 
-### Input Validation
+- `config.Config` struct loaded once at startup. Fields are exported, JSON-tagged for YAML loading via `yaml.v3`.
+- Config sources, in order of precedence: CLI flags → env vars (`HELLING_*` prefix) → `/etc/helling/config.yaml` → defaults.
+- No global state. Pass `Config` (or relevant subset) into the constructors that need it.
 
-```go
-// RULE: Validate ALL input at the API handler layer.
-// RULE: Whitelist valid values, don't blacklist bad ones.
-// RULE: Validate before any processing or database access.
+## Style
 
-func (h *Handler) CreateInstance(w http.ResponseWriter, r *http.Request) {
-    var req CreateInstanceRequest
-    if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req); err != nil {
-        writeError(w, 400, "INVALID_JSON", "Request body is not valid JSON")
-        return
-    }
+### Naming
 
-    // Validate name: alphanumeric + hyphens, 1-63 chars
-    if !isValidName(req.Name) {
-        writeError(w, 400, "INVALID_NAME", "Name must be 1-63 alphanumeric characters or hyphens")
-        return
-    }
+- Exported function names follow stdlib conventions: `ListInstances`, not `list_instances` or `listInstances`.
+- Acronyms are uppercase consistently: `HTTPClient`, `URLParser`, `UserID`. Both first and trailing.
+- Avoid stuttering: `instance.Instance` is fine, `instance.InstanceList` is not — call it `instance.List`.
+- Test functions use `Test_<func>_<case>`: `TestLogin_BadPassword`, `TestLogin_RateLimited`.
 
-    // Validate enum values against whitelist
-    if !slices.Contains(validInstanceTypes, req.Type) {
-        writeError(w, 400, "INVALID_TYPE", "Type must be one of: vm, container")
-        return
-    }
+### Comments
 
-    // Validate numeric ranges
-    if req.CPU < 1 || req.CPU > 128 {
-        writeError(w, 400, "INVALID_CPU", "CPU must be between 1 and 128")
-        return
-    }
-}
+- Every exported identifier has a doc comment starting with its name: `// ListInstances returns ...`.
+- Comments explain _why_, not _what_. The code shows _what_.
+- TODO comments include an owner and a date: `// TODO(suhail, 2026-05-02): ...`.
 
-// RULE: Use io.LimitReader on all request bodies (prevent DoS).
-// RULE: Sanitize file paths (prevent path traversal):
-if strings.Contains(path, "..") || !filepath.IsAbs(path) {
-    return ErrInvalidPath
-}
+### Imports
 
-// RULE: Use parameterized queries for ALL database access.
-// NEVER: fmt.Sprintf("SELECT * FROM users WHERE name = '%s'", name)
-// ALWAYS: query with placeholders through sqlc-generated methods/database/sql
-```
-
-### Database
+`goimports` ordering, with a third group for our own packages:
 
 ```go
-// RULE: All database access through sqlc-generated queries + database/sql.
-// RULE: Schema changes via numbered migration files, never ad-hoc ALTER TABLE.
-// RULE: Transactions for multi-step operations:
-tx, err := db.BeginTx(ctx, nil)
-if err != nil {
-    return err
-}
-defer tx.Rollback()
+import (
+    "context"
+    "fmt"
 
-if err := qtx.CreateInstance(ctx, params); err != nil {
-    return err
-}
-if err := qtx.CreateAuditEntry(ctx, auditParams); err != nil {
-    return err
-}
-if err := tx.Commit(); err != nil {
-    return err
-}
+    "github.com/go-chi/chi/v5"
+    "github.com/lxc/incus/v6/client"
 
-// RULE: Pagination on all list endpoints. Never return unbounded results.
-// RULE: Indexes on all columns used in WHERE clauses.
+    "github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
+)
 ```
 
-### HTTP Security Headers
+Configure with `goimports -local github.com/Bizarre-Industries/helling`.
 
-```go
-// RULE: Set on every response via middleware:
-func SecurityHeaders(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("X-Content-Type-Options", "nosniff")
-        w.Header().Set("X-Frame-Options", "DENY")
-        w.Header().Set("X-XSS-Protection", "0")  // Disabled, CSP handles this
-        w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-        w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'")
-        w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-        w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-        next.ServeHTTP(w, r)
-    })
-}
-```
+### Files
 
-### Handler Architecture (ADR-014)
+- One concept per file. `instances.go`, `sessions.go`, `users.go` — not a 2,000-line `handlers.go`.
+- Tests next to the file under test: `instances_test.go`. Black-box tests use `package <name>_test`.
 
-```text
-Most resources are proxied to Incus/Podman sockets (ADR-014). Only Helling-specific
-endpoints (approximately 34) have handler implementations. These include: auth, users, settings,
-tasks, warnings, webhooks, audit, and metrics.
+## Testing
 
-Proxied requests:
-        - hellingd validates JWT, loads user Incus TLS identity, forwards to local Incus HTTPS API (mTLS)
-        - Podman requests forward to the local Podman Unix socket
-  - No handler code needed for standard Incus/Podman CRUD operations
-  - Auth + audit middleware still runs on proxied requests
+- Every public service method has a test. No exceptions.
+- Use the standard library `testing` package. No `testify` unless we hit a real ergonomics wall on assertions.
+- Table-driven tests where the cases share structure. Each case has a `name`.
+- Race detector always on: `-race -count=1`. Ban `-count > 1` in CI (it hides flakes by averaging them out).
+- Integration tests go behind a build tag: `//go:build integration`. They can spin up Incus or use a fake.
+- Fakes for the Incus client live in `internal/incus/fake`. Real client in production, fake in tests. No mocks-as-frameworks.
 
-Helling-specific handlers:
-        - Implement approximately 34 Helling-specific handlers. All Incus/Podman operations go through the proxy (ADR-014).
-  - Call service layer, never access DB directly
-  - Follow the patterns below for API design, validation, and error handling
-```
+## Generated code
 
-### HTTP Handlers (Huma)
+- Do not edit. Ever.
+- Re-run `make generate` after every spec change. CI enforces this via `make check-generated`.
+- Generated files have a `// Code generated by ...; DO NOT EDIT.` line. golangci-lint skips them.
 
-```go
-// RULE: Register Helling-owned endpoints with Huma operations on top of ServeMux.
-// RULE: Input/output contracts are typed structs with validation tags.
-// RULE: Business logic lives in services; handlers only map transport to service calls.
-// RULE: Success envelope is centralized with Envelope[T] and meta.request_id.
-// RULE: Error envelope is centralized through huma.NewError transformer.
+## Frontend
 
-// BAD: Duplicating envelope or validation logic in each endpoint.
-// GOOD: Reuse shared envelope/error adapters and keep endpoint functions thin.
-```
+- TypeScript strict mode (`"strict": true` in tsconfig).
+- Generated API client and React Query hooks come from `web/src/api/generated/`. Same forbidden-edit rule.
+- Components live in `web/src/components/`. Pages in `web/src/pages/`.
+- antd v6 is the component library. No mixing in another UI kit.
+- No global state libraries (Redux, Zustand) in v0.1. React Query handles server state; component state stays local.
+- Form handling via antd's `Form`, validation rules co-located with the form definition.
+- Style with antd's theme tokens and CSS modules. No Tailwind in v0.1. No `styled-components` either.
 
-### API Design
+## What this doc doesn't say
 
-```go
-// RULE: All endpoints follow consistent naming:
-//   GET    /api/v1/{resource}          → List (paginated)
-//   POST   /api/v1/{resource}          → Create
-//   GET    /api/v1/{resource}/{id}     → Get one
-//   PUT    /api/v1/{resource}/{id}     → Full update
-//   PATCH  /api/v1/{resource}/{id}     → Partial update
-//   DELETE /api/v1/{resource}/{id}     → Delete
+If a rule isn't here, default to:
 
-// RULE: Consistent response envelope:
-// Success: { "data": {...}, "meta": { "request_id": "...", "page": { "has_next": true, "next_cursor": "...", "limit": 50 } } }
-// Error:   { "error": "msg", "code": "CODE", "action": "...", "doc_link": "..." }
+1. What the Go standard library does.
+2. What `gofumpt` enforces.
+3. What `golangci-lint` flags.
 
-// RULE: Pagination contract is cursor-based. See docs/spec/pagination.md.
-// RULE: Filtering via query params: ?status=running&type=vm&tags=production
-// RULE: Offset/page pagination is not supported for v0.1 API contracts.
-
-// RULE: Rate limiting on all endpoints:
-//   Auth endpoints: 5 failed attempts per 15 minutes per IP and per username
-//   Write endpoints: 30 req/min per user
-//   Read endpoints: 120 req/min per user
-
-// RULE: Request IDs on all requests (X-Request-ID header, generated if missing).
-// RULE: Request ID propagated to all logs, responses, and downstream calls.
-```
-
----
-
-## 2. React Frontend
-
-### Component Rules
-
-```tsx
-// RULE: Components in src/components/. Pages in src/pages/. Hooks in src/hooks/.
-// RULE: One component per file. File name matches component name.
-// RULE: No business logic in components. Use hooks or services.
-
-// RULE: TypeScript strict mode. No `any` type.
-// BAD:
-const data: any = response.data;
-// GOOD:
-const data: Instance[] = response.data;
-
-// RULE: All API types generated from OpenAPI spec. Don't hand-type API interfaces.
-// RULE: Use React Query for ALL API calls. No raw fetch in components.
-// RULE: Use antd components for ALL UI. No custom HTML for things antd provides.
-
-// RULE: Dynamic imports for heavy components:
-const VncConsole = React.lazy(() => import("./VncConsole"));
-const CodeEditor = React.lazy(() => import("./CodeEditor"));
-
-// RULE: No localStorage/sessionStorage for auth tokens. Use httpOnly cookies or
-// memory-only storage with refresh token flow.
-
-// RULE: No inline styles. Use antd theme tokens or Tailwind utilities.
-// RULE: No `!important` in CSS.
-```
-
-### State Management
-
-```tsx
-// RULE: React Query for server state. useState for UI state. No Redux.
-// RULE: Cache invalidation via React Query + SSE events.
-
-// Pattern: SSE invalidates React Query cache
-useEffect(() => {
-  const es = new EventSource("/api/v1/events");
-  es.onmessage = (e) => {
-    const event = JSON.parse(e.data);
-    if (event.type === "instance.state_changed") {
-      queryClient.invalidateQueries({ queryKey: ["instances"] });
-    }
-  };
-  return () => es.close();
-}, []);
-```
-
-### Security (Frontend)
-
-```tsx
-// RULE: Never render user input as HTML (XSS). React escapes by default.
-// RULE: Never use dangerouslySetInnerHTML except for sanitized markdown.
-// RULE: Validate all form inputs client-side AND server-side.
-// RULE: CSRF protection via SameSite cookies + custom header.
-// RULE: No secrets in frontend code. API keys stay in backend.
-```
-
----
-
-## 3. Testing Standards
-
-### Coverage Targets
-
-```yaml
-Go backend:
-  Handlers: 80% line coverage minimum
-  Services: 90% line coverage minimum
-  Clients: 70% line coverage minimum (external dependencies mocked)
-  Overall: 80% minimum, 90% goal
-
-React frontend:
-  Components: 60% minimum (test interactions, not rendering)
-  Hooks: 80% minimum
-  Utils: 90% minimum
-```
-
-### Test Patterns
-
-```go
-// RULE: Table-driven tests for all functions with multiple cases.
-func TestValidateName(t *testing.T) {
-    tests := []struct {
-        name    string
-        input   string
-        wantErr bool
-    }{
-        {"valid simple", "my-vm", false},
-        {"valid with numbers", "vm-123", false},
-        {"empty", "", true},
-        {"too long", strings.Repeat("a", 64), true},
-        {"special chars", "my_vm!", true},
-        {"starts with hyphen", "-invalid", true},
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            err := ValidateName(tt.input)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("ValidateName(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
-            }
-        })
-    }
-}
-
-// RULE: Use testify/assert for assertions.
-// RULE: Use testify/mock or manual mocks for external dependencies.
-// RULE: Tests must not depend on network, filesystem, or external services.
-// RULE: Integration tests in separate _integration_test.go files with build tag.
-// RULE: Fuzz tests for all input parsing functions:
-func FuzzValidateName(f *testing.F) {
-    f.Add("valid-name")
-    f.Add("")
-    f.Add("../../../etc/passwd")
-    f.Fuzz(func(t *testing.T, name string) {
-        _ = ValidateName(name) // Must not panic
-    })
-}
-
-// RULE: Run with -race flag in CI. Zero race conditions allowed.
-// RULE: Benchmark critical path functions:
-func BenchmarkListInstances(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        _, _ = service.ListInstances(ctx, ListOptions{})
-    }
-}
-```
-
-### Test Organization
-
-```yaml
-Unit tests: Adjacent to code (*_test.go). Run with `make test`.
-Integration: test/ directory. Require running services. Run with `make test-integration`.
-E2E: test/e2e/. Full API tests against running hellingd. Run in CI only.
-Fuzz: In *_test.go files. Run with `go test -fuzz`.
-Benchmarks: In *_test.go files. Run with `go test -bench`.
-Load tests: test/load/. k6 or hey scripts. Run manually.
-```
-
----
-
-## 4. Code Review Checklist
-
-Every PR must pass all items:
-
-```text
-Correctness:
-  [ ] Does what the ticket/issue says
-  [ ] Edge cases handled (empty input, max values, concurrent access)
-  [ ] Error paths tested
-
-Security:
-  [ ] Input validated (whitelist, not blacklist)
-  [ ] No secrets in code, logs, or error messages
-  [ ] SQL injection impossible (parameterized queries)
-  [ ] Path traversal impossible (no unsanitized file paths)
-  [ ] Auth check on every new endpoint
-  [ ] Rate limiting considered
-
-Quality:
-  [ ] Errors wrapped with context (%w)
-  [ ] Structured logging (slog, not fmt)
-  [ ] Context passed through call chain
-  [ ] No goroutine leaks (termination path exists)
-  [ ] Tests for new code (table-driven, edge cases)
-  [ ] No TODO/FIXME without linked issue
-
-Standards:
-  [ ] SPDX header on new files
-  [ ] Conventional commit message
-  [ ] Signed-off-by line (DCO)
-  [ ] golangci-lint clean
-  [ ] make check passes
-```
-
----
-
-## 5. Dependency Management
-
-```text
-RULE: Every new dependency requires justification in PR description.
-RULE: Prefer stdlib over third-party. Justify why stdlib is insufficient.
-RULE: Pin exact versions. No floating (^, ~, latest).
-RULE: Run `go mod tidy` and `go mod verify` in CI.
-RULE: Dependabot configured for automated patch updates.
-RULE: Manual review required for minor/major updates.
-RULE: License check in CI (no AGPL-incompatible licenses).
-RULE: govulncheck in CI. Zero known vulnerabilities at release time.
-
-Approved dependencies (no justification needed):
-  bmc-toolbox/bmclib        — BMC management (core functionality)
-    danielgtaylor/huma/v2     — HTTP operation framework + OpenAPI generation
-  net/http (stdlib)         — HTTP routing baseline
-  sqlc + database/sql       — Typed query generation + persistence
-  goose                     — SQL migrations
-    msteinert/pam/v2          — PAM authentication bridge
-    filippo.io/age            — Secret envelope encryption
-  pquerna/otp          — TOTP 2FA
-    go-webauthn/webauthn — WebAuthn (v0.5+)
-    prometheus/client    — Metrics (v0.3+)
-  golang-jwt/jwt       — JWT
-  spf13/cobra          — CLI framework
-  gopkg.in/yaml.v3     — Configuration
-  stretchr/testify     — Test assertions
-
-Requires justification:
-  Any new dependency not in the above list.
-  Especially: anything that pulls in CGO, anything >5MB, anything with <100 GitHub stars.
-```
+If you find yourself fighting one of those three, raise it as a discussion before writing the workaround.

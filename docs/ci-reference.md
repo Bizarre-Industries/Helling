@@ -737,7 +737,7 @@ For Helling, not an issue at current scale.
 - `github.ref` — `refs/heads/main`, `refs/pull/123/merge`
 - `github.ref_name` — `main`, `123/merge`
 - `github.sha` — the commit being processed
-- `github.repository` — `Bizarre-Industries/Helling`
+- `github.repository` — `Bizarre-Industries/helling`
 - `github.actor` — who triggered (including bots: `dependabot[bot]`)
 - `github.head_ref` — source branch on PR (empty on push)
 - `github.base_ref` — target branch on PR (empty on push)

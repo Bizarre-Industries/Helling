@@ -1,45 +1,106 @@
 # Helling
 
-Helling is a Debian-first virtualization management platform built around a proxy-first control plane for Incus and Podman.
+A self-hosted, single-node, Debian-first system container and VM management platform built on top of [Incus](https://linuxcontainers.org/incus/) and [Podman](https://podman.io/).
 
-## Status
+> **Status:** v0.1 in active development. APIs and behavior are not yet stable. Don't run this in production.
 
-Pre-alpha. Documentation and architecture are being stabilized before full implementation.
+## What it is
 
-## Why Helling
+Helling gives you a unified web UI, REST API, and CLI for managing containers and VMs on a single Debian host. It sits on top of Incus (which does the actual virtualization) and adds:
 
-- Keep upstream APIs native instead of re-wrapping everything.
-- Use clear isolation boundaries for auth and operations.
-- Prioritize operational simplicity over feature sprawl.
+- A clean HTTP API generated from a single OpenAPI contract
+- Local user authentication with sessions (no PAM, no LDAP needed)
+- A React 19 + Ant Design 6 dashboard
+- A typed Go and TypeScript client, both generated from the same spec
+- Audit logging and async operation tracking
 
-## Scope Snapshot (v0.1)
+## What it isn't
 
-- PAM + JWT + TOTP auth with per-user Incus TLS trust identity
-- Incus and Podman proxy integration
-- noVNC for VM browser console
-- k3s via cloud-init for Kubernetes provisioning
+- Not Kubernetes. Not trying to be.
+- Not multi-node. Single host only in v0.1.
+- Not a Docker replacement. Use Podman or Incus's application containers if you want OCI workloads.
+- Not a managed cloud. You run it on your own hardware.
 
-Deferred from v0.1:
+## Repository layout
 
-- LDAP/OIDC/WebAuthn
-- CAPN controller path
-- MicroVM runtime path
+```text
+helling/
+├── api/                    # OpenAPI spec — single source of truth
+├── apps/
+│   ├── hellingd/           # Backend daemon
+│   ├── helling-cli/        # CLI client
+│   └── helling-proxy/      # TLS terminator + static web serving
+├── web/                    # React 19 + Vite + antd dashboard
+├── deploy/                 # Dockerfile, systemd units, packaging
+├── docs/
+│   ├── spec/               # Architecture, source-of-truth specs
+│   ├── design/             # Design notes per feature
+│   ├── standards/          # Coding and security standards
+│   └── roadmap/            # Versioned roadmaps
+├── go.work                 # Go workspace
+├── Makefile                # All build/test/lint commands
+├── AGENTS.md               # Guide for AI agents working in this repo
+└── LICENSE                 # AGPL-3.0
+```
 
-## Try It
+## Required toolchain
 
-Not available yet.
+- Go 1.26+ (1.26.2 recommended)
+- Bun (frontend tooling and Orval generation)
+- Incus 6.0 LTS or later (for runtime; not required to build)
+- golangci-lint, gofumpt, goimports
 
-## Documentation
+Install everything else with:
 
-- Specs: docs/spec/
-- Decisions: docs/decisions/
-- Standards: docs/standards/
-- Roadmap: docs/roadmap/
+```bash
+make dev-setup
+```
+
+## Quick start (development)
+
+```bash
+git clone https://github.com/Bizarre-Industries/helling.git
+cd helling
+make dev-setup
+make generate         # OpenAPI → Go server, Go client, TS client
+make build            # produces ./bin/hellingd, ./bin/helling, ./bin/helling-proxy
+./bin/hellingd        # listens on /run/helling/api.sock by default
+```
+
+In another terminal:
+
+```bash
+make web-dev          # Vite dev server, proxies /v1 to hellingd
+```
+
+## Architecture
+
+See [docs/spec/architecture.md](docs/spec/architecture.md) for the canonical design. Short version:
+
+- `hellingd` is the backend. Listens on a Unix socket. Talks to Incus over its socket.
+- `helling-proxy` terminates TLS and serves the web bundle. Forwards API calls to `hellingd`.
+- `helling-cli` is a CLI that hits the same socket.
+- SQLite for Helling's own state (users, sessions, operations). Incus is the source of truth for instance state.
 
 ## Contributing
 
-See CONTRIBUTING.md.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). The TL;DR:
+
+1. Read [docs/spec/architecture.md](docs/spec/architecture.md) before changing behavior.
+2. Spec changes go through `api/openapi.yaml` first, then `make generate`.
+3. `make check` must pass before opening a PR.
 
 ## License
 
-AGPL-3.0-or-later.
+[AGPL-3.0](LICENSE). If you run a modified version of Helling and let other people interact with it over a network, you must offer them the source code.
+
+If AGPL doesn't work for your use case, get in touch.
+
+## Project status and roadmap
+
+- v0.1: see [docs/roadmap/v0.1.md](docs/roadmap/v0.1.md). Minimum viable platform — auth + container CRUD + dashboard shell.
+- Beyond v0.1: VM support, storage volumes, network management, multi-user RBAC tied to Incus projects, OIDC SSO. Not committed; will be tracked in versioned roadmap docs.
+
+## Naming
+
+Helling is named after a [submarine launching ramp](https://en.wikipedia.org/wiki/Slipway) — the structure that gets boats from dry land into water. Same idea: get workloads from definition to running.

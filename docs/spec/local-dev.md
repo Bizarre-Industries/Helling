@@ -39,7 +39,7 @@ Order of operations:
 ### 1. Clone
 
 ```bash
-git clone git@github.com:Bizarre-Industries/Helling.git
+git clone git@github.com:Bizarre-Industries/helling.git
 cd Helling
 ```
 

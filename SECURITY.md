@@ -1,95 +1,56 @@
 # Security Policy
 
-## Supported Versions
+## Reporting a vulnerability
 
-Helling is in pre-alpha development. No versions are currently supported for
-production use. Security advisories will begin with the first tagged release
-(`v0.1.0-alpha`).
+**Don't open a public GitHub issue.** Helling is alpha software. Even minor bugs can have security implications because the daemon talks to Incus.
 
-## Reporting a Vulnerability
+Instead:
 
-**Do not report security issues as public GitHub issues.**
+1. Email **<security@bizarre.industries>** with the details. PGP key fingerprint: TBD (will be published before v0.1.0).
+2. Include: affected version, reproduction steps, expected vs actual behavior, and an estimate of impact.
+3. We'll acknowledge within 72 hours.
 
-Preferred channel — GitHub Private Vulnerability Reporting:
+## Supported versions
 
-- <https://github.com/Bizarre-Industries/Helling/security/advisories/new>
+Helling is pre-1.0. Only the most recent tagged release is supported. Once v1.0 ships, we'll publish a versioned support window here.
 
-Alternative channel — email:
+| Version | Supported         |
+| ------- | ----------------- |
+| < 0.1   | No (prerelease)   |
+| 0.1.x   | Yes (latest only) |
 
-- <mailto:security@bizarre.industries>
+## Disclosure timeline
 
-When reporting, please include:
+- **Day 0:** Report received.
+- **Day 1–3:** Acknowledgement sent. Initial triage.
+- **Day 1–14:** Investigation and fix development.
+- **Day 14–30:** Coordinated disclosure window. Patch tested.
+- **Day 30 or earlier:** Patch released, advisory published.
 
-- Affected component (hellingd / helling-cli / helling-proxy / helling-agent / web / other)
-- Affected version or commit SHA
-- Reproduction steps
-- Impact assessment
-- Suggested mitigation, if available
+We'll work with reporters on timing if active exploitation is suspected or if upstream coordination (e.g. with Incus) is needed.
 
-Encrypted communication is available on request. Reports may be submitted in
-English or Arabic.
+## What's in scope
 
-## Disclosure Process
+- The `hellingd` daemon
+- The `helling-proxy` TLS terminator
+- The `helling-cli` client
+- The web dashboard (`web/`)
+- Generated API client code (Go and TypeScript)
+- Build pipeline tampering / supply-chain issues affecting our published artifacts
 
-- **Initial triage acknowledgement target:** 72 hours
-- **Status update cadence:** every 7 days until resolution
-- **Fix timeline:** depends on severity per the table below
-- **Coordinated disclosure:** preferred; embargo negotiated on a case-by-case basis
+## What's out of scope
 
-### Severity targets
+- Vulnerabilities in Incus, Podman, the kernel, or systemd themselves. Report those upstream.
+- Issues that require root on the host (root already wins).
+- Issues that require access to the `incus-admin` group (privilege escalation by definition).
+- Denial of service via unauthenticated traffic flood; we expect operators to put a rate-limiting reverse proxy in front of `helling-proxy` for public deployments.
+- Best-practices nags without an actual exploit path (we run our own scans).
 
-| Severity | CVSS v3.1  | Target fix timeline |
-| -------- | ---------- | ------------------- |
-| Critical | 9.0 – 10.0 | 7 days              |
-| High     | 7.0 – 8.9  | 30 days             |
-| Medium   | 4.0 – 6.9  | 60 days             |
-| Low      | 0.1 – 3.9  | 90 days             |
+## Bounty
 
-After a fix is released, a GitHub Security Advisory will be published with a
-CVE (if applicable) and credit to the reporter, unless the reporter requests
-anonymity.
+No formal bounty program. We'll publicly credit reporters in advisories unless they ask not to be.
 
-## Scope
+## See also
 
-**In scope:**
-
-- Authentication and authorization flaws in hellingd, helling-cli, or the
-  WebUI
-- Privilege escalation paths via the API, CLI, or installer
-- Sensitive data exposure (tokens, credentials, PII, session material)
-- Supply-chain integrity issues in release artifacts, container images, or CI
-  build pipelines
-- Cryptographic misuse (argon2id parameters, JWT signing, TOTP verification,
-  age-encrypted secrets handling)
-- Sandbox escape from Incus or Podman workloads managed by Helling
-- Issues in the `api/openapi.yaml` contract that enable impersonation, replay,
-  or unauthorized access
-
-**Out of scope:**
-
-- Social engineering attacks against maintainers
-- Vulnerabilities in unsupported forks or third-party distributions
-- Vulnerabilities in upstream dependencies already covered by their own
-  security policies (report those to the relevant project; we will coordinate)
-- Missing security hardening unrelated to a concrete exploitation path
-- Denial of service via resource exhaustion on self-hosted deployments without
-  authentication bypass
-
-## Security-related references
-
-- ADR-026 — SHA-pinned GitHub Actions
-- ADR-030 — argon2id password hashing
-- ADR-039 — age-encrypted secret storage
-- ADR-042 — security scanning strategy
-- `docs/spec/threat-model.md` — repository threat model
-- `docs/standards/quality-assurance.md` — security gates in CI
-
-## Hall of Fame
-
-Reporters who submit valid, in-scope reports will be listed here (with consent):
-
-- _(none yet)_
-
-## Maintainer
-
-- [Suhail (@binGhzal)](https://github.com/binGhzal)
+- [docs/standards/security.md](docs/standards/security.md) — security model and guarantees
+- [docs/spec/architecture.md](docs/spec/architecture.md) — design overview, threat model boundaries

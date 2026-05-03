@@ -18,8 +18,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/client"
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/client"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
 )
 
 // NewAuthCmd returns the `helling auth` parent command.

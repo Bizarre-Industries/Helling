@@ -303,7 +303,7 @@ tasks:
       - |
         if [ ! -f go.mod ]; then exit 0; fi
         gofumpt -w .
-        goimports -w -local github.com/Bizarre-Industries/Helling .
+        goimports -w -local github.com/Bizarre-Industries/helling .
 
   # ============================================================
   # Frontend

@@ -37,7 +37,7 @@ pre-commit:
       glob: "*.go"
       run: |
         if ! command -v goimports >/dev/null; then exit 0; fi
-        goimports -w -local github.com/Bizarre-Industries/Helling {staged_files}
+        goimports -w -local github.com/Bizarre-Industries/helling {staged_files}
         git add {staged_files}
 
     markdownlint:

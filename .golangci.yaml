@@ -104,10 +104,10 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/Bizarre-Industries/Helling)
+      - prefix(github.com/Bizarre-Industries/helling)
 
   goimports:
-    local-prefixes: github.com/Bizarre-Industries/Helling
+    local-prefixes: github.com/Bizarre-Industries/helling
 
   forbidigo:
     analyze-types: true

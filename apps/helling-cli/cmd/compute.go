@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/client"
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/client"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
 )
 
 // NewComputeCmd returns the `helling compute` parent. For v0.1-alpha only

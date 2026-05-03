@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
 )
 
 // totpSecretFixture is the RFC 6238 §A.1 test vector, used only as a

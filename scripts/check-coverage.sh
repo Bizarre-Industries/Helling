@@ -32,7 +32,7 @@ OVERALL_FLOOR=80
 
 # Parse `go tool cover -func` output.
 # Format:  <path>:<line>.<col>,<line>.<col>  <funcname>  <pct>
-# Sample:  github.com/Bizarre-Industries/Helling/internal/handlers/auth.go:42.1,48.2  Login  92.3%
+# Sample:  github.com/Bizarre-Industries/helling/internal/handlers/auth.go:42.1,48.2  Login  92.3%
 
 coverage_output="$(go tool cover -func="$COVERAGE_FILE")"
 

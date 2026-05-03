@@ -14,7 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/cmd"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/cmd"
 )
 
 // Build-time injected via -ldflags "-X main.version=... -X main.commit=... -X main.date=...".

@@ -10,7 +10,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"gopkg.in/yaml.v3"
 
-	hellingapi "github.com/Bizarre-Industries/Helling/apps/hellingd/api"
+	hellingapi "github.com/Bizarre-Industries/helling/apps/hellingd/api"
 )
 
 var stdout io.Writer = os.Stdout

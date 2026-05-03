@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/cmd"
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/cmd"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
 )
 
 func runUser(t *testing.T, args []string) (string, error) {

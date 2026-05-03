@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Bizarre-Industries/Helling/apps/helling-cli/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
 )
 
 func TestLoadMissingReturnsEmpty(t *testing.T) {

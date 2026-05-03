@@ -34,8 +34,7 @@ jobs:
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
           go install mvdan.cc/gofumpt@latest
           go install golang.org/x/tools/cmd/goimports@latest
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-            | sh -s -- -b "$(go env GOPATH)/bin" v1.64.8
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 
       - name: Install web deps
         working-directory: web

@@ -31,27 +31,28 @@ if [ -z "$command_str" ]; then
 fi
 
 # External tools whose CLI surface has historically drifted between
-# Sojourn's relevant cycles. If a Bash invokes one of these, inject a
+# Helling's relevant cycles. If a Bash invokes one of these, inject a
 # verification reminder. Pattern is greedy on purpose — false positives
 # cost a few extra tokens, false negatives cost a buggy commit.
 declare -a watch_tools=(
-  "brew"
-  "mas"
-  "chezmoi"
-  "defaults"
-  "PlistBuddy"
-  "/usr/libexec/PlistBuddy"
-  "softwareupdate"
-  "spctl"
-  "notarytool"
-  "stapler"
-  "codesign"
-  "sign_update"
+  "incus"
+  "incusd"
+  "podman"
+  "podman-system-service"
   "gh"
-  "container"
-  "orbctl"
-  "docker"
-  "op"
+  "git-cliff"
+  "cliff"
+  "golangci-lint"
+  "oapi-codegen"
+  "vacuum"
+  "goose"
+  "lefthook"
+  "bun"
+  "task"
+  "prlctl"
+  "parallels"
+  "reprepro"
+  "live-build"
 )
 
 # Risky shell patterns regardless of tool.
@@ -65,7 +66,6 @@ declare -a watch_patterns=(
   "git reset --hard"
   "git tag -d"
   "git branch -D"
-  "diskutil"
   "sudo "
 )
 

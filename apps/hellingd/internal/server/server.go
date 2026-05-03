@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
 
@@ -27,29 +28,63 @@ type VersionInfo struct {
 	BuildTime string
 }
 
+// AuthSettings groups runtime knobs for the auth surface.
+type AuthSettings struct {
+	SessionTTL     time.Duration
+	UsernameLimit  int
+	UsernameWindow time.Duration
+	IPLimit        int
+	IPWindow       time.Duration
+	Argon2         auth.Argon2Params
+}
+
+// IncusProber returns whether the Incus daemon is reachable. Injected so
+// tests can stub the probe without hitting a real socket.
+type IncusProber func(context.Context) bool
+
 // Config wires the server's collaborators.
 type Config struct {
-	Store   *store.Store
-	Logger  *slog.Logger
-	Version VersionInfo
+	Store       *store.Store
+	Logger      *slog.Logger
+	Version     VersionInfo
+	Auth        AuthSettings
+	IncusProber IncusProber
 }
 
 // Server is the top-level HTTP server.
 type Server struct {
-	cfg    Config
-	router chi.Router
+	cfg         Config
+	router      chi.Router
+	userLimiter *auth.RateLimiter
+	ipLimiter   *auth.RateLimiter
 }
 
 // New constructs the server and registers routes.
-func New(cfg Config) (*Server, error) {
+func New(cfg *Config) (*Server, error) {
+	if cfg == nil {
+		return nil, errors.New("server.New: cfg is nil")
+	}
 	if cfg.Store == nil {
 		return nil, errors.New("server.New: Store is required")
 	}
 	if cfg.Logger == nil {
 		return nil, errors.New("server.New: Logger is required")
 	}
+	if cfg.Auth.SessionTTL <= 0 {
+		return nil, errors.New("server.New: Auth.SessionTTL must be > 0")
+	}
+	if cfg.Auth.UsernameLimit <= 0 || cfg.Auth.UsernameWindow <= 0 {
+		return nil, errors.New("server.New: Auth.UsernameLimit/Window must be > 0")
+	}
+	if cfg.Auth.IPLimit <= 0 || cfg.Auth.IPWindow <= 0 {
+		return nil, errors.New("server.New: Auth.IPLimit/Window must be > 0")
+	}
 
-	s := &Server{cfg: cfg}
+	s := &Server{
+		cfg:         *cfg,
+		userLimiter: auth.NewRateLimiter(cfg.Auth.UsernameLimit, cfg.Auth.UsernameWindow),
+		ipLimiter:   auth.NewRateLimiter(cfg.Auth.IPLimit, cfg.Auth.IPWindow),
+	}
 	s.router = s.routes()
 	return s, nil
 }
@@ -73,12 +108,14 @@ func (s *Server) routes() chi.Router {
 
 	// v1 group; auth applied where appropriate inside subroutes.
 	r.Route("/v1", func(r chi.Router) {
-		r.Post("/auth/login", s.handleNotImplemented)
-		r.Post("/auth/logout", s.handleNotImplemented)
+		// Public auth endpoints.
+		r.Post("/auth/login", s.handleLogin)
 
+		// Authenticated surface.
 		r.Group(func(r chi.Router) {
-			// TODO(suhail, 2026-05-02): wire authMiddleware here once sessions exist.
-			r.Get("/auth/me", s.handleNotImplemented)
+			r.Use(s.authMiddleware)
+			r.Post("/auth/logout", s.handleLogout)
+			r.Get("/auth/me", s.handleMe)
 			r.Get("/instances", s.handleNotImplemented)
 			r.Post("/instances", s.handleNotImplemented)
 			r.Get("/instances/{name}", s.handleNotImplemented)
@@ -98,8 +135,21 @@ func (s *Server) routes() chi.Router {
 
 // ---- handlers (skeletons; real implementations land in stage 2) ----
 
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	incusReachable := false
+	if s.cfg.IncusProber != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		incusReachable = s.cfg.IncusProber(ctx)
+	}
+	status := "ok"
+	if !incusReachable {
+		status = "degraded"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":          status,
+		"incus_reachable": incusReachable,
+	})
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {

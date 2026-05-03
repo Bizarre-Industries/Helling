@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/config"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/server"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
@@ -76,10 +77,23 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	srv, err := server.New(server.Config{
+	if err := bootstrapAdmin(context.Background(), st, &cfg, logger); err != nil {
+		return fmt.Errorf("bootstrapping admin: %w", err)
+	}
+
+	srv, err := server.New(&server.Config{
 		Store:   st,
 		Logger:  logger,
 		Version: server.VersionInfo{Version: version, Commit: commit, BuildTime: buildTime},
+		Auth: server.AuthSettings{
+			SessionTTL:     time.Duration(cfg.Auth.SessionTTLHours) * time.Hour,
+			UsernameLimit:  5,
+			UsernameWindow: 15 * time.Minute,
+			IPLimit:        20,
+			IPWindow:       15 * time.Minute,
+			Argon2:         argon2ParamsFromConfig(cfg.Auth),
+		},
+		IncusProber: incusProber(cfg.Incus.SocketPath),
 	})
 	if err != nil {
 		return fmt.Errorf("building server: %w", err)
@@ -145,6 +159,67 @@ func newLogger(cfg config.LogConfig) *slog.Logger {
 		handler = slog.NewJSONHandler(os.Stderr, opts)
 	}
 	return slog.New(handler)
+}
+
+// bootstrapAdmin creates the initial admin user on first boot. Refuses to
+// start if HELLING_BOOTSTRAP_PASSWORD is unset and no users exist; lets the
+// daemon start normally once at least one user is present.
+func bootstrapAdmin(ctx context.Context, st *store.Store, cfg *config.Config, logger *slog.Logger) error {
+	n, err := st.CountUsers(ctx)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	password := os.Getenv("HELLING_BOOTSTRAP_PASSWORD")
+	if password == "" {
+		return errors.New("first boot: HELLING_BOOTSTRAP_PASSWORD env var is required to create the admin user")
+	}
+	hash, err := auth.Hash(password, argon2ParamsFromConfig(cfg.Auth))
+	if err != nil {
+		return fmt.Errorf("hashing bootstrap password: %w", err)
+	}
+	u, err := st.CreateUser(ctx, "admin", hash, true)
+	if err != nil {
+		return fmt.Errorf("creating admin user: %w", err)
+	}
+	logger.LogAttrs(ctx, slog.LevelInfo, "bootstrap admin user created",
+		slog.Int64("user_id", u.ID),
+		slog.String("username", u.Username),
+	)
+	return nil
+}
+
+// argon2ParamsFromConfig converts the Auth section of config.Config into the
+// auth package's Argon2Params. Cost ints come from validated config and are
+// safely bounded; the gosec annotations note this.
+func argon2ParamsFromConfig(cfg config.AuthConfig) auth.Argon2Params {
+	return auth.Argon2Params{
+		Time:        uint32(cfg.Argon2TimeCost),   //nolint:gosec // validated > 0 in config
+		MemoryKiB:   uint32(cfg.Argon2MemoryKiB),  //nolint:gosec // validated >= 8 MiB in config
+		Parallelism: uint8(cfg.Argon2Parallelism), //nolint:gosec // small operator-set value
+		SaltLen:     16,
+		KeyLen:      32,
+	}
+}
+
+// incusProber returns a probe that dials the Incus Unix socket. Failure
+// (missing socket, connection refused) returns false; success returns true
+// without sending any data on the connection.
+func incusProber(socketPath string) server.IncusProber {
+	return func(ctx context.Context) bool {
+		if socketPath == "" {
+			socketPath = "/var/lib/incus/unix.socket"
+		}
+		var d net.Dialer
+		conn, err := d.DialContext(ctx, "unix", socketPath)
+		if err != nil {
+			return false
+		}
+		_ = conn.Close()
+		return true
+	}
 }
 
 // newSocketListener creates a Unix socket listener with the requested

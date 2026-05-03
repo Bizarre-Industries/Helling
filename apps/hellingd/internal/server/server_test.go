@@ -57,6 +57,7 @@ func seedUser(t *testing.T, st *store.Store, username, password string) {
 	}
 }
 
+//nolint:unparam // username/password kept for test readability across call sites
 func loginCookie(t *testing.T, ts *httptest.Server, username, password string) *http.Cookie {
 	t.Helper()
 	body, _ := json.Marshal(loginRequest{Username: username, Password: password})

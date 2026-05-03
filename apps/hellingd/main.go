@@ -20,6 +20,8 @@ import (
 
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/poller"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/server"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
@@ -81,6 +83,17 @@ func run() error {
 		return fmt.Errorf("bootstrapping admin: %w", err)
 	}
 
+	// Connect to Incus. A failure here is non-fatal: the daemon still serves
+	// /healthz, /v1/version, and the auth surface; instance/operation
+	// endpoints will return 503 until Incus is reachable.
+	incusClient, err := incus.Connect(cfg.Incus.SocketPath)
+	if err != nil {
+		logger.Warn("incus client unavailable; instance endpoints will return 503",
+			slog.String("socket", cfg.Incus.SocketPath),
+			slog.Any("err", err),
+		)
+	}
+
 	srv, err := server.New(&server.Config{
 		Store:   st,
 		Logger:  logger,
@@ -94,6 +107,7 @@ func run() error {
 			Argon2:         argon2ParamsFromConfig(cfg.Auth),
 		},
 		IncusProber: incusProber(cfg.Incus.SocketPath),
+		Incus:       incusClient,
 	})
 	if err != nil {
 		return fmt.Errorf("building server: %w", err)
@@ -113,6 +127,10 @@ func run() error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// Background operation poller. Mirrors Incus operation state into our
+	// operations table. Exits when the context is canceled.
+	go poller.Run(ctx, st, incusClient, logger, 5*time.Second)
 
 	serveErr := make(chan error, 1)
 	go func() {

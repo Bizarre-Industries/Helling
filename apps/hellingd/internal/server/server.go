@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
 
@@ -49,6 +50,7 @@ type Config struct {
 	Version     VersionInfo
 	Auth        AuthSettings
 	IncusProber IncusProber
+	Incus       incus.Client
 }
 
 // Server is the top-level HTTP server.
@@ -116,14 +118,14 @@ func (s *Server) routes() chi.Router {
 			r.Use(s.authMiddleware)
 			r.Post("/auth/logout", s.handleLogout)
 			r.Get("/auth/me", s.handleMe)
-			r.Get("/instances", s.handleNotImplemented)
-			r.Post("/instances", s.handleNotImplemented)
-			r.Get("/instances/{name}", s.handleNotImplemented)
-			r.Delete("/instances/{name}", s.handleNotImplemented)
-			r.Post("/instances/{name}/start", s.handleNotImplemented)
-			r.Post("/instances/{name}/stop", s.handleNotImplemented)
-			r.Get("/operations", s.handleNotImplemented)
-			r.Get("/operations/{id}", s.handleNotImplemented)
+			r.Get("/instances", s.handleListInstances)
+			r.Post("/instances", s.handleCreateInstance)
+			r.Get("/instances/{name}", s.handleGetInstance)
+			r.Delete("/instances/{name}", s.handleDeleteInstance)
+			r.Post("/instances/{name}/start", s.handleStartInstance)
+			r.Post("/instances/{name}/stop", s.handleStopInstance)
+			r.Get("/operations", s.handleListOperations)
+			r.Get("/operations/{id}", s.handleGetOperation)
 		})
 	})
 
@@ -159,10 +161,6 @@ func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {
 		"commit":      s.cfg.Version.Commit,
 		"build_time":  s.cfg.Version.BuildTime,
 	})
-}
-
-func (s *Server) handleNotImplemented(w http.ResponseWriter, _ *http.Request) {
-	writeError(w, http.StatusNotImplemented, "not_implemented", "endpoint pending implementation")
 }
 
 func (s *Server) handleNotFound(w http.ResponseWriter, _ *http.Request) {

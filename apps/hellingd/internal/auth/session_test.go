@@ -37,7 +37,7 @@ func TestHashTokenDeterministic(t *testing.T) {
 	if a != b {
 		t.Fatalf("HashToken not deterministic: %s vs %s", a, b)
 	}
-	if HashToken("abc") == HashToken("abd") {
+	if HashToken("abc") == HashToken("xyz") {
 		t.Fatal("HashToken collided on different inputs")
 	}
 }

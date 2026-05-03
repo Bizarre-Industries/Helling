@@ -1,327 +1,177 @@
-// Package main starts the hellingd daemon process.
+// Package main is the entrypoint for the hellingd backend daemon.
+//
+// hellingd listens on a Unix socket only. It is never directly exposed
+// to the network. All public traffic flows through helling-proxy, which
+// terminates TLS and forwards to hellingd over the local socket.
 package main
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/tls"
-	"crypto/x509"
-	"database/sql"
-	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	hellingapi "github.com/Bizarre-Industries/Helling/apps/hellingd/api"
-	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/auth"
-	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/db"
-	httpserver "github.com/Bizarre-Industries/Helling/apps/hellingd/internal/http"
-	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/pki"
-	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/proxy"
-	"github.com/Bizarre-Industries/Helling/apps/hellingd/internal/repo/authrepo"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/config"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/server"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
 
-const (
-	defaultAddr = ":8080"
-	defaultDSN  = "file:/var/lib/helling/helling.db?cache=shared"
-
-	accessTokenTTL    = 15 * time.Minute
-	refreshTokenTTL   = 7 * 24 * time.Hour
-	sessionInactivity = 30 * time.Minute
-	jwtIssuer         = "hellingd"
-	jwtKeyPathEnvVar  = "HELLING_JWT_PRIVATE_KEY_PATH"
-
-	// caDirEnvVar overrides the on-host directory containing ca-identity,
-	// ca.key.age, and ca.crt. When unset, hellingd skips CA bootstrap so dev
-	// runs do not write to /etc/helling.
-	caDirEnvVar = "HELLING_CA_DIR"
-
-	// certRenewalInterval is how often the renewal worker scans
-	// user_certificates for rows nearing the 60-day threshold (spec §4.1).
-	// Hourly is well below the renewal granularity (10-day grace) so we
-	// catch any clock skew or restart-induced gap.
-	certRenewalInterval = 1 * time.Hour
-)
-
-var defaultServe = func(server *http.Server) error {
-	return server.ListenAndServe()
-}
-
+// Build-time variables, populated via -ldflags by the Makefile.
 var (
-	exitFunc           = os.Exit
-	stderr   io.Writer = os.Stderr
-	openDB             = db.Open
-	osArgs             = os.Args
+	version   = "dev"
+	commit    = "unknown"
+	buildTime = "unknown"
 )
 
-func newLogger(w io.Writer) *slog.Logger {
-	return slog.New(slog.NewTextHandler(w, nil))
-}
-
-// runConfig holds parsed CLI flags, kept small so tests can synthesize one
-// without invoking flag.Parse directly.
-type runConfig struct {
-	addr        string
-	dsn         string
-	migrateOnly bool
-}
-
-func parseFlags(args []string, errOut io.Writer) (runConfig, error) {
-	fs := flag.NewFlagSet("hellingd", flag.ContinueOnError)
-	fs.SetOutput(errOut)
-
-	cfg := runConfig{}
-	fs.StringVar(&cfg.addr, "addr", defaultAddr, "listen address")
-	fs.StringVar(&cfg.dsn, "db", defaultDSN, "SQLite DSN (modernc.org/sqlite)")
-	fs.BoolVar(&cfg.migrateOnly, "migrate-only", false, "apply migrations and exit")
-
-	if err := fs.Parse(args); err != nil {
-		return runConfig{}, err
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
+		os.Exit(1)
 	}
-	return cfg, nil
 }
 
-func run(logger *slog.Logger, cfg runConfig, serve func(*http.Server) error) int {
-	ctx := context.Background()
+func run() error {
+	configPath := flag.String("config", "/etc/helling/config.yaml", "path to config file")
+	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
 
-	pool, err := openDB(ctx, cfg.dsn)
+	if *showVersion {
+		_, _ = fmt.Fprintf(os.Stdout, "hellingd %s (commit %s, built %s)\n", version, commit, buildTime)
+		return nil
+	}
+
+	cfg, err := config.Load(*configPath)
 	if err != nil {
-		logger.Error("open db", slog.Any("err", err))
-		return 1
+		return fmt.Errorf("loading config: %w", err)
 	}
-	defer func() { _ = pool.Close() }()
 
-	logger.Info("db ready",
-		slog.String("dsn", cfg.dsn),
-		slog.Bool("migrate_only", cfg.migrateOnly),
+	logger := newLogger(cfg.Log)
+	slog.SetDefault(logger)
+
+	logger.Info("starting hellingd",
+		slog.String("version", version),
+		slog.String("commit", commit),
+		slog.String("socket", cfg.Server.SocketPath),
+		slog.String("state_dir", cfg.StateDir),
 	)
 
-	if cfg.migrateOnly {
-		return 0
-	}
-
-	authSvc, err := buildAuthService(logger, pool)
+	st, err := store.Open(cfg.StateDir)
 	if err != nil {
-		logger.Error("build auth service", slog.Any("err", err))
-		return 1
+		return fmt.Errorf("opening store: %w", err)
 	}
-
-	ca, identity, err := ensureInternalCAWithIdentity(logger)
-	if err != nil {
-		logger.Error("ensure internal ca", slog.Any("err", err))
-		return 1
-	}
-
-	var (
-		issuer  hellingapi.CertIssuer
-		userTLS proxy.UserTLSProvider
-	)
-	if ca != nil {
-		concreteIssuer := &pki.Issuer{CA: ca, Identity: identity, Repo: authSvc.Repo()}
-		issuer = concreteIssuer
-		userTLS = &pkiTLSAdapter{repo: authSvc.Repo(), identity: identity}
-		renewer := &pki.Renewer{Issuer: concreteIssuer, Repo: authSvc.Repo(), Logger: logger}
-		go renewer.Run(ctx, certRenewalInterval)
-	}
-
-	proxyDeps, err := buildProxyDeps(logger, authSvc, userTLS)
-	if err != nil {
-		logger.Error("build proxy", slog.Any("err", err))
-		return 1
-	}
-
-	mux := httpserver.NewMuxWith(hellingapi.Deps{
-		Auth:        authSvc,
-		IncusProxy:  proxyDeps.incus,
-		PodmanProxy: proxyDeps.podman,
-		CertIssuer:  issuer,
-	})
-
-	server := &http.Server{
-		Addr:              cfg.addr,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-
-	logger.Info("hellingd listening", slog.String("addr", server.Addr))
-	if err := serve(server); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Error("hellingd stopped", slog.Any("err", err))
-		return 1
-	}
-
-	return 0
-}
-
-// proxyHandlers bundles the optional Incus/Podman reverse-proxy handlers.
-type proxyHandlers struct {
-	incus  http.Handler
-	podman http.Handler
-}
-
-// buildProxyDeps wires the Incus + Podman proxy handlers from environment
-// variables (see apps/hellingd/internal/proxy/proxy.go). Missing envs leave
-// the matching route unmounted so hellingd runs fine in dev without Incus or
-// Podman installed.
-func buildProxyDeps(logger *slog.Logger, authSvc *auth.Service, userTLS proxy.UserTLSProvider) (proxyHandlers, error) {
-	cfg := proxy.ConfigFromEnv()
-	if cfg.IncusURL == "" && cfg.PodmanSocket == "" {
-		logger.Info("proxy disabled (HELLING_INCUS_URL and HELLING_PODMAN_SOCKET unset)")
-		return proxyHandlers{}, nil
-	}
-	cfg.UserTLSProvider = userTLS
-	p, err := proxy.New(&cfg, authSvc, logger)
-	if err != nil {
-		return proxyHandlers{}, err
-	}
-	out := proxyHandlers{}
-	if cfg.IncusURL != "" {
-		out.incus = p.IncusHandler()
-	}
-	if cfg.PodmanSocket != "" {
-		out.podman = p.PodmanHandler()
-	}
-	logger.Info("proxy enabled",
-		slog.Bool("incus", cfg.IncusURL != ""),
-		slog.Bool("podman", cfg.PodmanSocket != ""),
-	)
-	return out, nil
-}
-
-// pkiTLSAdapter bridges authrepo + pki into proxy.UserTLSProvider so the
-// reverse proxy can present per-user mTLS certs to Incus (ADR-024 §6).
-// Returns proxy.ErrNoUserCert when no active row exists or when the cert
-// is past its grace window, signaling the proxy to fall back to the
-// shared admin cert.
-type pkiTLSAdapter struct {
-	repo     *authrepo.Repo
-	identity string
-}
-
-func (a *pkiTLSAdapter) GetTLSCert(ctx context.Context, userID string) (*tls.Certificate, error) {
-	if a == nil || a.repo == nil {
-		return nil, errors.New("pkiTLSAdapter: not configured")
-	}
-	if a.identity == "" {
-		return nil, errors.New("pkiTLSAdapter: missing age identity")
-	}
-	row, err := a.repo.GetActiveUserCertificate(ctx, userID)
-	if err != nil {
-		if errors.Is(err, authrepo.ErrNotFound) {
-			return nil, proxy.ErrNoUserCert
+	defer func() {
+		if cerr := st.Close(); cerr != nil {
+			logger.Warn("closing store", slog.Any("err", cerr))
 		}
-		return nil, fmt.Errorf("pkiTLSAdapter: lookup: %w", err)
+	}()
+
+	if err := st.Migrate(context.Background()); err != nil {
+		return fmt.Errorf("running migrations: %w", err)
 	}
-	if pki.Expired(time.Unix(row.ExpiresAt, 0), time.Now()) {
-		return nil, proxy.ErrNoUserCert
-	}
-	certPEM, err := pki.DecryptWithIdentity(a.identity, row.CertPEM)
+
+	srv, err := server.New(server.Config{
+		Store:   st,
+		Logger:  logger,
+		Version: server.VersionInfo{Version: version, Commit: commit, BuildTime: buildTime},
+	})
 	if err != nil {
-		return nil, fmt.Errorf("pkiTLSAdapter: decrypt cert: %w", err)
+		return fmt.Errorf("building server: %w", err)
 	}
-	keyPEM, err := pki.DecryptWithIdentity(a.identity, row.PrivateKeyPEM)
+
+	listener, err := newSocketListener(cfg.Server.SocketPath, cfg.Server.SocketGroup, cfg.Server.SocketMode)
 	if err != nil {
-		return nil, fmt.Errorf("pkiTLSAdapter: decrypt key: %w", err)
+		return fmt.Errorf("creating socket listener: %w", err)
 	}
-	pair, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		return nil, fmt.Errorf("pkiTLSAdapter: x509 keypair: %w", err)
+
+	httpServer := &http.Server{
+		Handler:      srv.Handler(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
-	leaf, err := x509.ParseCertificate(pair.Certificate[0])
-	if err != nil {
-		return nil, fmt.Errorf("pkiTLSAdapter: parse leaf: %w", err)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serveErr := make(chan error, 1)
+	go func() {
+		logger.Info("listening", "socket", cfg.Server.SocketPath)
+		if err := httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serveErr <- err
+		}
+		close(serveErr)
+	}()
+
+	select {
+	case err := <-serveErr:
+		return fmt.Errorf("server error: %w", err)
+	case <-ctx.Done():
+		logger.Info("shutdown requested")
 	}
-	pair.Leaf = leaf
-	return &pair, nil
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+
+	logger.Info("shutdown complete")
+	return nil
 }
 
-// ensureInternalCAWithIdentity bootstraps or loads the Helling internal CA
-// per ADR-024 when HELLING_CA_DIR is set, and returns both the live CA and
-// the on-host age identity needed to encrypt persisted user-cert blobs.
-// Dev runs without HELLING_CA_DIR get (nil, "", nil) so callers treat PKI
-// as off without writing anything to /etc/helling.
-func ensureInternalCAWithIdentity(logger *slog.Logger) (*pki.CA, string, error) {
-	dir := os.Getenv(caDirEnvVar)
-	if dir == "" {
-		logger.Info("internal ca disabled (HELLING_CA_DIR unset)")
-		return nil, "", nil
+func newLogger(cfg config.LogConfig) *slog.Logger {
+	level := slog.LevelInfo
+	switch cfg.Level {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
 	}
-	paths := pki.NewTestPaths(dir)
-	ca, created, err := pki.EnsureCA(paths, logger)
-	if err != nil {
-		return nil, "", err
+
+	opts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
+	if cfg.Format == "text" {
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stderr, opts)
 	}
-	identity, err := os.ReadFile(paths.Identity)
-	if err != nil {
-		return nil, "", fmt.Errorf("read ca identity: %w", err)
-	}
-	logger.Info("internal ca ready",
-		slog.String("dir", dir),
-		slog.Bool("bootstrapped", created),
-	)
-	return ca, string(identity), nil
+	return slog.New(handler)
 }
 
-// buildAuthService wires the auth service from the DB pool, loading the
-// Ed25519 signing key from disk or generating an ephemeral one for dev.
-func buildAuthService(logger *slog.Logger, pool *sql.DB) (*auth.Service, error) {
-	priv, err := loadOrGenerateSigningKey(logger)
+// newSocketListener creates a Unix socket listener with the requested
+// permissions. It removes any stale socket file before binding.
+func newSocketListener(path, group string, mode os.FileMode) (net.Listener, error) {
+	// Remove stale socket from a previous run. systemd will pass an existing
+	// listener via socket activation in the future; we ignore that here.
+	if _, err := os.Stat(path); err == nil {
+		if err := os.Remove(path); err != nil {
+			return nil, fmt.Errorf("removing stale socket: %w", err)
+		}
+	}
+
+	listener, err := net.Listen("unix", path)
 	if err != nil {
 		return nil, err
 	}
-	signer := auth.NewSigner(priv, jwtIssuer, accessTokenTTL, refreshTokenTTL, sessionInactivity)
-	return auth.NewService(authrepo.New(pool), signer, auth.Argon2idParams{}), nil
-}
 
-func loadOrGenerateSigningKey(logger *slog.Logger) (ed25519.PrivateKey, error) {
-	path := os.Getenv(jwtKeyPathEnvVar)
-	if path == "" {
-		logger.Warn("jwt signing key: generating ephemeral key (set HELLING_JWT_PRIVATE_KEY_PATH for persistence)")
-		_, priv, err := auth.GenerateKey()
-		if err != nil {
-			return nil, fmt.Errorf("generate ed25519 key: %w", err)
-		}
-		return priv, nil
-	}
-	raw, err := os.ReadFile(path) //nolint:gosec // path is operator-controlled
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
-	}
-	block, _ := pem.Decode(raw)
-	if block == nil {
-		return nil, fmt.Errorf("pem decode %s: empty", path)
-	}
-	parsed, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("parse pkcs8 %s: %w", path, err)
-	}
-	priv, ok := parsed.(ed25519.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("parse %s: not an Ed25519 private key", path)
-	}
-	logger.Info("jwt signing key loaded", slog.String("path", path))
-	return priv, nil
-}
-
-// Keep database/sql imported for symbol stability across test stubs of openDB.
-var _ = (*sql.DB)(nil)
-
-func main() {
-	logger := newLogger(stderr)
-
-	cfg, err := parseFlags(osArgs[1:], stderr)
-	if err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			exitFunc(0)
-			return
-		}
-		exitFunc(2)
-		return
+	if err := os.Chmod(path, mode); err != nil {
+		_ = listener.Close()
+		return nil, fmt.Errorf("chmod socket: %w", err)
 	}
 
-	exitFunc(run(logger, cfg, defaultServe))
+	// Group ownership is set via Chown in a real install; skipped here because
+	// it requires privilege at startup. A systemd unit handles it via SocketUser=
+	// and SocketGroup= directives. See deploy/systemd/helling.socket (TODO).
+	_ = group
+
+	return listener, nil
 }

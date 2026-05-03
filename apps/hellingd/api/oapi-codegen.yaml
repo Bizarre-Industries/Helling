@@ -1,0 +1,24 @@
+# oapi-codegen config for the hellingd server.
+#
+# Run via:
+#   go tool oapi-codegen -config apps/hellingd/api/oapi-codegen.yaml api/openapi.yaml
+# (or: make generate-go)
+
+package: api
+output: server.gen.go
+
+generate:
+  models: true
+  chi-server: true
+  embedded-spec: true
+  strict-server: true
+
+output-options:
+  skip-prune: false
+  user-templates: {}
+  prefer-skip-optional-pointer: true
+
+# Custom doc comment block at the top of the generated file.
+# Updated by hand only when this comment changes.
+compatibility:
+  always-prefix-enum-values: false

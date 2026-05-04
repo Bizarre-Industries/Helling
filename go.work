@@ -4,9 +4,8 @@ toolchain go1.26.2
 
 // Helling workspace.
 //
-// Per-app module layout per docs/v0.1.md Stage 1. helling-proxy lands as
-// a separate module later (stage 6); add its path here when that go.mod
-// file exists.
+// Per-app module layout. The v0.1 edge service is packaged Caddy, not a Go
+// workspace module.
 
 use (
 	./apps/hellingd

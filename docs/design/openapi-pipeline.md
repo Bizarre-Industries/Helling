@@ -1,33 +1,27 @@
 # OpenAPI Pipeline
 
 **Date:** 2026-04-20
-**Supersedes:** 2026-04-15 docs-first + orval server/client generation flow
+**Supersedes:** 2026-04-20 Huma code-first migration plan for v0.1
 
 ---
 
 ## The Pipeline
 
-Helling now uses a code-first contract flow for Helling-owned API routes.
+Helling v0.1 uses a spec-first contract flow. `api/openapi.yaml` is the hand-authored source of truth; generated Go and TypeScript clients must be regenerated from that file.
 
 ```text
-Go input/output structs + validation tags + operation metadata
+api/openapi.yaml
         |
         v
-Huma v2 operations mounted via humago on net/http ServeMux
-(Helling-owned /api/v1/* only)
-        |
-        v
-Generate api/openapi.yaml from registered operations
-        |
-        v
-Commit generated contract artifact for review
+Validate contract with vacuum
         |
    +----+-------------------------+
    |                              |
    v                              v
-oapi-codegen (CLI client)     hey-api/openapi-ts (WebUI SDK + Query)
+oapi-codegen (Go server + CLI) hey-api/openapi-ts (WebUI SDK + Query)
    |                              |
-apps/helling-cli/internal      web/src/api/generated
+apps/hellingd/api              web/src/api/generated
+apps/helling-cli/internal
 ```
 
 Proxy pass-through paths stay plain handlers:
@@ -35,16 +29,16 @@ Proxy pass-through paths stay plain handlers:
 - /api/incus/\*
 - /api/podman/\*
 
-These routes bypass Huma to preserve ADR-014 and ADR-015 behavior.
+These routes bypass generated Helling-owned handlers to preserve ADR-014 and ADR-015 behavior.
 
 ---
 
 ## Scope and Invariants
 
-- Huma manages approximately 34 Helling-owned endpoints under /api/v1/\*.
-- ServeMux remains the top-level router (ADR-040 preserved via humago adapter).
+- `api/openapi.yaml` manages Helling-owned endpoints under /api/v1/\*.
+- chi remains the top-level router for the current v0.1 implementation.
 - URI major versioning remains /api/v1 (ADR-041 preserved).
-- OpenAPI remains committed in-repo, but is generated (no hand-editing).
+- OpenAPI remains committed in-repo and is intentionally reviewed by humans.
 
 ---
 
@@ -52,17 +46,18 @@ These routes bypass Huma to preserve ADR-014 and ADR-015 behavior.
 
 ### Source of contract truth
 
-For Helling-owned routes, contract truth lives in Go operation definitions:
+For Helling-owned routes, contract truth lives in `api/openapi.yaml`:
 
-- request and response structs
-- validation tags
+- request and response schemas
+- validation constraints
 - operation metadata (summary, description, operationId, tags, responses)
 
 ### Generated artifact
 
-- Output path: api/openapi.yaml
-- Header must indicate generated ownership and prohibit manual edits.
-- Any PR changing API behavior must include regenerated api/openapi.yaml.
+- Go server/model code: `apps/hellingd/api/*.gen.go`
+- Go CLI client code: `apps/helling-cli/internal/client/*.gen.go`
+- Web client code: `web/src/api/generated/**`
+- Any PR changing API behavior must update `api/openapi.yaml` first, then regenerate downstream artifacts.
 
 ### Downstream codegen
 
@@ -73,15 +68,15 @@ For Helling-owned routes, contract truth lives in Go operation definitions:
 
 ## Why this flow
 
-- Removes hand-authored YAML drift as a recurring class of failure.
-- Reduces manual OpenAPI remediation effort from roughly 14 hours to near-zero.
-- Keeps reviewability: API diffs remain visible through committed generated artifacts.
+- Keeps the API contract reviewable before implementation changes.
+- Lets backend, CLI, and WebUI generation share one source of truth.
+- Avoids code-first migration churn until v0.1 is stable.
 
 ---
 
 ## Verification Gates
 
-1. Generate OpenAPI from code.
+1. Validate the committed OpenAPI contract.
 2. Run vacuum against api/.vacuum.yaml.
 3. Regenerate CLI and WebUI clients from committed api/openapi.yaml.
 4. Ensure no stale generated diff remains in CI.
@@ -98,12 +93,13 @@ vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 
 ### Generated artifacts (never hand-edit)
 
-- api/openapi.yaml
+- apps/hellingd/api/\*.gen.go
 - apps/helling-cli/internal/client/\*.gen.go
 - web/src/api/generated/\*\*
 
 ### Hand-authored artifacts
 
-- Huma operation definitions and envelopes in apps/hellingd/
+- api/openapi.yaml
+- Handler implementation in apps/hellingd/
 - Proxy pass-through handlers for /api/incus/\* and /api/podman/\*
 - Contract policy docs in docs/spec/

@@ -61,7 +61,8 @@ func (s *Store) CreateWebhook(ctx context.Context, userID int64, name, url, secr
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO webhooks (id, user_id, name, url, secret, events, enabled, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
 		w.ID, w.UserID, w.Name, w.URL, w.Secret, string(eventsJSON), now.Unix(), now.Unix(),
@@ -78,7 +79,8 @@ func (s *Store) GetWebhook(ctx context.Context, id string) (Webhook, error) {
 	var createdAt, updatedAt int64
 	var eventsJSON string
 	var enabled int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, name, url, secret, events, enabled, created_at, updated_at
 		 FROM webhooks WHERE id = ?`, id,
 	).Scan(&w.ID, &w.UserID, &w.Name, &w.URL, &w.Secret, &eventsJSON, &enabled, &createdAt, &updatedAt)
@@ -137,7 +139,8 @@ func (s *Store) UpdateWebhook(ctx context.Context, id, name, url, secret string,
 	if enabled {
 		en = 1
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`UPDATE webhooks SET name = ?, url = ?, secret = ?, events = ?, enabled = ?, updated_at = ? WHERE id = ?`,
 		name, url, secret, string(eventsJSON), en, time.Now().Unix(), id,
 	)
@@ -174,7 +177,8 @@ func (s *Store) CreateWebhookDelivery(ctx context.Context, webhookID, event, sta
 		Attempt:      attempt,
 		CreatedAt:    now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO webhook_deliveries (id, webhook_id, event, status, status_code, response_body, error, attempt, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		d.ID, d.WebhookID, d.Event, d.Status, statusCode, responseBody, errMsg, d.Attempt, now.Unix(),
@@ -190,7 +194,8 @@ func (s *Store) ListWebhookDeliveries(ctx context.Context, webhookID string, lim
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx,
+	rows, err := s.db.QueryContext(
+		ctx,
 		`SELECT id, webhook_id, event, status, status_code, response_body, error, attempt, created_at
 		 FROM webhook_deliveries WHERE webhook_id = ? ORDER BY created_at DESC LIMIT ?`,
 		webhookID, limit,

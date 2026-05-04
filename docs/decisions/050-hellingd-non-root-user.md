@@ -1,6 +1,7 @@
-# ADR-050: hellingd runs as non-root via DBus + polkit for systemd interaction
+# ADR-050: hellingd runs as non-root with deferred privileged systemd helper
 
-> Status: Accepted (2026-04-20)
+> Status: Accepted (2026-04-20); amended by ADR-054 for the default
+> `incus-admin` prohibition.
 
 ## Context
 
@@ -14,17 +15,13 @@ Prior text in `docs/decisions/017-systemd-timers-over-cron.md`, `docs/standards/
 
 Running hellingd as root makes a web-facing compromise immediately full-system compromise. It also invalidates the systemd hardening profile in `docs/spec/systemd-units.md` — the hardening assumes the daemon doesn't need to write outside its own state directories, yet ADR-017 as written requires `/etc/systemd/system/` write access.
 
-Debian provides a standard non-root path for daemons that need a specific slice of systemd capability: **DBus + polkit**. `systemd1` exposes `ManagerInterface` over the system bus; `polkit` rules can grant a specific user permission to a specific subset of unit-management actions.
-
-This pattern is used by cockpit, snapd, and systemd-homed. It is a battle-tested path for exactly this scenario.
+Debian provides DBus/polkit patterns for daemons that need a specific slice of systemd capability, but v0.1 deliberately avoids installing a broad unit-management grant. Schedule mutation waits for a narrow helper that can be reviewed as a separate privileged surface.
 
 ## Decision
 
 **hellingd runs as a dedicated non-root system user `helling` in group `helling`.**
 
-Systemd interaction uses DBus calls (`org.freedesktop.systemd1` via `godbus/dbus/v5`), authorized by a polkit policy file shipped in the Helling `.deb` package.
-
-The polkit policy restricts the `helling` user to managing only units matching `helling-*.service` and `helling-*.timer`. No other unit management is permitted.
+Systemd interaction is deferred until a narrow privileged-helper implementation is present. The v0.1 ISO does not ship a polkit rule granting `hellingd` `org.freedesktop.systemd1.manage-units` rights.
 
 ### User, group, and filesystem layout
 
@@ -49,57 +46,23 @@ Filesystem (created by .deb postinst):
 
   /var/log/helling/               helling:helling 0750  (reserved; journal is primary)
 
-  /run/helling/                   helling:helling 0750
-    hellingd.sock                 helling:helling 0660
+  /run/helling/                   helling:helling 0755
+    api.sock                      helling:helling-proxy 0660
 
   /etc/systemd/system/            root:root 0755   (system-owned; hellingd does NOT write here)
 ```
 
-Unit files under `/etc/systemd/system/helling-*.{timer,service}` are managed **through DBus**, not through direct filesystem writes.
+Unit files under `/etc/systemd/system/helling-*.{timer,service}` are not managed by v0.1 hellingd. Future schedule support must go through the reviewed helper path instead of direct daemon writes.
 
-### Polkit policy (`/usr/share/polkit-1/actions/industries.bizarre.helling.policy`)
+### Privileged unit management
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
-  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
-<policyconfig>
-  <vendor>Bizarre Industries</vendor>
-  <vendor_url>https://bizarre.industries</vendor_url>
-
-  <action id="industries.bizarre.helling.manage-unit">
-    <description>Manage Helling systemd units</description>
-    <message>Helling requires permission to manage helling-* systemd units</message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin</allow_active>
-    </defaults>
-    <annotate key="org.freedesktop.policykit.imply">org.freedesktop.systemd1.manage-units</annotate>
-  </action>
-</policyconfig>
-```
-
-### Polkit rule (`/etc/polkit-1/rules.d/50-helling.rules`)
-
-```javascript
-polkit.addRule(function (action, subject) {
-  if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "helling") {
-    var unit = action.lookup("unit");
-    if (unit && unit.match(/^helling-.*\.(service|timer)$/)) {
-      return polkit.Result.YES;
-    }
-  }
-  return polkit.Result.NOT_HANDLED;
-});
-```
+No broad polkit rule is installed in v0.1. Schedule support must use the narrow helper described below, with filename validation and no arbitrary transient unit body accepted from `hellingd`.
 
 ### Group memberships (created during install)
 
 ```text
-helling  →  member of group `podman`       (reads /run/podman/podman.sock)
-helling  →  member of group `systemd-journal`   (queries journal)
-helling  →  member of group `incus-admin` (or equivalent)  (loopback HTTPS cert access)
+helling  →  member of group `incus`        (restricted Incus access; not `incus-admin`)
+helling  →  member of group `helling-proxy` (can place the API socket in the proxy group)
 ```
 
 ### hellingd.service (replaces any `User=root` assumption)
@@ -109,7 +72,7 @@ helling  →  member of group `incus-admin` (or equivalent)  (loopback HTTPS cer
 Type=notify
 User=helling
 Group=helling
-SupplementaryGroups=podman systemd-journal
+SupplementaryGroups=helling-proxy incus
 
 ExecStart=/usr/lib/helling/hellingd
 
@@ -122,7 +85,7 @@ ProtectKernelModules=true
 ProtectControlGroups=true
 
 ReadWritePaths=/var/lib/helling /var/log/helling /run/helling /etc/helling
-# No ReadWritePaths for /etc/systemd/system/ — unit management goes via DBus.
+# No ReadWritePaths for /etc/systemd/system/ — unit management is deferred.
 
 # Capabilities: none. We do not need CAP_DAC_OVERRIDE under this model.
 CapabilityBoundingSet=
@@ -143,33 +106,21 @@ Restart=on-failure
 RestartSec=5
 ```
 
-### DBus call pattern (replaces direct `systemctl` shell-out for unit CRUD)
+### Future helper pattern (deferred for unit CRUD)
 
 ```go
-import "github.com/godbus/dbus/v5"
-
-// Connect to system bus as the helling user; polkit authorizes the call.
-conn, err := dbus.SystemBus()
-if err != nil {
-    return fmt.Errorf("systemd dbus: %w", err)
-}
-
-systemd := conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
-
-// Write the unit file to /etc/systemd/system/ — this step is the issue.
-// Solution: unit files for helling-* are owned by root:helling 0640 by the
-// .deb postinst creating an empty drop-in directory at
-// /etc/systemd/system/helling-managed.d/ that `helling:helling` can write into,
-// OR unit file bodies are rendered into transient units via
-// StartTransientUnit on the DBus API (no filesystem writes needed at all).
+// Render a validated helling-*.timer/service into a root-owned staging path.
+// Invoke a tiny helper with only the unit basename as argv.
+// The helper validates the basename, links/enables/removes only Helling-owned
+// units, and never accepts arbitrary unit body text from hellingd.
 ```
 
 ### Chosen path for writing unit definitions
 
 Two options for getting unit bodies onto the filesystem without giving `helling` write access to `/etc/systemd/system/`:
 
-1. **Transient units via `StartTransientUnit`** — DBus-only, no filesystem writes. Unit lives only as long as it's active, which is fine for `.service`-only use but **breaks for `.timer` units** because timers need to persist across reboots. Rejected.
-2. **Root-owned drop-in directory with group-writable staging** — `/etc/systemd/system/helling-managed/` created by `.deb postinst` as `root:helling` `0750`, containing a generated `*.timer` and `*.service` per schedule. Symlinks into `/etc/systemd/system/` created by a tiny SUID helper shipped in the `.deb` (`/usr/lib/helling/helling-unit-link`, owned `root:helling` mode `4750`) that takes a `helling-*.{timer,service}` filename argument and `systemctl link`s it, with DBus reload. The helper is auditable (~40 LOC), the filename pattern prevents directory traversal, and the group-writable stash is the only filesystem surface `helling` needs for scheduling. **Selected.**
+1. **Transient units** — no filesystem writes. Unit lives only as long as it is active, which is fine for `.service`-only use but breaks for `.timer` units because timers need to persist across reboots. Rejected.
+2. **Root-owned drop-in directory with group-writable staging** — `/etc/systemd/system/helling-managed/` created by the installer as `root:helling` `0750`, containing a generated `*.timer` and `*.service` per schedule. Symlinks into `/etc/systemd/system/` are created by a tiny helper shipped with Helling that takes a `helling-*.{timer,service}` filename argument. The helper is auditable (~40 LOC), the filename pattern prevents directory traversal, and the group-writable stash is the only filesystem surface `helling` needs for scheduling. **Selected for future implementation.**
 
 Alternative (considered, rejected): a dedicated `hellingsched` privileged helper daemon. Splits the concern cleanly but adds another moving part. Not worth the complexity for v0.1.
 
@@ -179,11 +130,11 @@ Alternative (considered, rejected): a dedicated `hellingsched` privileged helper
 
 ## Why
 
-- **Smallest surface area consistent with Helling's requirements.** DBus + polkit is the standard Debian pattern for exactly this scenario.
-- **Keeps ADR-027 (two-daemon split) honest.** Previously hellingd was root and hellingprox was non-root — the split bought limited isolation. Now both are non-root.
-- **Makes ADR-029 less of an outlier.** ADR-029 established `hellingprox` as a dedicated low-privilege user. This ADR establishes the same pattern for `hellingd`.
+- **Smallest surface area consistent with Helling's requirements.** Non-root `hellingd` with no broad polkit rule keeps the v0.1 daemon inside the documented host boundary; the future helper carries only the specific unit-link operation.
+- **Keeps ADR-027/037 split honest.** Previously hellingd was root and only the edge service was non-root. Now hellingd is non-root while Caddy remains the unprivileged edge.
+- **Supersedes ADR-029 cleanly.** ADR-029's custom proxy user is replaced by packaged Caddy plus the `helling-proxy` socket group; this ADR establishes the same low-privilege pattern for `hellingd`.
 - **Validates the systemd hardening profile.** `docs/spec/systemd-units.md` existed, but was incompatible with `User=root`. Under this ADR, every hardening directive in that file actually bites.
-- **No worse than root for the threat model.** A compromised `helling` user can manage `helling-*` units. That's the capability the daemon already needed. It can't suddenly install a rootkit or read `/etc/shadow`.
+- **No root-operation grant in v0.1.** A compromised `helling` user cannot ask polkit to create or manage arbitrary system units. Schedule support waits for the helper.
 
 ## Consequences
 
@@ -195,31 +146,29 @@ Alternative (considered, rejected): a dedicated `hellingsched` privileged helper
 
 **Harder:**
 
-- `.deb postinst` is more complex: create user, group, polkit policy file, polkit rule, SUID helper binary, directory ownerships.
+- `.deb postinst` becomes more complex once schedules land: create user, group, SUID helper binary, and directory ownerships.
 - The SUID helper is net-new code that must be kept minimal (~40 LOC) and fuzzed.
-- Lima dev environment needs the same user/group/polkit setup, or a dev-mode shim that runs as root (guard behind an ADR-034 flag).
-- Uninstall (`apt purge helling`) must revert polkit rules and remove the `helling` user.
+- Lima dev environment needs the same user/group/helper setup once schedules land, or a dev-mode shim that runs as root (guard behind an ADR-034 flag).
+- Uninstall (`apt purge helling`) must remove the `helling` user and any helper artifacts.
 
 ## Follow-up documents to update when this ADR is accepted
 
-- `docs/decisions/017-systemd-timers-over-cron.md` — strike "it runs as root, so this is fine"; replace with the DBus + polkit + SUID-helper path from this ADR.
+- `docs/decisions/017-systemd-timers-over-cron.md` — strike "it runs as root, so this is fine"; replace with the deferred helper path from this ADR.
 - `docs/decisions/018-shell-out-over-libraries.md` — add `go-systemd/v22/journal` (no-cgo) as a permitted library for journal emission (this is the "coreos/go-systemd" exception from §6.15 of the audit, but no-cgo and narrow-scope).
 - `docs/decisions/029-hellingprox-system-user.md` — add a cross-reference to this ADR; frame both as "all Helling daemons non-root".
-- `docs/spec/systemd-units.md` — replace `User=root` assumptions; drop `CAP_DAC_OVERRIDE` from the hardening profile; add `User=helling`, `Group=helling`, `SupplementaryGroups=podman systemd-journal`.
+- `docs/spec/systemd-units.md` — replace `User=root` assumptions; drop `CAP_DAC_OVERRIDE` from the hardening profile; add `User=helling`, `Group=helling`, `SupplementaryGroups=helling-proxy incus`.
 - `docs/spec/caddy.md` — no change, Caddy was already non-root.
 - `docs/spec/threat-model.md` — update "hellingd compromise → root" to "hellingd compromise → helling-scoped capability"; update blast radius analysis.
-- `docs/standards/security.md` §1 — strike "(running as root)" from the Podman-socket description; replace with "accessible to the `helling` system user via the `podman` supplementary group (configured during ISO install per ADR-050)".
-- `docs/standards/security.md` §2 — drop `CapabilityBoundingSet=CAP_DAC_OVERRIDE`; drop `AmbientCapabilities=`; add `User=helling`, `Group=helling`, `SupplementaryGroups=podman systemd-journal`.
-- `docs/design/tools-and-frameworks.md` — add `godbus/dbus/v5` to the hellingd dependency table (for systemd DBus); add `go-systemd/v22/journal` (no-cgo) for structured journal emission.
-- `apps/hellingd/internal/systemd/` (implementation) — use DBus client, not `exec.Command("systemctl", ...)`, for unit management.
-- `debian/` packaging tree — ship polkit policy, polkit rule, SUID helper, user/group creation in postinst.
+- `docs/standards/security.md` §2 — drop `CapabilityBoundingSet=CAP_DAC_OVERRIDE`; drop `AmbientCapabilities=`; add `User=helling`, `Group=helling`, `SupplementaryGroups=helling-proxy incus`.
+- `docs/design/tools-and-frameworks.md` — keep `go-systemd/v22/journal` (no-cgo) for structured journal emission; systemd DBus unit management stays deferred.
+- `apps/hellingd/internal/systemd/` (future implementation) — use the reviewed helper path, not a broad polkit `manage-units` grant.
+- `debian/` packaging tree — ship the SUID helper and user/group creation in postinst once schedules land.
 
 ## References
 
-- ADR-017 (superseded in part — systemctl shell-out replaced with DBus+polkit)
+- ADR-017 (superseded in part — systemctl shell-out replaced with the deferred helper path)
 - ADR-018 (expanded — go-systemd/v22/journal exception)
 - ADR-027 (two-daemon split)
 - ADR-029 (hellingprox non-root — same pattern applied here)
-- Debian polkit documentation: <https://www.freedesktop.org/software/polkit/docs/latest/>
 - systemd DBus API: <https://www.freedesktop.org/wiki/Software/systemd/dbus/>
 - Cockpit project non-root pattern reference

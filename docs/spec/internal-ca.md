@@ -1,10 +1,10 @@
 # Internal CA Specification
 
-This document specifies the Certificate Authority (CA) lifecycle for Helling's per-user Incus client certificates.
+This document specifies the deferred Certificate Authority (CA) lifecycle for Helling's per-user Incus client certificates. It is not active in v0.1; raw Incus proxy access is admin-only until ADR-024 is wired end to end.
 
 ## Overview
 
-Helling maintains an internal CA to issue per-user client certificates for mTLS authentication with Incus. Each user receives a unique certificate that grants them access to their own Incus resources via the proxy.
+Helling will maintain an internal CA to issue per-user client certificates for mTLS authentication with Incus. Each user will receive a unique certificate that grants them access to their own Incus resources via the proxy.
 
 ## CA Key Management
 

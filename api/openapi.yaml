@@ -16,7 +16,7 @@ info:
 
 servers:
   - url: https://localhost/v1
-    description: Local installation behind helling-proxy
+    description: Local installation behind the Caddy edge service
   - url: http+unix:///run/helling/api.sock/v1
     description: Direct socket access (CLI, dev)
 
@@ -43,12 +43,12 @@ paths:
       summary: Liveness probe
       description: Returns the daemon liveness state and Incus reachability flag.
       responses:
-        '200':
+        "200":
           description: Daemon is up
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Health'
+                $ref: "#/components/schemas/Health"
 
   /version:
     get:
@@ -59,12 +59,12 @@ paths:
       summary: Server version and build info
       description: Returns the daemon semver, API version, git commit, and build timestamp.
       responses:
-        '200':
+        "200":
           description: Version info
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Version'
+                $ref: "#/components/schemas/Version"
 
   /auth/login:
     post:
@@ -84,9 +84,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Login successful. Sets `helling_session` cookie and returns an access token for API clients.
           headers:
             Set-Cookie:
@@ -98,24 +98,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenEnvelope'
+                $ref: "#/components/schemas/AuthTokenEnvelope"
               example:
                 data:
                   access_token: eyJhbGciOiJFZERTQSJ9...
                   token_type: Bearer
                   expires_in: 900
                   mfa_required: false
-        '202':
+        "202":
           description: Password accepted, but MFA must be completed before a session is issued.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenEnvelope'
+                $ref: "#/components/schemas/AuthTokenEnvelope"
               example:
                 data:
                   mfa_required: true
                   mfa_token: c08f4a7281b54d9abef67c210d3e49a2
-        '204':
+        "204":
           description: Browser-compatible login successful response for cookie-only clients.
           headers:
             Set-Cookie:
@@ -124,12 +124,71 @@ paths:
                 type: string
                 description: Standard Set-Cookie header value.
                 example: helling_session=...; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '429':
-          $ref: '#/components/responses/RateLimited'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /auth/setup/status:
+    get:
+      operationId: authSetupStatus
+      tags:
+        - auth
+      security: []
+      summary: Report whether first-admin setup is required
+      description: Returns whether the daemon currently has zero users and will accept one-time setup.
+      responses:
+        "200":
+          description: Setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupStatus"
+              example:
+                setup_required: true
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/setup:
+    post:
+      operationId: authSetup
+      tags:
+        - auth
+      security: []
+      summary: Create the first admin user
+      description: |
+        One-time first-boot setup. This endpoint is available only while no
+        users exist and requires the installer setup token from
+        `/etc/helling/setup-token`.
+      requestBody:
+        required: true
+        description: First admin credentials and installer setup token
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupRequest"
+      responses:
+        "201":
+          description: First admin user created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                id: 1
+                username: admin
+                is_admin: true
+                created_at: "2026-05-04T12:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /auth/mfa/complete:
     post:
@@ -148,12 +207,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MFACompleteRequest'
+              $ref: "#/components/schemas/MFACompleteRequest"
             example:
               mfa_token: c08f4a7281b54d9abef67c210d3e49a2
-              totp_code: '123456'
+              totp_code: "123456"
       responses:
-        '200':
+        "200":
           description: MFA successful. Sets `helling_session` cookie and returns an access token for API clients.
           headers:
             Set-Cookie:
@@ -165,21 +224,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenEnvelope'
+                $ref: "#/components/schemas/AuthTokenEnvelope"
               example:
                 data:
                   access_token: eyJhbGciOiJFZERTQSJ9...
                   token_type: Bearer
                   expires_in: 900
                   mfa_required: false
-        '204':
+        "204":
           description: MFA successful cookie-only response.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/RateLimited'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 
   /auth/logout:
     post:
@@ -189,10 +248,10 @@ paths:
       summary: Invalidate the current session
       description: Revokes the session bound to the `helling_session` cookie and clears it client-side.
       responses:
-        '204':
+        "204":
           description: Session invalidated. Clears `helling_session` cookie.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /auth/me:
     get:
@@ -202,14 +261,14 @@ paths:
       summary: Identity of the authenticated user
       description: Returns the profile of the user bound to the current session cookie.
       responses:
-        '200':
+        "200":
           description: User profile
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /instances:
     get:
@@ -228,7 +287,7 @@ paths:
             enum: [running, stopped, frozen, error]
             example: running
       responses:
-        '200':
+        "200":
           description: List of instances
           content:
             application/json:
@@ -236,9 +295,9 @@ paths:
                 type: array
                 description: Array of instance records.
                 items:
-                  $ref: '#/components/schemas/Instance'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/Instance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     post:
       operationId: createInstance
       tags:
@@ -251,24 +310,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InstanceCreate'
+              $ref: "#/components/schemas/InstanceCreate"
       responses:
-        '202':
+        "202":
           description: Operation accepted; poll `/operations/{id}` for completion
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: "#/components/schemas/Operation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /instances/{name}:
     parameters:
-      - $ref: '#/components/parameters/InstanceName'
+      - $ref: "#/components/parameters/InstanceName"
     get:
       operationId: getInstance
       tags:
@@ -276,16 +335,16 @@ paths:
       summary: Fetch a single instance
       description: Returns the current snapshot of one instance.
       responses:
-        '200':
+        "200":
           description: Instance details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Instance'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Instance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       operationId: deleteInstance
       tags:
@@ -293,22 +352,22 @@ paths:
       summary: Delete an instance (async)
       description: Submits an instance delete request. Returns the tracking operation; poll `/operations/{id}` for completion.
       responses:
-        '202':
+        "202":
           description: Deletion operation accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: "#/components/schemas/Operation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /instances/{name}/start:
     parameters:
-      - $ref: '#/components/parameters/InstanceName'
+      - $ref: "#/components/parameters/InstanceName"
     post:
       operationId: startInstance
       tags:
@@ -316,22 +375,22 @@ paths:
       summary: Start an instance (async)
       description: Submits a start request for the named instance. Returns the tracking operation.
       responses:
-        '202':
+        "202":
           description: Start operation accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: "#/components/schemas/Operation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /instances/{name}/stop:
     parameters:
-      - $ref: '#/components/parameters/InstanceName'
+      - $ref: "#/components/parameters/InstanceName"
     post:
       operationId: stopInstance
       tags:
@@ -344,20 +403,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InstanceStopRequest'
+              $ref: "#/components/schemas/InstanceStopRequest"
       responses:
-        '202':
+        "202":
           description: Stop operation accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: "#/components/schemas/Operation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /operations:
     get:
@@ -386,7 +445,7 @@ paths:
             default: 50
             example: 50
       responses:
-        '200':
+        "200":
           description: Recent operations
           content:
             application/json:
@@ -394,9 +453,9 @@ paths:
                 type: array
                 description: Array of operation records.
                 items:
-                  $ref: '#/components/schemas/Operation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: "#/components/schemas/Operation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /operations/{id}:
     parameters:
@@ -416,16 +475,16 @@ paths:
       summary: Fetch a single operation by ID
       description: Returns the current state of a single operation by its UUID.
       responses:
-        '200':
+        "200":
           description: Operation state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Operation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Operation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
   securitySchemes:
@@ -443,7 +502,7 @@ components:
       description: Instance name path parameter.
       schema:
         type: string
-        pattern: '^[a-z0-9][a-z0-9-]{0,62}$'
+        pattern: "^[a-z0-9][a-z0-9-]{0,62}$"
         example: web-1
         description: |
           Instance name. Lowercase letters, digits, and hyphens only.
@@ -455,31 +514,37 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Unauthorized:
       description: Missing or invalid session
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Conflict:
       description: State conflict (e.g. instance already exists, already running)
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     RateLimited:
       description: Too many requests
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
+    ServiceUnavailable:
+      description: Required local service or setup material is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
 
   schemas:
     Health:
@@ -518,7 +583,7 @@ components:
           type: string
           description: Build timestamp (RFC 3339 / ISO 8601).
           format: date-time
-          example: '2026-05-03T12:00:00Z'
+          example: "2026-05-03T12:00:00Z"
 
     LoginRequest:
       type: object
@@ -539,6 +604,42 @@ components:
           format: password
           example: correct horse battery staple
 
+    SetupRequest:
+      type: object
+      description: First-admin credentials plus the installer setup token.
+      required: [username, password, setup_token]
+      properties:
+        username:
+          type: string
+          description: Initial admin username.
+          minLength: 1
+          maxLength: 64
+          example: admin
+        password:
+          type: string
+          description: Initial admin password.
+          minLength: 8
+          maxLength: 256
+          format: password
+          example: correct horse battery staple
+        setup_token:
+          type: string
+          description: One-time setup token read from `/etc/helling/setup-token`.
+          minLength: 32
+          maxLength: 128
+          format: password
+          example: NlJfR2S7aG9uTSaKlJ5gMlR8n8dujAErDXsQu7ulFE4=
+
+    SetupStatus:
+      type: object
+      description: First-admin setup availability.
+      required: [setup_required]
+      properties:
+        setup_required:
+          type: boolean
+          description: True while no users exist and `/auth/setup` can create the first admin.
+          example: true
+
     MFACompleteRequest:
       type: object
       description: TOTP or recovery-code proof for a pre-session MFA challenge.
@@ -555,8 +656,8 @@ components:
           description: Six-digit TOTP code from the user's authenticator app.
           minLength: 6
           maxLength: 6
-          pattern: '^[0-9]{6}$'
-          example: '123456'
+          pattern: "^[0-9]{6}$"
+          example: "123456"
         recovery_code:
           type: string
           description: One-time recovery code shown during TOTP enrollment.
@@ -570,7 +671,7 @@ components:
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/AuthTokenResponse'
+          $ref: "#/components/schemas/AuthTokenResponse"
 
     AuthTokenResponse:
       type: object
@@ -622,7 +723,7 @@ components:
           type: string
           description: Account creation time (RFC 3339).
           format: date-time
-          example: '2026-05-03T12:00:00Z'
+          example: "2026-05-03T12:00:00Z"
 
     Instance:
       type: object
@@ -655,11 +756,11 @@ components:
           type: string
           description: Instance creation timestamp (RFC 3339).
           format: date-time
-          example: '2026-05-03T12:00:00Z'
+          example: "2026-05-03T12:00:00Z"
         ipv4:
           type: array
           description: IPv4 addresses assigned to the instance.
-          example: ['10.0.0.5']
+          example: ["10.0.0.5"]
           items:
             type: string
             description: IPv4 address in dotted-quad form.
@@ -667,7 +768,7 @@ components:
         ipv6:
           type: array
           description: IPv6 addresses assigned to the instance.
-          example: ['fd42::5']
+          example: ["fd42::5"]
           items:
             type: string
             description: IPv6 address.
@@ -681,7 +782,7 @@ components:
         name:
           type: string
           description: Desired instance name.
-          pattern: '^[a-z0-9][a-z0-9-]{0,62}$'
+          pattern: "^[a-z0-9][a-z0-9-]{0,62}$"
           example: web-1
         type:
           type: string
@@ -749,12 +850,12 @@ components:
           type: string
           description: Operation submission time (RFC 3339).
           format: date-time
-          example: '2026-05-03T12:00:00Z'
+          example: "2026-05-03T12:00:00Z"
         updated_at:
           type: string
           description: Last state-change time (RFC 3339).
           format: date-time
-          example: '2026-05-03T12:00:05Z'
+          example: "2026-05-03T12:00:05Z"
         progress_percent:
           type: integer
           description: Approximate progress between 0 and 100 (best-effort).

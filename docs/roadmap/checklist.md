@@ -22,7 +22,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 ### Auth
 
-- [x] Setup → login → JWT → protected routes → refresh → TOTP → recovery codes: full flow (covered by `TestRealAuth_SetupLoginRefreshLogout`, `TestService_SetupThenLoginAndRefresh`, `TestRealTotp_EnrollVerifyLoginFlow`, `TestService_EnrollVerifyTOTP_Flow`, `TestService_CompleteMFA_RecoveryCodeFlow`)
+- [x] Setup → login → JWT/session → protected routes → TOTP → recovery codes: full flow (covered by setup/login/MFA/recovery tests; v0.1 has no separate refresh endpoint)
 - [x] Rate limiting: 6 failed logins → 429 (sliding-window limiter at `apps/hellingd/internal/auth/ratelimit.go`; covered by `TestService_LoginRateLimit` + `TestService_LoginRateLimit_ResetsAfterSuccess`; api maps `auth.ErrRateLimited` → `huma.Error429TooManyRequests` in `auth_real.go`)
 - [x] API token: create → auth with token → revoke → rejected (covered by `TestRealApiTokens_CreateListRevoke` end-to-end including post-revoke 401 assertion)
 
@@ -37,19 +37,19 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 ### Dev Environment (ADR-052)
 
-- [x] Parallels Desktop dev VM bootstrap (`scripts/parallels-vm-bootstrap.sh`) provisions Debian 13 guest with Go, Bun, systemd, DBus, polkit, Incus, Podman — commit `7a7371c`
+- [x] Parallels Desktop dev VM bootstrap (`scripts/parallels-vm-bootstrap.sh`) provisions Debian 13 guest with Go, Bun, systemd, Incus, Podman, and no broad hellingd polkit grant — commit `7a7371c`
 - [x] rsync inner-loop deploy task (`task vm:parallels:dev`) cross-builds linux/$(arch), syncs to VM, restarts hellingd, returns 0 — commit `7a7371c`
 - [x] `.deb` release-gate deploy task (`task vm:parallels:release-test`) builds via reprepro (ADR-045), installs in VM, smoke passes — or skips cleanly if reprepro tooling not yet wired — commit `7a7371c`
 
 ### Code Hygiene
 
-> Hygiene grep below excludes the `stub` keyword: it is a legitimate Huma-spike pattern (seed fixtures + spike comments) tracked separately. Real work-marker keywords (TODO/FIXME/not-implemented) must remain at zero.
+> Hygiene grep below excludes the `stub` keyword: generated stubs are expected where the OpenAPI contract requires them. Real work-marker keywords (TODO/FIXME/not-implemented) must remain at zero.
 
 - [x] No `docker/docker` in go.mod
 - [x] No `google/nftables` in go.mod
 - [x] No `go-co-op/gocron` in go.mod
 - [x] No `devauth.go` exists
-- [x] No `Dockerfile` exists in deploy/ (deploy/ does not exist; ISO-only per ADR-021)
+- [x] No `Dockerfile` exists in deploy/ (deploy/ now contains ISO/systemd/Caddy packaging only)
 - [x] No `router.go` (manual routes) exists
 - [x] No `handlers_phase*.go` files exist
 - [x] No `strict_handlers.go` (empty struct) exists
@@ -60,7 +60,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 - [x] `vacuum lint --ruleset api/.vacuum.yaml api/openapi.yaml` — zero errors (score 100/100 against project ruleset; gate enforced by `task check:openapi`)
 - [x] Every Helling endpoint has operationId, request/response schemas, error responses (49/49 operations parity gate green via `task check:parity`)
-- [x] Every list endpoint follows cursor pagination contract (enforced via Huma operation registration + parity script; deviations require explicit exception)
+- [x] Every list endpoint follows cursor pagination contract (enforced via OpenAPI lint + parity script; deviations require explicit exception)
 
 ### Dashboard
 
@@ -95,7 +95,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 
 > Commits `5fd90aa`, `1992e3c`, `68fb40b` on main (2026-04-27).
 
-- [x] **F-37** (security · spec): `web/src/api/auth-store.ts` stores access token in memory only (`docs/spec/auth.md` §2.2); refresh stays in httpOnly cookie set by server
+- [x] **F-37** (security · spec): `web/src/api/auth-store.ts` stores access token in memory only (`docs/spec/auth.md` §2.2); session stays in an httpOnly cookie set by server
 - [x] **F-38** (ux): `PageLogin` calls `authLogin` operation from generated SDK; `app.jsx` initialises `authed=false`; MFA stage calls `authMfaComplete`
 - [x] **F-39** (resilience): root `<ErrorBoundary>` wraps `<App />` in `main.tsx`; per-route boundary inside `App` around page body
 - [x] **F-41** (dx): fresh-clone build works (`bun install && bun run dev` succeeds); `prepare` script runs `gen:api`; `web/README.md` documents codegen step

@@ -82,6 +82,56 @@ export const LoginRequestSchema = {
     }
 } as const;
 
+export const SetupRequestSchema = {
+    type: 'object',
+    description: 'First-admin credentials plus the installer setup token.',
+    required: [
+        'username',
+        'password',
+        'setup_token'
+    ],
+    properties: {
+        username: {
+            type: 'string',
+            description: 'Initial admin username.',
+            minLength: 1,
+            maxLength: 64,
+            example: 'admin'
+        },
+        password: {
+            type: 'string',
+            description: 'Initial admin password.',
+            minLength: 8,
+            maxLength: 256,
+            format: 'password',
+            example: 'correct horse battery staple'
+        },
+        setup_token: {
+            type: 'string',
+            description: 'One-time setup token read from `/etc/helling/setup-token`.',
+            minLength: 32,
+            maxLength: 128,
+            format: 'password',
+            example: 'NlJfR2S7aG9uTSaKlJ5gMlR8n8dujAErDXsQu7ulFE4='
+        }
+    }
+} as const;
+
+export const SetupStatusSchema = {
+    type: 'object',
+    description: 'First-admin setup availability.',
+    required: [
+        'setup_required'
+    ],
+    properties: {
+        setup_required: {
+            type: 'boolean',
+            description: 'True while no users exist and `/auth/setup` can create the first admin.',
+            example: true
+        }
+    }
+} as const;
+
 export const MFACompleteRequestSchema = {
     type: 'object',
     description: 'TOTP or recovery-code proof for a pre-session MFA challenge.',

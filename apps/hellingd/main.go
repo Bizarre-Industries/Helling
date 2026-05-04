@@ -1,8 +1,8 @@
 // Package main is the entrypoint for the hellingd backend daemon.
 //
 // hellingd listens on a Unix socket only. It is never directly exposed
-// to the network. All public traffic flows through helling-proxy, which
-// terminates TLS and forwards to hellingd over the local socket.
+// to the network. All public traffic flows through Caddy, which terminates
+// TLS and forwards to hellingd over the local socket.
 package main
 
 import (
@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"os/user"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -40,9 +42,8 @@ func main() {
 	}
 }
 
-//nolint:gocyclo // Startup wires config, store, auth keys, Incus, router, listener, and shutdown in one place.
 func run() error {
-	configPath := flag.String("config", "/etc/helling/config.yaml", "path to config file")
+	configPath := flag.String("config", "/etc/helling/helling.yaml", "path to config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -59,7 +60,8 @@ func run() error {
 	logger := newLogger(cfg.Log)
 	slog.SetDefault(logger)
 
-	logger.Info("starting hellingd",
+	logger.Info(
+		"starting hellingd",
 		slog.String("version", version),
 		slog.String("commit", commit),
 		slog.String("socket", cfg.Server.SocketPath),
@@ -80,10 +82,6 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	if err := bootstrapAdmin(context.Background(), st, &cfg, logger); err != nil {
-		return fmt.Errorf("bootstrapping admin: %w", err)
-	}
-
 	jwtSigner, err := auth.LoadOrCreateJWTSigner(cfg.Auth.JWTSigningKeyPath)
 	if err != nil {
 		return fmt.Errorf("loading JWT signing key: %w", err)
@@ -94,7 +92,8 @@ func run() error {
 	// endpoints will return 503 until Incus is reachable.
 	incusClient, err := incus.Connect(cfg.Incus.SocketPath)
 	if err != nil {
-		logger.Warn("incus client unavailable; instance endpoints will return 503",
+		logger.Warn(
+			"incus client unavailable; instance endpoints will return 503",
 			slog.String("socket", cfg.Incus.SocketPath),
 			slog.Any("err", err),
 		)
@@ -111,7 +110,8 @@ func run() error {
 			UsernameWindow: 15 * time.Minute,
 			IPLimit:        20,
 			IPWindow:       15 * time.Minute,
-			Argon2:         argon2ParamsFromConfig(cfg.Auth),
+			SetupTokenPath: cfg.Auth.SetupTokenPath,
+			Argon2:         argon2ParamsFromConfig(&cfg.Auth),
 			JWTSigner:      jwtSigner,
 		},
 		IncusProber: incusProber(cfg.Incus.SocketPath),
@@ -127,10 +127,11 @@ func run() error {
 	}
 
 	httpServer := &http.Server{
-		Handler:      srv.Handler(),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Handler:           srv.Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -187,40 +188,10 @@ func newLogger(cfg config.LogConfig) *slog.Logger {
 	return slog.New(handler)
 }
 
-// bootstrapAdmin creates the initial admin user on first boot. Refuses to
-// start if HELLING_BOOTSTRAP_PASSWORD is unset and no users exist; lets the
-// daemon start normally once at least one user is present.
-func bootstrapAdmin(ctx context.Context, st *store.Store, cfg *config.Config, logger *slog.Logger) error {
-	n, err := st.CountUsers(ctx)
-	if err != nil {
-		return err
-	}
-	if n > 0 {
-		return nil
-	}
-	password := os.Getenv("HELLING_BOOTSTRAP_PASSWORD")
-	if password == "" {
-		return errors.New("first boot: HELLING_BOOTSTRAP_PASSWORD env var is required to create the admin user")
-	}
-	hash, err := auth.Hash(password, argon2ParamsFromConfig(cfg.Auth))
-	if err != nil {
-		return fmt.Errorf("hashing bootstrap password: %w", err)
-	}
-	u, err := st.CreateUser(ctx, "admin", hash, true)
-	if err != nil {
-		return fmt.Errorf("creating admin user: %w", err)
-	}
-	logger.LogAttrs(ctx, slog.LevelInfo, "bootstrap admin user created",
-		slog.Int64("user_id", u.ID),
-		slog.String("username", u.Username),
-	)
-	return nil
-}
-
 // argon2ParamsFromConfig converts the Auth section of config.Config into the
 // auth package's Argon2Params. Cost ints come from validated config and are
 // safely bounded; the gosec annotations note this.
-func argon2ParamsFromConfig(cfg config.AuthConfig) auth.Argon2Params {
+func argon2ParamsFromConfig(cfg *config.AuthConfig) auth.Argon2Params {
 	return auth.Argon2Params{
 		Time:        uint32(cfg.Argon2TimeCost),   //nolint:gosec // validated > 0 in config
 		MemoryKiB:   uint32(cfg.Argon2MemoryKiB),  //nolint:gosec // validated >= 8 MiB in config
@@ -236,7 +207,7 @@ func argon2ParamsFromConfig(cfg config.AuthConfig) auth.Argon2Params {
 func incusProber(socketPath string) server.IncusProber {
 	return func(ctx context.Context) bool {
 		if socketPath == "" {
-			socketPath = "/var/lib/incus/unix.socket"
+			socketPath = "/var/lib/incus/unix.socket.user"
 		}
 		var d net.Dialer
 		conn, err := d.DialContext(ctx, "unix", socketPath)
@@ -269,10 +240,29 @@ func newSocketListener(path, group string, mode os.FileMode) (net.Listener, erro
 		return nil, fmt.Errorf("chmod socket: %w", err)
 	}
 
-	// Group ownership is set via Chown in a real install; skipped here because
-	// it requires privilege at startup. A systemd unit handles it via SocketUser=
-	// and SocketGroup= directives. See deploy/systemd/helling.socket (TODO).
-	_ = group
+	if group != "" {
+		gid, err := lookupGroupID(group)
+		if err != nil {
+			_ = listener.Close()
+			return nil, err
+		}
+		if err := os.Chown(path, -1, gid); err != nil {
+			_ = listener.Close()
+			return nil, fmt.Errorf("chgrp socket to %s: %w", group, err)
+		}
+	}
 
 	return listener, nil
+}
+
+func lookupGroupID(name string) (int, error) {
+	g, err := user.LookupGroup(name)
+	if err != nil {
+		return 0, fmt.Errorf("lookup socket group %s: %w", name, err)
+	}
+	gid, err := strconv.Atoi(g.Gid)
+	if err != nil {
+		return 0, fmt.Errorf("parse gid for socket group %s: %w", name, err)
+	}
+	return gid, nil
 }

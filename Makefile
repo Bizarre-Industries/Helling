@@ -12,7 +12,6 @@ BUN           ?= bun
 GOLANGCI_LINT ?= golangci-lint
 GOFUMPT       ?= gofumpt
 GOIMPORTS     ?= goimports
-DOCKER        ?= docker
 
 VERSION       ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT        ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -22,12 +21,11 @@ LDFLAGS       := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.bui
 
 GO_PKGS_HELLINGD     := ./apps/hellingd/...
 GO_PKGS_HELLING_CLI  := ./apps/helling-cli/...
-GO_PKGS_HELLING_PROXY:= ./apps/helling-proxy/...
 GO_TEST_FLAGS        := -race -count=1
 GO_BUILD_FLAGS       := -trimpath -ldflags '$(LDFLAGS)'
 
 OUT_DIR := ./bin
-GENERATED_PATHS := apps/hellingd/api apps/helling-cli/internal/client web/src/api/generated
+GENERATED_PATHS := apps/hellingd/api web/src/api/generated
 
 # ---- Help ----------------------------------------------------------------
 
@@ -72,7 +70,7 @@ generate-go: ## Regenerate Go server and client code from OpenAPI
 	fi
 
 .PHONY: generate-web
-generate-web: ## Regenerate the TypeScript client (Orval)
+generate-web: ## Regenerate the TypeScript client (Hey API)
 	@if [ -d web ] && [ -f web/package.json ]; then \
 		cd web && $(BUN) run gen:api; \
 	else \
@@ -109,12 +107,11 @@ fmt-check: ## Verify formatting without modifying files
 lint: ## Run static analysis
 	cd apps/hellingd && $(GOLANGCI_LINT) run ./...
 	@if [ -d apps/helling-cli ]; then cd apps/helling-cli && $(GOLANGCI_LINT) run ./...; fi
-	@if [ -d apps/helling-proxy ]; then cd apps/helling-proxy && $(GOLANGCI_LINT) run ./...; fi
 
 # ---- Tests ---------------------------------------------------------------
 
 .PHONY: test
-test: test-hellingd test-cli test-proxy ## Run unit tests for all Go modules
+test: test-hellingd test-cli ## Run unit tests for all Go modules
 
 .PHONY: test-hellingd
 test-hellingd:
@@ -126,12 +123,6 @@ test-cli:
 		$(GO) test $(GO_PKGS_HELLING_CLI) $(GO_TEST_FLAGS); \
 	fi
 
-.PHONY: test-proxy
-test-proxy:
-	@if [ -f apps/helling-proxy/go.mod ]; then \
-		$(GO) test $(GO_PKGS_HELLING_PROXY) $(GO_TEST_FLAGS); \
-	fi
-
 .PHONY: test-cover
 test-cover: ## Run tests with coverage report
 	$(GO) test -tags devauth -race -coverprofile=coverage.out ./apps/...
@@ -140,7 +131,15 @@ test-cover: ## Run tests with coverage report
 # ---- Build ---------------------------------------------------------------
 
 .PHONY: build
-build: build-hellingd build-cli build-proxy ## Build all binaries to $(OUT_DIR)
+build: build-hellingd build-cli ## Build all binaries to $(OUT_DIR)
+
+.PHONY: iso
+iso: ## Build the Helling Debian installer ISO (requires Debian + live-build)
+	bash scripts/build-iso.sh
+
+.PHONY: check-iso
+check-iso: ## Validate installer ISO profile and first-boot wiring
+	bash scripts/check-iso-config.sh
 
 .PHONY: build-hellingd
 build-hellingd: $(OUT_DIR)
@@ -150,12 +149,6 @@ build-hellingd: $(OUT_DIR)
 build-cli: $(OUT_DIR)
 	@if [ -d apps/helling-cli ]; then \
 		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling ./apps/helling-cli; \
-	fi
-
-.PHONY: build-proxy
-build-proxy: $(OUT_DIR)
-	@if [ -f apps/helling-proxy/go.mod ]; then \
-		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-proxy ./apps/helling-proxy; \
 	fi
 
 $(OUT_DIR):
@@ -170,12 +163,6 @@ web-dev: ## Run the frontend dev server
 .PHONY: web-build
 web-build: ## Build the production frontend bundle
 	cd web && $(BUN) run build
-
-# ---- Container -----------------------------------------------------------
-
-.PHONY: docker
-docker: ## Build the helling Docker image
-	$(DOCKER) build -t helling:$(VERSION) -f deploy/Dockerfile .
 
 # ---- Security ------------------------------------------------------------
 

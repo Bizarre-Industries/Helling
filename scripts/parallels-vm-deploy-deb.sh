@@ -7,6 +7,7 @@
 # Required env:
 #   HELLING_VM_HOST   VM IP
 #   HELLING_VM_USER   default: helling
+#   HELLING_VM_SSH_PORT default: 22
 #
 # Behavior when reprepro tooling is not yet wired (ADR-045 in flight):
 #   exits 0 with "SKIPPED: reprepro not configured (ADR-045)" so the smoke test
@@ -16,6 +17,22 @@ set -euo pipefail
 
 VM_HOST="${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
 VM_USER="${HELLING_VM_USER:-helling}"
+VM_SSH_PORT="${HELLING_VM_SSH_PORT:-22}"
+SSH_OPTS=(
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  -o ServerAliveInterval=5
+  -o ServerAliveCountMax=3
+  -p "$VM_SSH_PORT"
+)
+SCP_OPTS=(
+  -q
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  -o ServerAliveInterval=5
+  -o ServerAliveCountMax=3
+  -P "$VM_SSH_PORT"
+)
 
 log() { printf '▶ %s\n' "$*"; }
 done_() { printf '✓ %s\n' "$*"; }
@@ -27,6 +44,9 @@ fail() {
   printf '✗ %s\n' "$*" >&2
   exit 1
 }
+case "$VM_SSH_PORT" in
+  '' | *[!0-9]*) fail "HELLING_VM_SSH_PORT must be numeric (got: $VM_SSH_PORT)" ;;
+esac
 have() { command -v "$1" >/dev/null 2>&1; }
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -63,10 +83,10 @@ log "Built: $DEB"
 
 DEB_BASE="$(basename "$DEB")"
 log "scp $DEB -> $VM_USER@$VM_HOST:/tmp/$DEB_BASE"
-scp -q "$DEB" "$VM_USER@$VM_HOST:/tmp/$DEB_BASE"
+timeout 60 scp "${SCP_OPTS[@]}" "$DEB" "$VM_USER@$VM_HOST:/tmp/$DEB_BASE"
 
 log "apt install on VM and restart hellingd"
-ssh -o BatchMode=yes "$VM_USER@$VM_HOST" "sudo apt-get install -y --reinstall /tmp/$DEB_BASE && sudo systemctl restart hellingd"
+timeout 180 ssh "${SSH_OPTS[@]}" "$VM_USER@$VM_HOST" "sudo apt-get install -y --reinstall /tmp/$DEB_BASE && sudo systemctl restart hellingd"
 
 done_ "Release-shaped deploy complete"
 echo "Verify: task vm:parallels:smoke"

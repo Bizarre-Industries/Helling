@@ -35,20 +35,20 @@ Triggered on every push to a PR branch and every push to `main`. This is the blo
 
 Runs in parallel:
 
-| Job                 | Checks                                                                              | Fail condition                                                     |
-| ------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `openapi`           | `vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml`      | Score < 100/100, or any rule firing at `info` severity or above    |
-| `openapi-generated` | `task check:openapi:generated`                                                      | Committed `api/openapi.yaml` differs from what Huma would emit now |
-| `markdown`          | markdownlint-cli2, prettier --check                                                 | Any lint or format violation                                       |
-| `yaml`              | yamllint -s                                                                         | Any warning or error                                               |
-| `shell`             | shellcheck -S style, shfmt -d                                                       | Any violation                                                      |
-| `go`                | build + vet + golangci-lint + govulncheck + go.mod tidy + test with race + coverage | Any fail, or coverage below the active module floor                |
-| `frontend`          | tsc --noEmit, generated-code drift, Vitest via `bun run test`, production build     | Any fail                                                           |
-| `sql`               | sqlfluff, sqlc drift, goose round-trip                                              | Any fail                                                           |
-| `secrets`           | gitleaks detect                                                                     | Any finding                                                        |
-| `spelling`          | typos                                                                               | Any typo                                                           |
-| `links`             | lychee --offline                                                                    | Any broken internal link                                           |
-| `parity`            | `scripts/check-parity.sh`                                                           | Any operation without CLI + WebUI counterpart or exception         |
+| Job                 | Checks                                                                              | Fail condition                                                   |
+| ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `openapi`           | `vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml`      | Score < 100/100, or any rule firing at `info` severity or above  |
+| `openapi-generated` | `task check:openapi:generated`                                                      | Generated Go/TypeScript artifacts differ from `api/openapi.yaml` |
+| `markdown`          | markdownlint-cli2, prettier --check                                                 | Any lint or format violation                                     |
+| `yaml`              | yamllint -s                                                                         | Any warning or error                                             |
+| `shell`             | shellcheck -S style, shfmt -d                                                       | Any violation                                                    |
+| `go`                | build + vet + golangci-lint + govulncheck + go.mod tidy + test with race + coverage | Any fail, or coverage below the active module floor              |
+| `frontend`          | tsc --noEmit, generated-code drift, Vitest via `bun run test`, production build     | Any fail                                                         |
+| `sql`               | sqlfluff, sqlc drift, goose round-trip                                              | Any fail                                                         |
+| `secrets`           | gitleaks detect                                                                     | Any finding                                                      |
+| `spelling`          | typos                                                                               | Any typo                                                         |
+| `links`             | lychee --offline                                                                    | Any broken internal link                                         |
+| `parity`            | `scripts/check-parity.sh`                                                           | Any operation without CLI + WebUI counterpart or exception       |
 
 Total wall-clock target: under 3 minutes for a typical PR. The Go test job dominates; everything else is under 30 seconds.
 

@@ -79,6 +79,30 @@ func TestCountUsers(t *testing.T) {
 	}
 }
 
+func TestCreateFirstAdminOnlyWhenUsersTableIsEmpty(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+
+	u, err := st.CreateFirstAdmin(ctx, "admin", "hash")
+	if err != nil {
+		t.Fatalf("CreateFirstAdmin: %v", err)
+	}
+	if !u.IsAdmin || u.Username != "admin" {
+		t.Fatalf("CreateFirstAdmin user = %+v", u)
+	}
+
+	if _, err := st.CreateFirstAdmin(ctx, "second", "hash"); !errors.Is(err, ErrUsersExist) {
+		t.Fatalf("CreateFirstAdmin second err = %v, want ErrUsersExist", err)
+	}
+	n, err := st.CountUsers(ctx)
+	if err != nil {
+		t.Fatalf("CountUsers: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("CountUsers = %d, want 1", n)
+	}
+}
+
 func TestSessionRoundtrip(t *testing.T) {
 	t.Parallel()
 	st := newTestStore(t)

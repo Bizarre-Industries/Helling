@@ -44,7 +44,8 @@ func (s *Store) CreateK8sCluster(ctx context.Context, userID int64, name, versio
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO k8s_clusters (id, user_id, name, version, control_planes, workers, status, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.UserID, c.Name, c.Version, c.ControlPlanes, c.Workers, c.Status, now.Unix(), now.Unix(),
@@ -60,7 +61,8 @@ func (s *Store) GetK8sCluster(ctx context.Context, name string) (K8sCluster, err
 	var c K8sCluster
 	var createdAt, updatedAt int64
 	var kubeconfig sql.NullString
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, name, version, control_planes, workers, status, kubeconfig, created_at, updated_at
 		 FROM k8s_clusters WHERE name = ?`, name,
 	).Scan(&c.ID, &c.UserID, &c.Name, &c.Version, &c.ControlPlanes, &c.Workers, &c.Status, &kubeconfig, &createdAt, &updatedAt)
@@ -109,7 +111,8 @@ func (s *Store) ListK8sClusters(ctx context.Context) ([]K8sCluster, error) {
 // UpdateK8sClusterStatus updates the status and optionally the kubeconfig.
 func (s *Store) UpdateK8sClusterStatus(ctx context.Context, name, status string, kubeconfig *string) error {
 	now := time.Now().Unix()
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE k8s_clusters SET status = ?, kubeconfig = ?, updated_at = ? WHERE name = ?`,
 		status, kubeconfig, now, name,
 	)
@@ -121,7 +124,8 @@ func (s *Store) UpdateK8sClusterStatus(ctx context.Context, name, status string,
 
 // UpdateK8sClusterScale updates worker count.
 func (s *Store) UpdateK8sClusterScale(ctx context.Context, name string, workers int) error {
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE k8s_clusters SET workers = ?, updated_at = ? WHERE name = ?`,
 		workers, time.Now().Unix(), name,
 	)

@@ -6,8 +6,8 @@
 
 Helling currently generates frontend API client code from api/openapi.yaml using orval.
 
-After ADR-043, api/openapi.yaml is generated from Huma operation types for Helling-owned endpoints.
-The WebUI generator should align with this code-first contract flow and simplify frontend client/runtime dependencies.
+ADR-043 is superseded for v0.1; api/openapi.yaml is the spec-first source of truth for Helling-owned endpoints.
+The WebUI generator should align with this contract flow and simplify frontend client/runtime dependencies.
 
 Current constraints:
 

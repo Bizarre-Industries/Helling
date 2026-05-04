@@ -4,14 +4,21 @@ helling-complete.md
 IMPLEMENTATION-PLAN.md
 
 # Editor and agent caches (project-local; never tracked)
-# .claude/settings.json is project-shared (PostToolUse version-ship hook per ADR-053).
-# Everything else under .claude/ is per-contributor / per-machine local state.
-.claude/agents/
+# .claude/settings.json, commands, hooks, skills, and agents are project-shared.
+# Local Claude runtime state stays out of commits.
 .claude/launch.json
 .claude/rules/
+.claude/council-logs/
 .claude/settings.local.json
 .claude/worktrees/
 .claude/.last-shipped-tag
+
+# .codex/hooks.json, commands, hooks, and agents are project-shared.
+# Local runtime state stays out of commits.
+.codex/.last-shipped-tag
+.codex/council-logs/
+.codex/settings.local.json
+.codex/worktrees/
 
 # autoskills install dir — source of truth lives upstream; we deploy real
 # copies into .claude/skills/ which Claude Code reads. Re-sync via

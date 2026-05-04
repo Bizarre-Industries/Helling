@@ -13,9 +13,9 @@ Normative configuration contract for Helling v0.1 runtime.
 ## File Location and Ownership
 
 - Primary path: `/etc/helling/helling.yaml`
-- Owner: `root:root`
-- Mode: `0600`
-- Runtime service user reads via controlled startup path.
+- Owner: `root:helling`
+- Mode: `0640`
+- Runtime service user reads directly as the `helling` group member.
 
 ## Environment Override Pattern
 
@@ -24,7 +24,7 @@ Any key may be overridden by env var:
 - Pattern: `HELLING_<UPPER_SNAKE_PATH>`
 - Dot path to env conversion example:
   - `auth.access_ttl_minutes` -> `HELLING_AUTH_ACCESS_TTL_MINUTES`
-  - `listen.socket` -> `HELLING_LISTEN_SOCKET`
+  - `server.socket_path` -> `HELLING_SOCKET_PATH`
 
 Precedence:
 
@@ -34,41 +34,36 @@ Precedence:
 
 ## Required Keys (v0.1)
 
-| Key                               | Type     | Required | Default                              | Notes                                                                                                                                                                                                                                                |
-| --------------------------------- | -------- | -------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listen.socket`                   | string   | yes      | `/run/helling/hellingd.sock`         | Unix socket for edge proxy -> daemon traffic                                                                                                                                                                                                         |
-| `listen.socket_mode`              | string   | yes      | `0660`                               | Socket permissions                                                                                                                                                                                                                                   |
-| `incus.https_address`             | string   | yes      | `127.0.0.1:8443`                     | Loopback-only Incus HTTPS endpoint                                                                                                                                                                                                                   |
-| `incus.admin_cert_path`           | string   | yes      | `/etc/helling/certs/incus-admin.crt` | Admin client cert for Incus trust management                                                                                                                                                                                                         |
-| `incus.admin_key_path`            | string   | yes      | `/etc/helling/certs/incus-admin.key` | Admin client key                                                                                                                                                                                                                                     |
-| `podman.socket`                   | string   | yes      | `/run/podman/podman.sock`            | Local Podman Unix socket                                                                                                                                                                                                                             |
-| `secrets.identity_path`           | string   | yes      | `/etc/helling/age/identity.txt`      | age identity file for secret encryption                                                                                                                                                                                                              |
-| `auth.jwt_signing_key_path`       | string   | yes      | `/var/lib/helling/jwt/ed25519.key`   | Ed25519 signing key seed, created `0600` on first boot when absent                                                                                                                                                                                   |
-| `auth.access_ttl_minutes`         | int      | yes      | `15`                                 | Access token TTL in minutes                                                                                                                                                                                                                          |
-| `auth.session_ttl_hours`          | int      | yes      | `168`                                | Session cookie TTL in hours                                                                                                                                                                                                                          |
-| `auth.rate_limit.login_attempts`  | int      | yes      | `5`                                  | Failed attempts before lockout                                                                                                                                                                                                                       |
-| `auth.rate_limit.login_window`    | duration | yes      | `15m`                                | Lock window for failed auth                                                                                                                                                                                                                          |
-| `auth.session_inactivity_timeout` | duration | yes      | `30m`                                | Session inactivity window. Sessions with no refresh or access activity within this window require re-authentication even if the refresh TTL has not expired. Set to `0` to disable inactivity tracking (refresh TTL alone governs session lifetime). |
-| `warnings.interval`               | duration | yes      | `5m`                                 | Warning engine interval                                                                                                                                                                                                                              |
-| `warnings.pool_full_pct`          | int      | yes      | `85`                                 | Storage pool warning threshold                                                                                                                                                                                                                       |
-| `warnings.cert_expiry_days`       | int      | yes      | `30`                                 | Certificate expiry warning threshold                                                                                                                                                                                                                 |
-| `warnings.backup_age_hours`       | int      | yes      | `48`                                 | Backup staleness warning threshold                                                                                                                                                                                                                   |
-| `warnings.stopped_instance_days`  | int      | yes      | `90`                                 | Long-stopped instance warning threshold                                                                                                                                                                                                              |
-| `auto_snapshot.enabled`           | bool     | yes      | `true`                               | Auto-snapshot before destructive operations                                                                                                                                                                                                          |
-| `auto_snapshot.retention`         | duration | yes      | `24h`                                | Auto-snapshot retention                                                                                                                                                                                                                              |
-| `auto_snapshot.strict_mode`       | bool     | yes      | `true`                               | Block destructive change if snapshot fails                                                                                                                                                                                                           |
-| `logging.level`                   | string   | yes      | `info`                               | Allowed values: `debug`, `info`, `warn`, `error`                                                                                                                                                                                                     |
-| `logging.format`                  | string   | yes      | `json`                               | Allowed values: `json`, `text`                                                                                                                                                                                                                       |
+| Key                             | Type   | Required | Default                            | Notes                                                                |
+| ------------------------------- | ------ | -------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `state_dir`                     | string | yes      | `/var/lib/helling`                 | SQLite state directory.                                              |
+| `server.socket_path`            | string | yes      | `/run/helling/api.sock`            | Unix socket for edge proxy -> daemon traffic.                        |
+| `server.socket_group`           | string | yes      | `helling-proxy`                    | Socket group Caddy is added to during ISO first boot.                |
+| `server.socket_mode`            | int    | yes      | `432`                              | Decimal form of `0660`; YAML octal parsing is intentionally avoided. |
+| `incus.socket_path`             | string | no       | `/var/lib/incus/unix.socket.user`  | Restricted Incus user socket for the `incus` group.                  |
+| `incus.project`                 | string | yes      | `default`                          | Incus project used by v0.1 operations.                               |
+| `auth.jwt_signing_key_path`     | string | yes      | `/var/lib/helling/jwt/ed25519.key` | Ed25519 signing key seed, created `0600` on first boot when absent.  |
+| `auth.setup_token_path`         | string | yes      | `/etc/helling/setup-token`         | One-time first-admin setup token path, created by ISO first boot.    |
+| `auth.access_ttl_minutes`       | int    | yes      | `15`                               | Access token TTL in minutes.                                         |
+| `auth.session_ttl_hours`        | int    | yes      | `168`                              | Session cookie TTL in hours.                                         |
+| `auth.login_rate_limit_per_15m` | int    | yes      | `5`                                | Failed username attempts before lockout.                             |
+| `auth.argon2_time_cost`         | int    | yes      | `3`                                | Argon2id time cost.                                                  |
+| `auth.argon2_memory_kib`        | int    | yes      | `65536`                            | Argon2id memory cost.                                                |
+| `auth.argon2_parallelism`       | int    | yes      | `4`                                | Argon2id parallelism.                                                |
+| `log.level`                     | string | yes      | `info`                             | Allowed values: `debug`, `info`, `warn`, `error`.                    |
+| `log.format`                    | string | yes      | `json`                             | Allowed values: `json`, `text`.                                      |
 
 ## Validation Rules
 
-- Unknown top-level keys MUST fail startup validation.
-- Duration fields MUST use Go duration format (`15m`, `24h`, `168h`).
-- `incus.https_address` MUST be loopback-scoped in v0.1.
-- `listen.socket` and `podman.socket` MUST be absolute paths.
+- `server.socket_path` MUST be an absolute path.
+- `server.socket_group` MUST resolve during daemon startup when non-empty.
+- `server.socket_mode` MUST grant no broader access than `0660`.
 - `auth.login_rate_limit_per_15m` MUST be > 0.
 - `auth.access_ttl_minutes` MUST be > 0.
-- `warnings.pool_full_pct` MUST be in range `[1,100]`.
+- `auth.setup_token_path` MUST be non-empty and absolute.
+- `auth.argon2_time_cost` MUST be between 1 and 10.
+- `auth.argon2_memory_kib` MUST be between 8192 and 262144.
+- `auth.argon2_parallelism` MUST be between 1 and 8.
 
 ## Change Management
 

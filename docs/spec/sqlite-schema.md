@@ -18,39 +18,35 @@ This document defines the Helling-owned SQLite schema for v0.1.
 
 ### 1.1 users
 
-| Column        | Type                 | Notes                                                           |
-| ------------- | -------------------- | --------------------------------------------------------------- |
-| id            | TEXT PRIMARY KEY     | UUID                                                            |
-| username      | TEXT UNIQUE NOT NULL | Login identity                                                  |
-| role          | TEXT NOT NULL        | `admin`, `user`, `auditor`                                      |
-| status        | TEXT NOT NULL        | `active`, `disabled`                                            |
-| password_hash | TEXT                 | argon2id PHC; NULL for PAM-backed users (see docs/spec/auth.md) |
-| created_at    | INTEGER NOT NULL     | Unix epoch seconds                                              |
-| updated_at    | INTEGER NOT NULL     | Unix epoch seconds                                              |
+| Column        | Type                 | Notes                                        |
+| ------------- | -------------------- | -------------------------------------------- |
+| id            | INTEGER PRIMARY KEY  | Autoincrementing local user id               |
+| username      | TEXT UNIQUE NOT NULL | Login identity                               |
+| password_hash | TEXT NOT NULL        | argon2id PHC for Helling-managed local users |
+| created_at    | INTEGER NOT NULL     | Unix epoch seconds                           |
+| is_admin      | INTEGER NOT NULL     | Boolean admin flag, 0 or 1                   |
 
 Checks:
 
-- `role IN ('admin','user','auditor')`
-- `status IN ('active','disabled')`
+- `is_admin IN (0,1)`
 
 Notes:
 
-- `password_hash` was added in migration `0002_user_password_hash.sql` to
-  support Helling-managed bootstrap accounts. PAM users keep it NULL and
-  authenticate through `/etc/pam.d/helling` per docs/spec/auth.md §2.1.
+- `password_hash` is required for all v0.1 users. The first admin is created
+  by `/auth/setup` with the one-time installer setup token.
 
 ### 1.2 sessions
 
-| Column             | Type             | Notes                        |
-| ------------------ | ---------------- | ---------------------------- |
-| id                 | TEXT PRIMARY KEY | UUID                         |
-| user_id            | TEXT NOT NULL    | FK to users.id               |
-| refresh_token_hash | TEXT NOT NULL    | SHA-256 digest               |
-| user_agent         | TEXT             | Client fingerprint for audit |
-| ip_address         | TEXT             | Last known source IP         |
-| expires_at         | INTEGER NOT NULL | Unix epoch seconds           |
-| revoked_at         | INTEGER          | Null when active             |
-| created_at         | INTEGER NOT NULL | Unix epoch seconds           |
+| Column     | Type             | Notes                                  |
+| ---------- | ---------------- | -------------------------------------- |
+| id         | TEXT PRIMARY KEY | UUID                                   |
+| user_id    | TEXT NOT NULL    | FK to users.id                         |
+| token_hash | TEXT NOT NULL    | SHA-256 digest of opaque session token |
+| user_agent | TEXT             | Client fingerprint for audit           |
+| ip_address | TEXT             | Last known source IP                   |
+| expires_at | INTEGER NOT NULL | Unix epoch seconds                     |
+| revoked_at | INTEGER          | Null when active                       |
+| created_at | INTEGER NOT NULL | Unix epoch seconds                     |
 
 Indexes:
 

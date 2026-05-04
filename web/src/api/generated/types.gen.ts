@@ -55,6 +55,34 @@ export type LoginRequest = {
 };
 
 /**
+ * First-admin credentials plus the installer setup token.
+ */
+export type SetupRequest = {
+    /**
+     * Initial admin username.
+     */
+    username: string;
+    /**
+     * Initial admin password.
+     */
+    password: string;
+    /**
+     * One-time setup token read from `/etc/helling/setup-token`.
+     */
+    setup_token: string;
+};
+
+/**
+ * First-admin setup availability.
+ */
+export type SetupStatus = {
+    /**
+     * True while no users exist and `/auth/setup` can create the first admin.
+     */
+    setup_required: boolean;
+};
+
+/**
  * TOTP or recovery-code proof for a pre-session MFA challenge.
  */
 export type MfaCompleteRequest = {
@@ -343,6 +371,71 @@ export type AuthLoginResponses = {
 };
 
 export type AuthLoginResponse = AuthLoginResponses[keyof AuthLoginResponses];
+
+export type AuthSetupStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/setup/status';
+};
+
+export type AuthSetupStatusErrors = {
+    /**
+     * Required local service or setup material is unavailable
+     */
+    503: Error;
+};
+
+export type AuthSetupStatusError = AuthSetupStatusErrors[keyof AuthSetupStatusErrors];
+
+export type AuthSetupStatusResponses = {
+    /**
+     * Setup status.
+     */
+    200: SetupStatus;
+};
+
+export type AuthSetupStatusResponse = AuthSetupStatusResponses[keyof AuthSetupStatusResponses];
+
+export type AuthSetupData = {
+    /**
+     * First admin credentials and installer setup token
+     */
+    body: SetupRequest;
+    path?: never;
+    query?: never;
+    url: '/auth/setup';
+};
+
+export type AuthSetupErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * State conflict (e.g. instance already exists, already running)
+     */
+    409: Error;
+    /**
+     * Required local service or setup material is unavailable
+     */
+    503: Error;
+};
+
+export type AuthSetupError = AuthSetupErrors[keyof AuthSetupErrors];
+
+export type AuthSetupResponses = {
+    /**
+     * First admin user created.
+     */
+    201: User;
+};
+
+export type AuthSetupResponse = AuthSetupResponses[keyof AuthSetupResponses];
 
 export type AuthMfaCompleteData = {
     /**

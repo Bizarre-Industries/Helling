@@ -7,47 +7,44 @@
 
 ## Backend (hellingd)
 
-| Concern                | Tool                                               | What it does                                                                                                                              | ADR                                 |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| HTTP routing           | `net/http` ServeMux + `huma/v2/humago`             | ServeMux baseline + Huma adapter                                                                                                          | ADR-043                             |
-| API types + validation | `danielgtaylor/huma/v2`                            | Validation + OpenAPI 3.1 from Go struct tags                                                                                              | ADR-043                             |
-| Auth (PAM)             | `msteinert/pam/v2`                                 | PAM conversation (cgo — requires `libpam0g-dev` on Debian build host); see `docs/spec/pam.md` for the service-name / config-path contract | ADR-030                             |
-| Auth (JWT)             | `golang-jwt/jwt/v5`                                | Ed25519-signed access + refresh tokens                                                                                                    | ADR-031                             |
-| Auth (TOTP)            | `pquerna/otp`                                      | QR generation, code verify                                                                                                                | —                                   |
-| Database               | `database/sql` + `sqlc`                            | Helling state only (SQLite)                                                                                                               | ADR-038                             |
-| SQLite driver          | `mattn/go-sqlite3`                                 | cgo-backed SQLite — cgo already mandatory for libpam                                                                                      | ADR-038                             |
-| Migrations             | `goose`                                            | Forward-only SQL migrations                                                                                                               | ADR-038                             |
-| Password hashing       | `golang.org/x/crypto/argon2`                       | argon2id (RFC 9106 / OWASP baseline)                                                                                                      | ADR-030                             |
-| Config                 | `gopkg.in/yaml.v3`                                 | YAML + env vars                                                                                                                           | —                                   |
-| BMC                    | `bmc-toolbox/bmclib/v2`                            | IPMI + Redfish (v0.4 feature)                                                                                                             | —                                   |
-| HTTP proxy             | `net/http/httputil.ReverseProxy`                   | Proxies to Incus HTTPS and Podman Unix socket                                                                                             | ADR-014, ADR-036                    |
-| systemd unit mgmt      | `godbus/dbus/v5` + SUID `helling-unit-link` helper | DBus-based unit management under non-root hellingd                                                                                        | ADR-017, ADR-018 (amended), ADR-050 |
-| Journal emit           | `coreos/go-systemd/v22/journal`                    | Structured-field audit emission                                                                                                           | ADR-018 (exception), ADR-019        |
-| Audit log reads        | `journalctl -o json` (shell-out)                   | Journal query path for audit API                                                                                                          | ADR-018, ADR-019                    |
-| Firewall               | `nft --json` (shell-out)                           | Host nftables rules                                                                                                                       | ADR-018                             |
-| Disk health            | `smartctl --json` (shell-out)                      | SMART data                                                                                                                                | ADR-018                             |
-| System info            | OS CLI tools (shell-out)                           | CPU, RAM, disk, NICs                                                                                                                      | ADR-018                             |
+| Concern                | Tool                                   | What it does                                                                      | ADR                          |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------- |
+| HTTP routing           | `net/http` + `go-chi/chi/v5`           | Thin handlers over the spec-first v0.1 OpenAPI contract                           | ADR-043 superseded           |
+| API types + generation | `oapi-codegen` + `@hey-api/openapi-ts` | Go server models/stubs and TypeScript client generated from `api/openapi.yaml`    | ADR-043 superseded, ADR-044  |
+| Auth (local users)     | Helling SQLite store + argon2id        | Local users, API tokens, TOTP, recovery codes                                     | ADR-030                      |
+| Auth (JWT)             | `golang-jwt/jwt/v5`                    | Ed25519-signed access tokens + revocable server-side sessions                     | ADR-031                      |
+| Auth (TOTP)            | `pquerna/otp`                          | QR generation, code verify                                                        | —                            |
+| Database               | `database/sql`                         | Helling state only (SQLite)                                                       | ADR-038                      |
+| SQLite driver          | `modernc.org/sqlite`                   | Pure-Go SQLite, no CGO requirement                                                | ADR-038                      |
+| Migrations             | Embedded SQL runner                    | Forward-only SQL migrations in `internal/store/migrations`                        | ADR-038                      |
+| Password hashing       | `golang.org/x/crypto/argon2`           | argon2id (RFC 9106 / OWASP baseline)                                              | ADR-030                      |
+| Config                 | `gopkg.in/yaml.v3`                     | YAML + env vars                                                                   | —                            |
+| BMC                    | `bmc-toolbox/bmclib/v2`                | IPMI + Redfish (v0.4 feature)                                                     | —                            |
+| HTTP proxy             | `net/http/httputil.ReverseProxy`       | Proxies admin-only raw Incus/Podman requests in v0.1                              | ADR-014, ADR-036 deferred    |
+| systemd unit mgmt      | Deferred privileged helper             | v0.1 returns explicit 501 for schedule/unit mutation until a narrow helper exists | ADR-017, ADR-018, ADR-050    |
+| Journal emit           | `coreos/go-systemd/v22/journal`        | Structured-field audit emission                                                   | ADR-018 (exception), ADR-019 |
+| Audit log reads        | `journalctl -o json` (shell-out)       | Journal query path for audit API                                                  | ADR-018, ADR-019             |
+| Firewall               | `nft --json` (shell-out)               | Host nftables rules                                                               | ADR-018                      |
+| Disk health            | `smartctl --json` (shell-out)          | SMART data                                                                        | ADR-018                      |
+| System info            | OS CLI tools (shell-out)               | CPU, RAM, disk, NICs                                                              | ADR-018                      |
 
 ### hellingd go.mod (target)
 
-Small dependency set centred on stdlib routing, auth, config, SQLite persistence, and two narrow systemd bindings. Everything else is in stdlib, systemd, or CLI tools invoked via `exec.Command`.
+Small dependency set centred on stdlib routing, auth, config, SQLite persistence, and narrow host-operation exceptions. Everything else is in stdlib, systemd, or CLI tools invoked via `exec.Command`.
 
 ### What hellingd does NOT import
 
-| Don't import                          | Use instead                                                      |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| `lxc/incus/v6`                        | Proxy to Incus HTTPS loopback (no SDK dependency)                |
-| `containers/podman/v5`                | Proxy to Podman Unix socket                                      |
-| `google/nftables`                     | Shell out to `nft --json`                                        |
-| `go-co-op/gocron`                     | systemd timers via DBus                                          |
-| `coreos/go-systemd/v22/dbus` (client) | `godbus/dbus/v5` directly for unit lifecycle (ADR-018 amendment) |
+| Don't import                          | Use instead                                                       |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| `lxc/incus/v6`                        | Proxy to restricted Incus user socket in v0.1 (no SDK dependency) |
+| `containers/podman/v5`                | Proxy to Podman Unix socket                                       |
+| `google/nftables`                     | Shell out to `nft --json`                                         |
+| `go-co-op/gocron`                     | deferred narrow systemd helper                                    |
+| `coreos/go-systemd/v22/dbus` (client) | deferred privileged helper; no v0.1 DBus client import            |
 
-Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit operation costs ~50ms per call and produces unstructured output. Two narrow Go imports replace those specific paths only:
+Note on the ADR-018 exceptions: shelling out to `systemctl` for every unit operation costs ~50ms per call and produces unstructured output. v0.1 does not grant hellingd those root-level unit-management rights; future unit mutation must use the reviewed helper path instead of a broad policy grant.
 
-1. `godbus/dbus/v5` for unit Start/Stop/Status/list ops (hellingd runs non-root per ADR-050; polkit grants the `helling` user only the unit actions it needs)
-2. `coreos/go-systemd/v22/journal` for structured-field audit emission
-
-`systemctl link` still shells out because it requires root — handled via the SUID helper introduced in ADR-050.
+1. `coreos/go-systemd/v22/journal` for structured-field audit emission, once the audit reader/writer is promoted beyond v0.1.
 
 ### Add when needed (later versions)
 
@@ -135,11 +132,11 @@ All tools ship in the ISO. Stable CLI interfaces. JSON output where available.
 
 Previous architecture: 150+ Go handlers wrapping Incus API calls. Each handler decoded HTTP, called Incus Go client, re-encoded response.
 
-Current architecture (ADR-014 + ADR-036): `httputil.ReverseProxy` forwards requests to Incus HTTPS loopback with per-user TLS client cert identity. Zero Go code per Incus endpoint. New Incus features work automatically.
+Current v0.1 architecture (ADR-014 + ADR-036 deferred): `httputil.ReverseProxy` forwards admin-only raw requests to the restricted Incus user socket. Per-user TLS client certificate identity over HTTPS loopback is deferred until ADR-024 is wired end to end.
 
 Helling adds on top of the proxy:
 
-- JWT auth + RBAC project scoping (ADR-024)
+- JWT auth + admin-only raw proxy gate in v0.1
 - Auto-snapshot before destructive operations (compute.md §Auto-Snapshot)
 - Tags via Incus `user.tag.*` config keys (ADR-020)
 - Audit logging to systemd journal (ADR-019)

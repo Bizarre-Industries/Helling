@@ -23,7 +23,7 @@ func TestSaveLoadRoundtrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "cfg.yaml")
 	want := config.Profile{
 		API:           "http://127.0.0.1:8080",
-		RefreshCookie: "helling_refresh=abc",
+		RefreshCookie: "helling_session=abc",
 		AccessToken:   "jwt.example",
 	}
 	if err := config.Save(&want, path); err != nil {

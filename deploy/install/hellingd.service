@@ -1,0 +1,41 @@
+[Unit]
+Description=Helling backend daemon
+Documentation=https://github.com/Bizarre-Industries/Helling
+After=network-online.target incus.service incus-user.socket
+Wants=network-online.target incus.service incus-user.socket
+
+[Service]
+Type=simple
+User=helling
+Group=helling
+SupplementaryGroups=helling-proxy incus
+UMask=0007
+ExecStart=/usr/lib/helling/hellingd -config /etc/helling/helling.yaml
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=helling
+RuntimeDirectoryMode=0755
+StateDirectory=helling
+StateDirectoryMode=0750
+LogsDirectory=helling
+LogsDirectoryMode=0750
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/helling /var/log/helling /run/helling /etc/helling
+ReadOnlyPaths=/usr/bin /usr/lib/helling
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+LimitNOFILE=65535
+LimitNPROC=4096
+TasksMax=4096
+
+[Install]
+WantedBy=multi-user.target

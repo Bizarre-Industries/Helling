@@ -34,7 +34,7 @@ Every Helling audit record emits a `MESSAGE=` plus the following indexed fields.
 | `HELLING_ACTION`        | string | yes      | Action type — dot-separated (e.g. `auth.login`, `user.create`, `instance.delete`, `schedule.run_now`, `policy.deny`)                                       |
 | `HELLING_ACTOR`         | string | yes      | Username (or `"system"` for machine-initiated events, or `"anonymous"` for pre-auth failures)                                                              |
 | `HELLING_ACTOR_ID`      | string | yes      | User ULID (or `"system"` / `"anonymous"`)                                                                                                                  |
-| `HELLING_ROLE`          | string | yes      | Actor role **at event time** — `admin`, `user`, `auditor`, or `none` for pre-auth events                                                                   |
+| `HELLING_ROLE`          | string | yes      | Actor role **at event time** — `admin`, `user`, or `none` for pre-auth events                                                                              |
 | `HELLING_OUTCOME`       | string | yes      | One of `success`, `failure`, `denied`                                                                                                                      |
 | `HELLING_REQUEST_ID`    | string | yes      | `X-Request-ID` UUID correlating the HTTP request                                                                                                           |
 | `HELLING_SOURCE_IP`     | string | yes      | Client IP (as seen by Caddy, propagated via `X-Forwarded-For` stripping per ADR-037)                                                                       |

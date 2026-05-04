@@ -1,4 +1,5 @@
 {
+  "disabledMcpjsonServers": ["context7", "codex-peer"],
   "hooks": {
     "PostToolUse": [
       {
@@ -6,7 +7,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/claude-hooks/post-bash-version-shipped.sh\" 2>/dev/null || true"
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/scripts/agent-hooks/post-bash-version-shipped.sh\" 2>/dev/null || true'"
+          },
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; cmd=\"${CODEX_TOOL_INPUT_command:-${CLAUDE_TOOL_INPUT_command:-}}\"; case \"$cmd\" in *\"git commit\"*|*\"gh pr create\"*|*\"git push\"*) bash \"$repo/scripts/check-docs-sync.sh\" --range HEAD~5..HEAD || true ;; esac'"
           }
         ]
       }
@@ -17,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/never-guess.sh\" 2>/dev/null || true"
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/.claude/hooks/never-guess.sh\" 2>/dev/null || true'"
           }
         ]
       }
@@ -28,11 +33,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/replan-on-tag.sh\" 2>/dev/null || true"
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/.claude/hooks/replan-on-tag.sh\" 2>/dev/null || true'"
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/docs-snapshot.sh\" 2>/dev/null || true"
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/scripts/docs-snapshot.sh\" 2>/dev/null || true'"
           }
         ]
       }
@@ -43,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'p=\"${CLAUDE_USER_PROMPT:-}\"; case \"$p\" in *plan*|*decid*|*next*|*roadmap*|*audit*|*phase*|*F-[0-9]*) bash \"${CLAUDE_PROJECT_DIR}/scripts/docs-snapshot.sh\" 2>/dev/null || true ;; esac'"
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; p=\"${CODEX_USER_PROMPT:-${CLAUDE_USER_PROMPT:-}}\"; case \"$p\" in *plan*|*decid*|*next*|*roadmap*|*audit*|*phase*|*F-[0-9]*) bash \"$repo/scripts/docs-snapshot.sh\" 2>/dev/null || true ;; esac'"
           }
         ]
       }

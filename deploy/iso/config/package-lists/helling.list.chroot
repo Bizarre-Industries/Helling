@@ -1,0 +1,9 @@
+ca-certificates
+caddy
+curl
+dbus
+gnupg
+incus
+openssh-server
+podman
+sudo

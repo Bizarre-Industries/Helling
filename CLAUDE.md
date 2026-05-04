@@ -11,7 +11,7 @@ The repository contains:
 
 - **Go backend daemon:** `apps/hellingd/` — listens on a Unix socket, talks to Incus.
 - **Go CLI:** `apps/helling-cli/` — interactive client over the same socket.
-- **Go TLS/static proxy:** `apps/helling-proxy/` — terminates TLS, serves the web bundle, forwards API.
+- **Caddy edge service:** `deploy/install/Caddyfile` — terminates TLS, serves the web bundle, forwards API.
 - **React + Vite Web UI:** `web/` — React 19 + TypeScript + antd v6.
 - **Shared API contract:** `api/openapi.yaml` — single source of truth for the API.
 
@@ -29,18 +29,17 @@ If implementation behavior conflicts with the docs, **the docs are the source of
 ```text
 apps/hellingd        backend daemon
 apps/helling-cli     CLI client
-apps/helling-proxy   TLS reverse proxy + static web serving
 web/                 frontend (React 19, TypeScript, Vite, antd 6)
 api/openapi.yaml     API contract used for code generation
-deploy/              Dockerfile and packaging artifacts
+deploy/              installer ISO, Caddy, systemd, and packaging artifacts
 ```
 
-The Go workspace is declared in `go.work` and includes the three Go apps. Each app is a separate module.
+The Go workspace is declared in `go.work` and includes the two Go apps. Each app is a separate module.
 
 ## Required toolchain
 
 - Go 1.26 (toolchain 1.26.2 pinned)
-- Bun (frontend tooling and Orval generation)
+- Bun (frontend tooling and Hey API generation)
 - `oapi-codegen` v2 (managed as a Go tool dependency in `apps/hellingd/go.mod`)
 - `golangci-lint`, `gofumpt`, `goimports`
 
@@ -118,12 +117,6 @@ Frontend production build:
 make web-build
 ```
 
-Container image:
-
-```bash
-make docker
-```
-
 Clean outputs:
 
 ```bash
@@ -145,7 +138,6 @@ Package-specific:
 ```bash
 go test ./apps/hellingd/...
 go test ./apps/helling-cli/...
-go test ./apps/helling-proxy/...
 ```
 
 Integration / E2E tests live behind the `integration` build tag and run on demand or via dedicated CI workflows. They may require a real Incus instance.
@@ -232,10 +224,21 @@ make lint
 make test
 ```
 
-## Agent tooling (Claude Code)
+## Agent Tooling
 
-This repo ships project-shared agent tooling under `.claude/`. Per-contributor
-overrides go in `.claude/settings.local.json` (gitignored).
+This repo ships project-shared agent tooling for both Claude Code and Codex.
+Keep these files in sync with `task check:agents`.
+
+- Claude Code shared config: `.claude/settings.json`, `.claude/commands/`,
+  `.claude/hooks/`, `.claude/skills/`
+- Codex shared config: `.codex/config.toml`, `.codex/hooks.json`, `.codex/commands/`,
+  `.codex/hooks/`, `.codex/agents/`
+- Shared MCP config for Claude Code: `.mcp.json`
+- Shared hook bodies: `scripts/agent-hooks/`
+- Peer-agent launcher: `scripts/run-peer-agent.sh`
+
+Per-contributor overrides go in `.claude/settings.local.json` and
+`.codex/settings.local.json` (gitignored).
 
 ### Slash commands (`.claude/commands/`)
 
@@ -243,7 +246,8 @@ overrides go in `.claude/settings.local.json` (gitignored).
 - `/regen` — `make generate` then verify drift
 - `/ship [remote] [refspec]` — fmt + check + check-generated + security-fast, then push
 - `/snapshot` — print docs/plans/checklist snapshot (also fires on SessionStart)
-- `/replan-mark <tag>` — advance `.claude/.last-shipped-tag` after a next-version plan is rewritten
+- `/replan-mark <tag>` — advance both `.claude/.last-shipped-tag` and
+  `.codex/.last-shipped-tag` after a next-version plan is rewritten
 
 ### Skills (`.claude/skills/`)
 
@@ -255,16 +259,34 @@ Auto-loaded at session start. Mix of project-specific and ECC-installed:
   `accessibility`, `seo` (ECC) — language and surface guidance
 - `auto-skill`, `skill-discovery` (ECC) — meta tooling for adding more skills
 
-The ECC autoskills tool installs to `.agents/skills/` (gitignored). To deploy
-into Claude Code's load path:
+The ECC autoskills tool installs to `.agents/skills/` (gitignored). Codex also
+loads project skills from `.agents/skills/` in this workspace. To deploy into
+Claude Code's checked-in load path:
 
 ```bash
 cp -RL .agents/skills/. .claude/skills/
 ```
 
-### Hooks (`.claude/hooks/`)
+### MCP Servers (`.mcp.json` and user config)
 
-Wired in `.claude/settings.json`:
+Project-scoped Claude Code MCP servers live in `.mcp.json`:
+
+- `openaiDeveloperDocs` — OpenAI docs MCP. Use for OpenAI API, ChatGPT Apps
+  SDK, Codex, and OpenAI product docs.
+- `context7` — pinned current-library docs MCP, disabled by default in
+  `.claude/settings.json` until its process lifecycle is reverified.
+- `codex-peer` — runs `codex mcp-server` through `scripts/run-peer-agent.sh`,
+  disabled by default until peer-agent lifecycle smoke coverage exists.
+
+Codex user config should mirror this baseline in `~/.codex/config.toml`:
+
+- `openaiDeveloperDocs` at `https://developers.openai.com/mcp`
+- `context7` via `npx -y @upstash/context7-mcp@2.2.3`, `enabled = false`
+- `claude-code` via `scripts/run-peer-agent.sh claude mcp serve`, `enabled = false`
+
+### Hooks (`.claude/hooks/` and `.codex/hooks/`)
+
+Wired in `.claude/settings.json` and `.codex/hooks.json`:
 
 - **`replan-on-tag.sh`** — SessionStart. Detects new `v*` tags pushed since the
   last marker; scaffolds `docs/plans/v<NEXT>-plan.md` and tells the agent to
@@ -283,10 +305,16 @@ Also wired:
 - `scripts/docs-snapshot.sh` (SessionStart + UserPromptSubmit on plan/decision
   prompts) — emits the release-gate snapshot, recent ADRs, working-tree
   dirtiness.
-- `scripts/claude-hooks/post-bash-version-shipped.sh` (PostToolUse on Bash) —
+- `scripts/agent-hooks/post-bash-version-shipped.sh` (PostToolUse on Bash) —
   detects `git push --tags` of a `v*` tag and triggers `task plan:next-version`.
 
-### Council subagents (`.claude/agents/`)
+The legacy `scripts/claude-hooks/post-bash-version-shipped.sh` is a wrapper for
+the shared script and exists only for compatibility.
+
+### Council Subagents
+
+Claude Code agents live in `.claude/agents/`. Codex agent definitions live in
+`.codex/agents/` and mirror the same roles:
 
 Spawned in parallel for changes matching the trigger list (new ADR, new
 external dep, breaking API/schema, deletion >100 LOC, edits under
@@ -298,7 +326,8 @@ external dep, breaking API/schema, deletion >100 LOC, edits under
 - `self-critique` — fires before commits that don't trigger the full council
 - `mechanical` — Haiku-backed, for renames/format/regex-replace ops
 
-See `.claude/agents/README.md` for deliberation flow and trigger details.
+See `.claude/agents/README.md` for the Claude deliberation flow. Keep Codex
+agent descriptions semantically identical when changing trigger lists.
 
 ## Troubleshooting
 

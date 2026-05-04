@@ -1,6 +1,6 @@
 # ADR-014: Authenticated Reverse Proxy Over Handler-Per-Endpoint
 
-> Status: Accepted
+> Status: Accepted; amended for v0.1 admin-only raw proxy mode.
 
 ## Context
 
@@ -14,14 +14,14 @@ Helling wraps Incus and Podman. The previous architecture implemented individual
 
 ## Decision
 
-Replace per-endpoint handlers with a generic authenticated reverse proxy middleware. hellingd forwards requests to the Incus HTTPS loopback API and Podman Unix socket after:
+Replace per-endpoint handlers with a generic authenticated reverse proxy middleware. v0.1 keeps raw proxy routes admin-only; Incus forwards use the restricted user socket until ADR-024/036 delegated mTLS is implemented. hellingd forwards after:
 
 1. JWT validation
-2. Per-user Incus trust identity (proxy uses user TLS client cert)
+2. Admin-only raw proxy authorization in v0.1
 3. Audit logging (async, to systemd journal)
 4. Auto-snapshot hook (before destructive operations)
 
-The proxy middleware is ~200-300 lines of Go. It uses `net/http/httputil.ReverseProxy` to forward Incus requests to the local Incus HTTPS API and Podman requests to the local Podman Unix socket.
+The proxy middleware is ~200-300 lines of Go. It uses `net/http/httputil.ReverseProxy` to forward Incus requests to the restricted Incus user socket in v0.1 and Podman requests to the local Podman Unix socket.
 
 Helling-specific features that Incus/Podman don't provide keep dedicated handlers (approximately 40 endpoints):
 
@@ -40,7 +40,7 @@ Everything else — instances, containers, storage, networks, images, profiles, 
 
 Proxy routes:
 
-- `/api/incus/*` → local Incus HTTPS API (per-user mTLS identity)
+- `/api/incus/*` → restricted Incus user socket in v0.1; delegated mTLS is deferred
 - `/api/podman/*` → `/run/podman/podman.sock`
 - `/api/v1/*` → Helling-specific handlers
 

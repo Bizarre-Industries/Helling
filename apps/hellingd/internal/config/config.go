@@ -4,7 +4,7 @@
 //
 //  1. CLI flags (handled in main)
 //  2. Environment variables (HELLING_* prefix)
-//  3. YAML config file at /etc/helling/config.yaml (or path passed via -config)
+//  3. YAML config file at /etc/helling/helling.yaml (or path passed via -config)
 //  4. Defaults
 package config
 
@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -44,6 +45,7 @@ type AuthConfig struct {
 	SessionTTLHours   int    `yaml:"session_ttl_hours"`
 	AccessTTLMinutes  int    `yaml:"access_ttl_minutes"`
 	JWTSigningKeyPath string `yaml:"jwt_signing_key_path"`
+	SetupTokenPath    string `yaml:"setup_token_path"`
 	LoginRateLimit    int    `yaml:"login_rate_limit_per_15m"`
 	Argon2TimeCost    int    `yaml:"argon2_time_cost"`
 	Argon2MemoryKiB   int    `yaml:"argon2_memory_kib"`
@@ -73,13 +75,14 @@ func Defaults() Config {
 			SessionTTLHours:   24 * 7,
 			AccessTTLMinutes:  15,
 			JWTSigningKeyPath: "/var/lib/helling/jwt/ed25519.key",
+			SetupTokenPath:    "/etc/helling/setup-token",
 			LoginRateLimit:    5,
 			Argon2TimeCost:    3,
 			Argon2MemoryKiB:   64 * 1024,
 			Argon2Parallelism: 4,
 		},
 		Incus: IncusConfig{
-			SocketPath: "",
+			SocketPath: "/var/lib/incus/unix.socket.user",
 			Project:    "default",
 		},
 	}
@@ -144,6 +147,9 @@ func applyEnv(cfg *Config) {
 	if v := os.Getenv("HELLING_AUTH_JWT_SIGNING_KEY_PATH"); v != "" {
 		cfg.Auth.JWTSigningKeyPath = v
 	}
+	if v := os.Getenv("HELLING_AUTH_SETUP_TOKEN_PATH"); v != "" {
+		cfg.Auth.SetupTokenPath = v
+	}
 }
 
 func (c *Config) validate() error {
@@ -153,17 +159,17 @@ func (c *Config) validate() error {
 	if c.Server.SocketPath == "" {
 		return errors.New("server.socket_path must not be empty")
 	}
+	if !filepath.IsAbs(c.Server.SocketPath) {
+		return errors.New("server.socket_path must be absolute")
+	}
+	if c.Server.SocketMode&^0o660 != 0 {
+		return errors.New("server.socket_mode must grant no broader access than 0660")
+	}
 	if c.Auth.SessionTTLHours <= 0 {
 		return errors.New("auth.session_ttl_hours must be > 0")
 	}
-	if c.Auth.AccessTTLMinutes <= 0 {
-		return errors.New("auth.access_ttl_minutes must be > 0")
-	}
-	if c.Auth.JWTSigningKeyPath == "" {
-		return errors.New("auth.jwt_signing_key_path must not be empty")
-	}
-	if c.Auth.Argon2MemoryKiB < 8*1024 {
-		return errors.New("auth.argon2_memory_kib must be >= 8192 (8 MiB)")
+	if err := c.Auth.validate(); err != nil {
+		return err
 	}
 	switch c.Log.Format {
 	case "json", "text":
@@ -174,6 +180,43 @@ func (c *Config) validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("log.level %q invalid", c.Log.Level)
+	}
+	return nil
+}
+
+func (a *AuthConfig) validate() error {
+	if a.AccessTTLMinutes <= 0 {
+		return errors.New("auth.access_ttl_minutes must be > 0")
+	}
+	if a.JWTSigningKeyPath == "" {
+		return errors.New("auth.jwt_signing_key_path must not be empty")
+	}
+	if a.SetupTokenPath == "" {
+		return errors.New("auth.setup_token_path must not be empty")
+	}
+	if !filepath.IsAbs(a.SetupTokenPath) {
+		return errors.New("auth.setup_token_path must be absolute")
+	}
+	if a.LoginRateLimit <= 0 {
+		return errors.New("auth.login_rate_limit_per_15m must be > 0")
+	}
+	if a.Argon2TimeCost <= 0 {
+		return errors.New("auth.argon2_time_cost must be > 0")
+	}
+	if a.Argon2TimeCost > 10 {
+		return errors.New("auth.argon2_time_cost must be <= 10")
+	}
+	if a.Argon2MemoryKiB < 8*1024 {
+		return errors.New("auth.argon2_memory_kib must be >= 8192 (8 MiB)")
+	}
+	if a.Argon2MemoryKiB > 256*1024 {
+		return errors.New("auth.argon2_memory_kib must be <= 262144 (256 MiB)")
+	}
+	if a.Argon2Parallelism <= 0 {
+		return errors.New("auth.argon2_parallelism must be > 0")
+	}
+	if a.Argon2Parallelism > 8 {
+		return errors.New("auth.argon2_parallelism must be <= 8")
 	}
 	return nil
 }

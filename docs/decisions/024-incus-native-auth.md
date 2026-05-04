@@ -1,10 +1,11 @@
-# ADR-024: Incus per-user TLS auth from v0.1
+# ADR-024: Incus per-user TLS auth
 
-> Status: Accepted (2026-04-19)
+> Status: Accepted for delegated proxy access; v0.1 defers non-admin proxying until the transport is implemented.
 
 ## Context
 
-Helling must enforce per-user isolation for proxied Incus operations from the first release.
+Helling must enforce per-user isolation for proxied Incus operations before
+non-admin users can access the raw Incus proxy.
 
 The previous stopgap model (JWT claim to project query-parameter injection) creates a split-brain authorization model where Helling middleware decides scope while Incus executes requests. This is brittle and hard to audit.
 
@@ -12,7 +13,10 @@ Incus already supports trust-scoped client certificates and project restrictions
 
 ## Decision
 
-From v0.1 onward, Helling uses per-user Incus client certificates.
+For delegated non-admin Incus proxy access, Helling uses per-user Incus client
+certificates. v0.1 keeps raw `/api/incus/*` proxy routes admin-only and uses the
+restricted Incus user socket for daemon-owned container operations until this
+certificate transport is implemented end to end.
 
 Prerequisite transport requirement:
 
@@ -37,7 +41,8 @@ Helling does not use query-parameter project injection as an authorization mecha
 
 ## Consequences
 
-- v0.1 has a single authorization boundary for Incus calls: Incus certificate identity
+- Non-admin raw Incus proxy calls remain rejected until Incus certificate
+  identity is available end to end.
 - Auditability improves because Incus logs and trust state reflect per-user identities
 - hellingd must implement certificate issuance, storage encryption, rotation, and revocation
 - User disable/delete must also revoke corresponding Incus trust entries

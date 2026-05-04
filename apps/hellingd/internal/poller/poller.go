@@ -54,7 +54,8 @@ func tick(ctx context.Context, st *store.Store, c incus.Client, logger *slog.Log
 
 		status, errMsg, err := c.GetOperation(ctx, op.IncusOpID)
 		if err != nil {
-			logger.WarnContext(ctx, "poller: get incus operation",
+			logger.WarnContext(
+				ctx, "poller: get incus operation",
 				slog.String("op", op.ID),
 				slog.String("incus_op", op.IncusOpID),
 				slog.Any("err", err),
@@ -80,7 +81,8 @@ func tick(ctx context.Context, st *store.Store, c incus.Client, logger *slog.Log
 			continue
 		}
 		if err := st.UpdateOperationStatus(ctx, op.ID, next, errMsg); err != nil {
-			logger.WarnContext(ctx, "poller: update operation",
+			logger.WarnContext(
+				ctx, "poller: update operation",
 				slog.String("op", op.ID),
 				slog.String("status", string(next)),
 				slog.Any("err", err),

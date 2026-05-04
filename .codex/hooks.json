@@ -1,0 +1,56 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/.codex/hooks/never-guess.sh\" 2>/dev/null || true'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/scripts/agent-hooks/post-bash-version-shipped.sh\" 2>/dev/null || true'"
+          },
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; cmd=\"${CODEX_TOOL_INPUT_command:-${CLAUDE_TOOL_INPUT_command:-}}\"; case \"$cmd\" in *\"git commit\"*|*\"gh pr create\"*|*\"git push\"*) bash \"$repo/scripts/check-docs-sync.sh\" --range HEAD~5..HEAD || true ;; esac'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/.codex/hooks/replan-on-tag.sh\" 2>/dev/null || true'"
+          },
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; bash \"$repo/scripts/docs-snapshot.sh\" 2>/dev/null || true'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -lc 'repo=\"${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}\"; p=\"${CODEX_USER_PROMPT:-${CLAUDE_USER_PROMPT:-}}\"; case \"$p\" in *plan*|*decid*|*next*|*roadmap*|*audit*|*phase*|*F-[0-9]*) bash \"$repo/scripts/docs-snapshot.sh\" 2>/dev/null || true ;; esac'"
+          }
+        ]
+      }
+    ]
+  }
+}

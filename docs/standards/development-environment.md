@@ -20,13 +20,25 @@ Applies to all contributors. Linux-native development is supported. macOS contri
 2. macOS with Parallels Desktop: Debian VM provisioned via `scripts/parallels-vm-bootstrap.sh` and `task vm:parallels:up` (per ADR-052). Primary macOS path.
 3. macOS or Windows with Lima: Debian VM (per ADR-034). Fallback path; supported but secondary.
 
+## Installer ISO Validation
+
+The product install path is the live-build installer ISO from ADR-021 and ADR-046. The dev VM is a fast validation target for the same systemd, Incus, Podman, Caddy, and permission assumptions; it is not the product installer.
+
+```bash
+task iso:verify    # validate live-build/preseed/first-boot wiring
+task iso:prepare   # stage payload into dist/iso/live-build without running live-build
+task iso:build     # build the installer ISO on Debian with live-build + root/sudo
+```
+
+`task iso:build` requires a Debian 13 host or VM with `live-build` installed. macOS contributors should build the ISO inside the Parallels Debian VM.
+
 ## Parallels Baseline (macOS — primary)
 
 - VM manager: Parallels Desktop (commercial; user-supplied license).
 - Guest OS: Debian stable.
 - VM name: `helling-dev`.
 - Sizing defaults: 4 vCPU, 8 GB RAM, 40 GB disk. Override via `HELLING_VM_CPUS`, `HELLING_VM_MEM_MB`, `HELLING_VM_DISK_GB`.
-- Networking: Parallels bridged interface so the host can reach the VM by IP for `rsync` + `ssh`.
+- Networking: Parallels bridged interface so the host can reach the VM by IP for `rsync` + `ssh`; NAT/port-forward setups use `HELLING_VM_HOST=127.0.0.1` plus `HELLING_VM_SSH_PORT`.
 - Auth: contributor's SSH public key (`HELLING_VM_SSHKEY`, default `~/.ssh/id_ed25519.pub`) injected via cloud-init.
 
 Bootstrap (one-time):
@@ -35,7 +47,7 @@ Bootstrap (one-time):
 bash scripts/parallels-vm-bootstrap.sh
 ```
 
-This installs `build-essential git curl make ca-certificates dbus policykit-1 systemd incus podman` plus Go and Bun inside the VM, and lays down a `hellingd` systemd unit drop-in so `systemctl restart hellingd` works after the first deploy.
+This installs `build-essential binutils-gold git curl make ca-certificates rsync unzip dbus systemd incus podman` plus Go and Bun inside the VM, and lays down a `hellingd` systemd unit drop-in so `systemctl restart hellingd` works after the first deploy.
 
 Daily loop:
 
@@ -44,6 +56,13 @@ task vm:parallels:up      # boot VM if stopped
 task vm:parallels:dev     # build:linux + rsync + restart hellingd
 task vm:parallels:smoke   # health probe + smoke checks
 task vm:parallels:logs    # journalctl -fu hellingd
+```
+
+For a Parallels shared-network VM with an SSH NAT rule, set:
+
+```bash
+export HELLING_VM_HOST=127.0.0.1
+export HELLING_VM_SSH_PORT=2222
 ```
 
 Release-shaped path:

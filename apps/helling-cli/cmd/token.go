@@ -19,7 +19,6 @@ func newAuthTokenCmd() *cobra.Command {
 	return c
 }
 
-//nolint:dupl // list rendering parallels user.go list; kept separate for schema clarity.
 func newAuthTokenListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",

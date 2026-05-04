@@ -12,7 +12,7 @@ Route: `/users`
 
 ## Layout
 
-Sidebar: "Users" selected (admin-only section). Main panel: 4 Tabs.
+Sidebar: "Users" selected (admin-only section). Main panel: 3 Tabs.
 
 ## API Endpoints
 
@@ -27,18 +27,14 @@ Sidebar: "Users" selected (admin-only section). Main panel: 4 Tabs.
 - `POST /api/v1/users/:id/2fa/enable` -- enable 2FA
 - `GET /api/v1/auth/sessions` -- active sessions
 - `DELETE /api/v1/auth/sessions/:sid` -- revoke session
-- `GET /api/v1/auth/roles` -- role definitions
-- `GET /api/v1/auth/permissions` -- permission matrix
 
 ## Components
 
-- `Tabs` -- Users | Roles | Permissions | API Tokens
+- `Tabs` -- Users | Permissions | API Tokens
 
-**Users tab:** `ProTable` (username, role Tag, 2FA status Badge, last login, created_at). Actions: Edit, Delete, Enable 2FA. `ModalForm` for Create User (username, password, group/role Select).
+**Users tab:** `ProTable` (username, admin Tag, 2FA status Badge, last login, created_at). Actions: Edit, Delete, Enable 2FA. `ModalForm` for Create User (username, password, admin Switch).
 
-**Roles tab:** Read-only `ProTable` of the three fixed v0.1 roles (`admin`, `user`, `auditor`) with description, user count, and permissions summary. No create/edit/delete actions.
-
-**Permissions tab:** Read-only permission matrix by role (no per-cell editor in v0.1). Shows which actions each fixed role can perform.
+**Permissions tab:** Read-only permission matrix for the two fixed v0.1 roles (`admin`, `user`). Shows which actions each role can perform.
 
 **API Tokens tab:** `ProTable` (name, scope Tags, created, expires, last used). Create via `ModalForm` (name, scope checkboxes, expiry DatePicker). `Typography.Text copyable` for token value (shown once).
 
@@ -46,10 +42,10 @@ Sidebar: "Users" selected (admin-only section). Main panel: 4 Tabs.
 
 ## Data Model
 
-- User: `id`, `username`, `role`, `groups[]`, `twofa_enabled`, `twofa_type`, `last_login`, `created_at`
+- User: `id`, `username`, `is_admin`, `twofa_enabled`, `twofa_type`, `last_login`, `created_at`
 - Token: `id`, `name`, `scope[]`, `created_at`, `expires_at`, `last_used`
 - Session: `id`, `device`, `ip`, `location`, `last_active`, `is_current`
-- Role: fixed enum `admin | user | auditor` with static `permissions[]` mapping
+- Role label: derived from `is_admin` as `admin | user` with static permissions mapping
 
 ## States
 
@@ -63,15 +59,15 @@ Cached user list. Token creation returns value immediately.
 
 ### Error State
 
-PAM unavailable: banner with link to system logs. Users shown as cached.
+User API unavailable: banner with link to system logs. Users shown as cached.
 
 ## User Actions
 
-- Create/edit/delete users with role assignment
+- Create/edit/delete users with admin/user assignment
 - Enable/disable 2FA (TOTP QR code, recovery codes)
 - Create/revoke API tokens with scope and expiry
 - View and revoke active sessions
-- View role definitions and permission matrix (read-only in v0.1)
+- View permission matrix (read-only in v0.1)
 
 ## Cross-References
 

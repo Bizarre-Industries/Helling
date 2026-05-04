@@ -323,7 +323,7 @@ Source `<Segmented>`. Severity `<Select>`. Search `<Input.Search>`. Time range `
 
 ### /setup + /login
 
-Setup: create first admin. Login: username + password + optional TOTP. First-login onboarding `<Tour>` (antd Tour component — dismissable).
+Setup: probe `/auth/setup/status`, create first admin only while setup is required, then route to login. Login: username + password + optional TOTP. First-login onboarding `<Tour>` (antd Tour component — dismissable).
 
 ---
 
@@ -345,3 +345,5 @@ Helling OpenAPI operationIds whose WebUI surface does not match the naive camelC
 - operationId: auditExport → CSV/JSONL export button on `/audit` page (`docs/design/pages/audit.md`)
 - operationId: healthGet → consumed internally by app-shell status banner (no dedicated route)
 - operationId: eventsSse → consumed internally by task log + SSE subscribers across pages (no dedicated route)
+- operationId: authSetup → first-admin setup form on `/setup` (`docs/design/pages/auth.md`)
+- operationId: authSetupStatus → setup availability probe on `/setup` (`docs/design/pages/auth.md`)

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "openaiDeveloperDocs": {
+      "type": "http",
+      "url": "https://developers.openai.com/mcp"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@2.2.3"]
+    },
+    "codex-peer": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "repo=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; exec \"$repo/scripts/run-peer-agent.sh\" codex mcp-server"
+      ]
+    }
+  }
+}

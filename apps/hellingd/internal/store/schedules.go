@@ -45,7 +45,8 @@ func (s *Store) CreateSchedule(ctx context.Context, userID int64, name, kind, ta
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO schedules (id, user_id, name, kind, target, cron_expr, enabled, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
 		sch.ID, sch.UserID, sch.Name, sch.Kind, sch.Target, sch.CronExpr, now.Unix(), now.Unix(),
@@ -62,7 +63,8 @@ func (s *Store) GetSchedule(ctx context.Context, id string) (Schedule, error) {
 	var createdAt, updatedAt int64
 	var lastRunAt, nextRunAt sql.NullInt64
 	var enabled int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, name, kind, target, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
 		 FROM schedules WHERE id = ?`, id,
 	).Scan(&sch.ID, &sch.UserID, &sch.Name, &sch.Kind, &sch.Target, &sch.CronExpr, &enabled,
@@ -113,7 +115,8 @@ func (s *Store) UpdateSchedule(ctx context.Context, id, name, cronExpr string, e
 	if enabled {
 		en = 1
 	}
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE schedules SET name = ?, cron_expr = ?, enabled = ?, updated_at = ? WHERE id = ?`,
 		name, cronExpr, en, time.Now().Unix(), id,
 	)
@@ -127,7 +130,8 @@ func (s *Store) UpdateSchedule(ctx context.Context, id, name, cronExpr string, e
 func (s *Store) TouchScheduleRun(ctx context.Context, id string, nextRunAt time.Time) error {
 	now := time.Now().Unix()
 	next := nextRunAt.Unix()
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE schedules SET last_run_at = ?, next_run_at = ?, updated_at = ? WHERE id = ?`,
 		now, next, now, id,
 	)

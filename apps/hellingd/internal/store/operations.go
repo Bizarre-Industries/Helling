@@ -56,7 +56,8 @@ func (s *Store) CreateOperation(ctx context.Context, userID int64, kind, target,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO operations (id, user_id, kind, target, incus_op_id, status, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		op.ID, op.UserID, op.Kind, op.Target, op.IncusOpID, string(op.Status), now.Unix(), now.Unix(),
@@ -70,7 +71,8 @@ func (s *Store) CreateOperation(ctx context.Context, userID int64, kind, target,
 // GetOperation returns the operation owned by userID with the given id.
 // Returns ErrNotFound if missing or owned by someone else.
 func (s *Store) GetOperation(ctx context.Context, userID int64, id string) (Operation, error) {
-	op, err := s.scanOperation(ctx,
+	op, err := s.scanOperation(
+		ctx,
 		`SELECT id, user_id, kind, target, COALESCE(incus_op_id, ''), status, COALESCE(error, ''), created_at, updated_at
 		 FROM operations WHERE id = ? AND user_id = ?`,
 		id, userID,
@@ -96,13 +98,15 @@ func (s *Store) ListOperations(ctx context.Context, userID int64, status Operati
 		err  error
 	)
 	if status == "" {
-		rows, err = s.db.QueryContext(ctx,
+		rows, err = s.db.QueryContext(
+			ctx,
 			`SELECT id, user_id, kind, target, COALESCE(incus_op_id, ''), status, COALESCE(error, ''), created_at, updated_at
 			 FROM operations WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
 			userID, limit,
 		)
 	} else {
-		rows, err = s.db.QueryContext(ctx,
+		rows, err = s.db.QueryContext(
+			ctx,
 			`SELECT id, user_id, kind, target, COALESCE(incus_op_id, ''), status, COALESCE(error, ''), created_at, updated_at
 			 FROM operations WHERE user_id = ? AND status = ? ORDER BY created_at DESC LIMIT ?`,
 			userID, string(status), limit,
@@ -130,7 +134,8 @@ func (s *Store) ListOperations(ctx context.Context, userID int64, status Operati
 // ListActiveOperations returns operations still in pending or running state.
 // Used by the background poller to advance state from Incus.
 func (s *Store) ListActiveOperations(ctx context.Context) ([]Operation, error) {
-	rows, err := s.db.QueryContext(ctx,
+	rows, err := s.db.QueryContext(
+		ctx,
 		`SELECT id, user_id, kind, target, COALESCE(incus_op_id, ''), status, COALESCE(error, ''), created_at, updated_at
 		 FROM operations WHERE status IN (?, ?) ORDER BY created_at`,
 		string(OpStatusPending), string(OpStatusRunning),
@@ -162,7 +167,8 @@ func (s *Store) UpdateOperationStatus(ctx context.Context, id string, status Ope
 	if errMsg != "" {
 		errField = errMsg
 	}
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE operations SET status = ?, error = ?, updated_at = ? WHERE id = ?`,
 		string(status), errField, now, id,
 	)

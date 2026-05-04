@@ -32,7 +32,7 @@ We'll work with reporters on timing if active exploitation is suspected or if up
 ## What's in scope
 
 - The `hellingd` daemon
-- The `helling-proxy` TLS terminator
+- The Caddy edge service and Helling's shipped Caddy configuration
 - The `helling-cli` client
 - The web dashboard (`web/`)
 - Generated API client code (Go and TypeScript)
@@ -43,7 +43,7 @@ We'll work with reporters on timing if active exploitation is suspected or if up
 - Vulnerabilities in Incus, Podman, the kernel, or systemd themselves. Report those upstream.
 - Issues that require root on the host (root already wins).
 - Issues that require access to the `incus-admin` group (privilege escalation by definition).
-- Denial of service via unauthenticated traffic flood; we expect operators to put a rate-limiting reverse proxy in front of `helling-proxy` for public deployments.
+- Denial of service via unauthenticated traffic flood; we expect operators to put rate limiting in front of Caddy for public deployments.
 - Best-practices nags without an actual exploit path (we run our own scans).
 
 ## Bounty

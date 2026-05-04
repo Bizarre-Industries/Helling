@@ -63,4 +63,4 @@ Planned additions:
 ## 6. Rollout Constraints
 
 - All v0.5+ IAM features must preserve compatibility with v0.1 auth contracts where possible.
-- Additive changes must not weaken v0.1 security defaults (PAM-backed verification, Ed25519 JWT, argon2id-managed secret storage).
+- Additive changes must not weaken v0.1 security defaults (argon2id local password verification, Ed25519 JWT, argon2id-managed secret storage).

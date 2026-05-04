@@ -18,7 +18,7 @@ Adopt SQL-first persistence:
 
 - Use `goose` for versioned SQL migrations
 - Use `sqlc` to generate typed Go query methods from SQL
-- Use `database/sql` with SQLite driver `github.com/mattn/go-sqlite3` (cgo-required for PAM integration)
+- Use `database/sql` with the pure-Go SQLite driver selected in the implementation (`modernc.org/sqlite`)
 - Treat SQL migration/query files as the primary schema and query contract
 
 For v0.1 scope, this replaces GORM runtime ORM and Atlas GORM-provider migration flow.

@@ -35,7 +35,7 @@ func runUser(t *testing.T, args []string) (string, error) {
 func TestUserList_TableFormat(t *testing.T) {
 	useTempConfigDir(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":[{"id":"u1","username":"alice","role":"admin","status":"active"}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":"u1","username":"alice","is_admin":true,"status":"active"}]}`))
 	}))
 	t.Cleanup(srv.Close)
 	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
@@ -54,15 +54,15 @@ func TestUserCreate_PostsBody(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(b, &gotBody)
-		_, _ = w.Write([]byte(`{"data":{"id":"u1","username":"bob","role":"user","status":"active"},"meta":{"request_id":"r"}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":"u1","username":"bob","is_admin":true},"meta":{"request_id":"r"}}`))
 	}))
 	t.Cleanup(srv.Close)
 	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
-	out, err := runUser(t, []string{"create", "bob", "--role=user", "--password=fixture-pw"})
+	out, err := runUser(t, []string{"create", "bob", "--admin", "--password=fixture-pw"})
 	if err != nil {
 		t.Fatalf("create: %v out=%q", err, out)
 	}
-	if gotBody["username"] != "bob" || gotBody["role"] != "user" || gotBody["password"] != "fixture-pw" {
+	if gotBody["username"] != "bob" || gotBody["is_admin"] != true || gotBody["password"] != "fixture-pw" {
 		t.Fatalf("body: %+v", gotBody)
 	}
 }

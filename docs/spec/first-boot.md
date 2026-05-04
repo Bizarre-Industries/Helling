@@ -34,34 +34,31 @@ Bring a fresh host from installer completion to a functional management plane wi
 - Generate Ed25519 keypair if missing.
 - Persist private key at configured signing-key path.
 
-5. Internal CA initialization
+5. Incus user-socket readiness
 
-- Create Helling client-cert signing CA if missing.
-- Persist CA key material encrypted at rest.
+- Ensure Incus is installed and the restricted user socket is available to the `helling` service account through the `incus` group.
+- Do not enable a broad `incus-admin` path or bootstrap trust-management certificates in v0.1.
 
-6. Incus admin trust bootstrap
-
-- Ensure Incus HTTPS loopback is enabled (`127.0.0.1:8443`).
-- Register/validate admin certificate used for trust-management operations.
-
-7. Config materialization
+6. Config materialization
 
 - Write/validate `helling.yaml` from installer defaults and required keys.
 
-8. Service enable/start
+7. Service enable/start
 
 - Enable and start `hellingd`.
 - Run schema migrations on startup.
 - Enable and start Caddy edge service.
 
-9. Health gate
+8. Health gate
 
-- Verify `/api/v1/health` and edge path health.
+- Verify `hellingd` on `/healthz` through `/run/helling/api.sock`.
+- Verify Caddy edge health on `/healthz` and its compatibility rewrite from `/api/v1/health`.
 - If failed: mark first boot incomplete and keep actionable diagnostics.
 
 ## Setup Completion Behavior
 
 - System allows one-time bootstrap admin creation through `POST /api/v1/auth/setup`.
+- Installer and dev-VM paths do not create a default admin account or pass an admin password through the environment. First boot creates `/etc/helling/setup-token` (`root:helling`, `0660`), and the setup endpoint requires that token while collecting the first admin password interactively after install. `GET /api/v1/auth/setup/status` reports whether setup is still required. After the first admin is created, hellingd unlinks the token file or truncates it if the installed directory permissions deny unlink.
 - If at least one admin user exists, setup endpoint is disabled.
 
 ## Failure Handling

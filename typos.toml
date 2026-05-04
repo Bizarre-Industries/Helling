@@ -45,6 +45,7 @@ OT = "OT"        # Operational Technology
 IST = "IST"      # Instance State / Iraq Standard Time etc.
 HPE = "HPE"      # Hewlett Packard Enterprise, appears in hardware mock data
 abd = "abd"      # Historical changelog entry quotes a typo-fixture token.
+fpr = "fpr"      # GnuPG --with-colons fingerprint record type.
 
 [default.extend-identifiers]
 # Identifiers that look like typos but aren't.

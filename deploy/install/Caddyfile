@@ -1,0 +1,39 @@
+{
+	auto_https off
+}
+
+:8006 {
+	encode zstd gzip
+	tls internal
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle /api/v1/health {
+		rewrite * /healthz
+		reverse_proxy unix//run/helling/api.sock
+	}
+
+	handle /healthz {
+		reverse_proxy unix//run/helling/api.sock
+	}
+
+	handle /api/* {
+		reverse_proxy unix//run/helling/api.sock
+	}
+
+	handle /v1/* {
+		reverse_proxy unix//run/helling/api.sock
+	}
+
+	handle {
+		root * /usr/share/helling/web
+		try_files {path} /index.html
+		file_server
+	}
+}

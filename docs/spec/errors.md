@@ -12,9 +12,8 @@ All error responses use the envelope contract documented in docs/spec/api.md and
 
 | Code                         | HTTP | When                                           | Action                      |
 | ---------------------------- | ---- | ---------------------------------------------- | --------------------------- |
-| AUTH_INVALID_CREDENTIALS     | 401  | PAM authentication failed                      | Check username and password |
+| AUTH_INVALID_CREDENTIALS     | 401  | Local password authentication failed           | Check username and password |
 | AUTH_INVALID_TOKEN           | 401  | Access token invalid or expired                | Re-authenticate             |
-| AUTH_REFRESH_INVALID         | 401  | Refresh token invalid or revoked               | Login again                 |
 | AUTH_MFA_REQUIRED            | 202  | Login requires MFA completion                  | Call `/auth/mfa/complete`   |
 | AUTH_TOTP_INVALID            | 401  | TOTP code invalid                              | Verify authenticator time   |
 | AUTH_TOTP_LOCKED             | 423  | Too many MFA failures                          | Use recovery code           |
@@ -22,12 +21,12 @@ All error responses use the envelope contract documented in docs/spec/api.md and
 
 ## USER
 
-| Code                 | HTTP | When                         | Action                      |
-| -------------------- | ---- | ---------------------------- | --------------------------- |
-| USER_NOT_FOUND       | 404  | User id missing              | Verify target id            |
-| USER_USERNAME_EXISTS | 409  | Duplicate username on create | Choose a unique username    |
-| USER_ROLE_INVALID    | 400  | Role outside allowed enum    | Use admin, user, or auditor |
-| USER_STATUS_INVALID  | 400  | Status outside allowed enum  | Use active or disabled      |
+| Code                 | HTTP | When                         | Action                   |
+| -------------------- | ---- | ---------------------------- | ------------------------ |
+| USER_NOT_FOUND       | 404  | User id missing              | Verify target id         |
+| USER_USERNAME_EXISTS | 409  | Duplicate username on create | Choose a unique username |
+| USER_ROLE_INVALID    | 400  | Role outside allowed enum    | Use admin or user        |
+| USER_STATUS_INVALID  | 400  | Status outside allowed enum  | Use active or disabled   |
 
 ## SCHEDULE
 

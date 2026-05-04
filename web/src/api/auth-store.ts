@@ -2,12 +2,11 @@
 //
 // Per docs/spec/auth.md §2.2 (ADR-031, docs/standards/security.md):
 //   - Access token storage: memory only.
-//   - Refresh token storage: httpOnly, Secure, SameSite=Strict cookie set by hellingd.
+//   - Session cookie storage: httpOnly, Secure, SameSite=Lax cookie set by hellingd.
 //
 // localStorage is XSS-exfiltratable, so the access token never touches it. On a
-// page reload the in-memory token is gone; the app calls /api/v1/auth/refresh
-// (which sends the refresh cookie automatically) at boot to mint a new access
-// token. Refresh failure routes the user to /login.
+// page reload the in-memory token is gone; v0.1 routes the user to login rather
+// than minting a replacement access token from a separate refresh endpoint.
 //
 // The 'auth:session-changed' event lets non-React consumers (and React hooks
 // that subscribe via useSyncExternalStore) react to login/logout. The

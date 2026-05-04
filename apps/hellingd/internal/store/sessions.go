@@ -26,7 +26,8 @@ type Session struct {
 func (s *Store) CreateSession(ctx context.Context, tokenHashHex string, userID int64, ttl time.Duration) (Session, error) {
 	now := time.Now().UTC()
 	expires := now.Add(ttl)
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)`,
 		tokenHashHex, userID, now.Unix(), expires.Unix(), now.Unix(),
 	)
@@ -47,7 +48,8 @@ func (s *Store) CreateSession(ctx context.Context, tokenHashHex string, userID i
 func (s *Store) GetSessionByTokenHash(ctx context.Context, tokenHashHex string) (Session, error) {
 	var sess Session
 	var createdAt, expiresAt, lastSeenAt int64
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, created_at, expires_at, last_seen_at FROM sessions WHERE id = ?`,
 		tokenHashHex,
 	).Scan(&sess.ID, &sess.UserID, &createdAt, &expiresAt, &lastSeenAt)
@@ -71,7 +73,8 @@ func (s *Store) GetSessionByTokenHash(ctx context.Context, tokenHashHex string) 
 
 // TouchSession bumps last_seen_at to now. Errors are returned but rarely fatal.
 func (s *Store) TouchSession(ctx context.Context, tokenHashHex string) error {
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE sessions SET last_seen_at = ? WHERE id = ?`,
 		time.Now().Unix(), tokenHashHex,
 	)

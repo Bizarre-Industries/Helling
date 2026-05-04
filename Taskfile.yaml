@@ -6,7 +6,7 @@
 # Primary commands:
 #   task check        — run every quality gate
 #   task fmt          — auto-format everything fixable
-#   task gen          — regenerate openapi.yaml from Huma + downstream codegen
+#   task gen          — validate openapi.yaml + regenerate downstream codegen
 #   task test         — run Go + frontend tests
 #   task install      — install all tools
 #   task hooks        — install lefthook git hooks
@@ -50,6 +50,8 @@ tasks:
       - check:spelling
       - check:links
       - check:parity
+      - check:iso
+      - check:agents
     cmds:
       - echo ""
       - echo "✓ All quality gates passed. Safe to push."
@@ -71,7 +73,7 @@ tasks:
       - test:frontend
 
   gen:
-    desc: Regenerate openapi.yaml from Huma + all downstream codegen.
+    desc: Validate openapi.yaml and regenerate downstream codegen.
     cmds:
       - task: gen:openapi
       - task: gen:go:cli
@@ -500,6 +502,16 @@ tasks:
     cmds:
       - bash scripts/check-parity.sh
 
+  check:iso:
+    desc: Validate installer ISO profile, preseed payload hook, and first-boot script wiring.
+    cmds:
+      - bash scripts/check-iso-config.sh
+
+  check:agents:
+    desc: Validate Codex/Claude hooks, commands, MCP, and agent config stay coherent.
+    cmds:
+      - bash scripts/sync-agent-tooling.sh
+
   # ============================================================
   # Security (not in default check)
   # ============================================================
@@ -560,6 +572,25 @@ tasks:
         done
 
   # ============================================================
+  # Installer ISO (ADR-021 / ADR-046)
+  # ============================================================
+
+  iso:verify:
+    desc: Validate the live-build ISO source without preparing payloads.
+    cmds:
+      - bash scripts/build-iso.sh --verify-only
+
+  iso:prepare:
+    desc: Prepare dist/iso/live-build with Helling payload files, but do not run live-build.
+    cmds:
+      - bash scripts/build-iso.sh --prepare-only
+
+  iso:build:
+    desc: Build the Helling Debian installer ISO with live-build. Requires Debian + root/sudo.
+    cmds:
+      - bash scripts/build-iso.sh
+
+  # ============================================================
   # VM (Parallels primary, Lima fallback) — ADR-052
   # ============================================================
 
@@ -602,7 +633,7 @@ tasks:
         VM="${HELLING_VM_NAME:-helling-dev}"
         prlctl list -a | awk -v n="$VM" 'NR==1 || $NF==n'
         if [ -n "${HELLING_VM_HOST:-}" ]; then
-          ssh -o BatchMode=yes -o ConnectTimeout=3 "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" \
+          ssh -o BatchMode=yes -o ConnectTimeout=3 -p "${HELLING_VM_SSH_PORT:-22}" "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" \
             'systemctl is-active hellingd 2>/dev/null || echo "hellingd: not running"'
         else
           echo "(set HELLING_VM_HOST to query hellingd over SSH)"
@@ -620,13 +651,13 @@ tasks:
       - task: vm:parallels:sync
 
   vm:parallels:smoke:
-    desc: Probe /api/v1/health on the VM.
+    desc: Probe /healthz on hellingd's Unix socket in the VM.
     cmds:
       - |
         : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
-        port="${HELLING_API_PORT:-8443}"
-        curl -fsS "http://$HELLING_VM_HOST:$port/api/v1/health" || {
-          echo "FAIL: hellingd health probe non-200 on $HELLING_VM_HOST:$port"
+        ssh -o BatchMode=yes -p "${HELLING_VM_SSH_PORT:-22}" "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" \
+          "curl -fsS --unix-socket /run/helling/api.sock http://helling/healthz" || {
+          echo "FAIL: hellingd health probe non-200 on /run/helling/api.sock"
           exit 1
         }
         echo
@@ -637,7 +668,7 @@ tasks:
     cmds:
       - |
         : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
-        ssh "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" sudo journalctl -fu hellingd
+        ssh -p "${HELLING_VM_SSH_PORT:-22}" "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" sudo journalctl -fu hellingd
 
   vm:parallels:release-test:
     desc: Build .deb (ADR-045), install in VM, smoke. Skips cleanly if reprepro tooling absent.
@@ -657,15 +688,22 @@ tasks:
           echo "(Health probe still runs.)"
         fi
         echo "▶ Health"
-        ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS http://127.0.0.1:${HELLING_API_PORT:-8443}/api/v1/health" || {
-          echo "FAIL: hellingd /api/v1/health non-200"; exit 1
+        ssh -o BatchMode=yes -p "${HELLING_VM_SSH_PORT:-22}" "$VM_USER@$HELLING_VM_HOST" \
+          "curl -fsS --unix-socket /run/helling/api.sock http://helling/healthz" || {
+          echo "FAIL: hellingd /healthz non-200"; exit 1
         }
         if [ -n "$TOKEN" ]; then
           echo "▶ Incus instances via proxy"
-          ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS -H 'Authorization: Bearer $TOKEN' http://127.0.0.1:${HELLING_API_PORT:-8443}/api/incus/1.0/instances | head -c 200"
+          ssh -o BatchMode=yes -p "${HELLING_VM_SSH_PORT:-22}" "$VM_USER@$HELLING_VM_HOST" \
+            "curl -fsS --unix-socket /run/helling/api.sock \
+              -H 'Authorization: Bearer $TOKEN' \
+              http://helling/api/incus/1.0/instances | head -c 200"
           echo
           echo "▶ Podman containers via proxy"
-          ssh -o BatchMode=yes "$VM_USER@$HELLING_VM_HOST" "curl -fsS -H 'Authorization: Bearer $TOKEN' http://127.0.0.1:${HELLING_API_PORT:-8443}/api/podman/libpod/containers/json | head -c 200"
+          ssh -o BatchMode=yes -p "${HELLING_VM_SSH_PORT:-22}" "$VM_USER@$HELLING_VM_HOST" \
+            "curl -fsS --unix-socket /run/helling/api.sock \
+              -H 'Authorization: Bearer $TOKEN' \
+              http://helling/api/podman/libpod/containers/json | head -c 200"
           echo
         fi
         echo "✓ test:integration:vm passed"

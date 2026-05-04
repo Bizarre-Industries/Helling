@@ -9,19 +9,19 @@
 - **Cluster**: Group of Kubernetes nodes provisioned by Helling.
 - **Session**: Authenticated server-side login state.
 - **API Token**: Long-lived automation credential, hashed at rest.
-- **Internal CA**: Helling-managed certificate authority for per-user Incus trust identities.
+- **Internal CA**: Deferred Helling-managed certificate authority for per-user Incus trust identities.
 - **Recovery Code**: Single-use MFA fallback code.
 - **Helling**: Debian-first virtualization platform combining Incus, Podman, and a Helling-owned control plane.
 - **hellingd**: Backend daemon that owns `/api/v1/*`, applies auth/policy, and proxies Incus/Podman requests.
 - **helling-cli**: Command-line client for Helling-owned operations.
-- **hellingprox**: Dedicated system user for the proxy/edge service path.
+- **helling-proxy**: Unix-socket group that lets Caddy reach `hellingd`.
 - **Caddy**: Edge proxy and TLS termination layer in front of `hellingd`.
 - **SPICE**: Remote display protocol used for VM VGA console access.
 - **SSE**: Server-Sent Events stream used for one-way real-time updates.
 - **JWT**: Signed access token used for API authentication.
-- **PAM**: Pluggable Authentication Modules backend used for local/SSSD user auth.
+- **Local User**: Helling-managed account whose password is stored as an argon2id hash.
 - **TOTP**: Time-based one-time password second factor.
-- **mTLS**: Mutual TLS using per-user client certificates for Incus authorization boundaries.
+- **mTLS**: Deferred mutual TLS design using per-user client certificates for Incus authorization boundaries.
 - **FIDO2**: WebAuthn/passkey standard, deferred from v0.1 and targeted to later milestones.
 - **age**: Modern file/secret encryption format used by Helling for secret-at-rest workflows.
 - **Scope**: Authorization boundary that constrains non-admin access to assigned project/resource domains.

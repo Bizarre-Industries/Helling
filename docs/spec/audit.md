@@ -38,7 +38,7 @@ Operator access is via standard journal tooling (`journalctl -t hellingd`, `jour
 
 ## 4. Authorization
 
-The audit read API is restricted to the `admin` and `auditor` roles (ADR-032). The `user` role receives HTTP 403 on any `/api/v1/audit/*` read.
+The audit read API is restricted to the `admin` role (ADR-032). The `user` role receives HTTP 403 on any `/api/v1/audit/*` read.
 
 Audit writes are not user-facing — they are emitted by hellingd as a side-effect of authorized mutation operations.
 
@@ -69,7 +69,7 @@ The export endpoint streams — it MUST NOT buffer the full result set in memory
 
 - `docs/decisions/019-journal-over-sqlite-audit.md` — normative field schema + emission pattern
 - `docs/decisions/018-shell-out-over-libraries.md` — journal emission exception rationale
-- `docs/decisions/050-hellingd-non-root-user.md` — polkit / journal socket access under non-root
+- `docs/decisions/050-hellingd-non-root-user.md` — non-root daemon boundary and deferred privileged-helper model
 - `docs/spec/observability.md` — structured application logging (distinct from audit)
 - `docs/design/pages/audit.md` — WebUI surface (table, before/after diff column)
 - `docs/spec/pagination.md` — pagination contract

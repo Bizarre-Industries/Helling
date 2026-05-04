@@ -12,12 +12,16 @@ IMPLEMENTATION-PLAN.md
 .claude/settings.local.json
 .claude/worktrees/
 .claude/.last-shipped-tag
+
+# autoskills install dir — source of truth lives upstream; we deploy real
+# copies into .claude/skills/ which Claude Code reads. Re-sync via
+# `cp -RL .agents/skills/. .claude/skills/` after running the autoskills tool.
+.agents/
 .claude-cache/
 .claude-plans/
 .design-fetch/
 .remember/
 .task/
-CLAUDE.md
 LESSONS.md
 
 # Go

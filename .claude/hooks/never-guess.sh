@@ -44,6 +44,7 @@ declare -a watch_tools=(
   "cliff"
   "golangci-lint"
   "oapi-codegen"
+  "openapi-ts"
   "vacuum"
   "goose"
   "lefthook"
@@ -53,6 +54,16 @@ declare -a watch_tools=(
   "parallels"
   "reprepro"
   "live-build"
+  "cosign"
+  "syft"
+  "sbom"
+  "dch"
+  "dput"
+  "dpkg-buildpackage"
+  "debuild"
+  "hellingd"
+  "helling-cli"
+  "helling-proxy"
 )
 
 # Risky shell patterns regardless of tool.
@@ -79,7 +90,7 @@ for t in "${watch_tools[@]}"; do
 done
 
 for p in "${watch_patterns[@]}"; do
-  if echo "$command_str" | grep -qE "$p"; then
+  if echo "$command_str" | grep -qE -- "$p"; then
     if [ -n "$reminder" ]; then
       reminder="${reminder} Additionally, the command matches a high-risk shell pattern ('${p}'). Confirm this is intended; the disk-bricking deny-list catches only the most catastrophic cases — '--force' / '-D' / 'reset --hard' destroy work without prompting."
     else

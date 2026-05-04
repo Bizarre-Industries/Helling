@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "skills": {
+    "accessibility": {
+      "source": "addyosmani/web-quality-skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "bffe3d08cfe92ebad63699f74ce29e35c19850ebfbf474c1463183cfe34d6a09"
+    },
+    "auto-skill": {
+      "source": "MaTriXy/auto-skill",
+      "sourceType": "github",
+      "skillPath": "skills/auto-skill/SKILL.md",
+      "computedHash": "b0e0b079928e3e12032678584a9c263d6c71d6bd5c875ca542aa5c538f2327cf"
+    },
+    "bun": {
+      "source": "midudev/autoskills",
+      "sourceType": "github",
+      "skillPath": "packages/autoskills/skills-registry/bun/SKILL.md",
+      "computedHash": "902720797715750b56c8f678b24c4c76d31d03af439b497af9653a7686c7fa7b"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "82fb11a63fb1e35ee2469516ed02d54695f783115b1540c0e783197af4240a3a"
+    },
+    "golang-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "autoskills-registry",
+      "computedHash": "669ccfb110e3a3932669684801fc8992cda87ec6d9c1fd72ff13ae9f5e7c748e"
+    },
+    "golang-testing": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "autoskills-registry",
+      "computedHash": "4c1e0c6805760534d8fd1a9fa2e4b5eb700b402f054254383437bd679d341cbd"
+    },
+    "seo": {
+      "source": "addyosmani/web-quality-skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "c184da724d1c61ad077f27418ea8e7e88fd54bcdf98165e18be7e4681cbd5e20"
+    },
+    "skill-discovery": {
+      "source": "MaTriXy/auto-skill",
+      "sourceType": "github",
+      "skillPath": "skills/skill-discovery/SKILL.md",
+      "computedHash": "b37c58e10c5bbb586d644ac2aae4d87fd8ba4264b845808bd6f264fdd5f4bed8"
+    }
+  }
+}

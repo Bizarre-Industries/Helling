@@ -21,7 +21,9 @@ ignores:
   # lessons.md is gitignored (local-only project log per .gitignore L20).
   - "lessons.md"
   - "LESSONS.md"
-  # .claude/ holds per-contributor agent/hook templates (gitignored).
-  - ".claude/**"
-  # CLAUDE.md is project-local AI assistant instructions (gitignored).
-  - "CLAUDE.md"
+  # .claude/skills/ comes from the ECC autoskills tool — vendor markdown,
+  # not Helling-authored, not our lint responsibility. The rest of .claude/
+  # (commands/, agents/, hooks/, etc.) is project-shared and IS linted.
+  - ".claude/skills/**"
+  # .agents/ is the autoskills install dir (gitignored). Vendor markdown.
+  - ".agents/**"

@@ -29,17 +29,21 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/replan-on-tag.sh\" 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/scripts/docs-snapshot.sh\" 2>/dev/null || true"
           }
         ]
       }
     ],
-    "Stop": [
+    "UserPromptSubmit": [
       {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/replan-on-tag.sh\" 2>/dev/null || true"
+            "command": "bash -c 'p=\"${CLAUDE_USER_PROMPT:-}\"; case \"$p\" in *plan*|*decid*|*next*|*roadmap*|*audit*|*phase*|*F-[0-9]*) bash \"${CLAUDE_PROJECT_DIR}/scripts/docs-snapshot.sh\" 2>/dev/null || true ;; esac'"
           }
         ]
       }

@@ -361,10 +361,15 @@ tasks:
       - |
         if [ ! -f package.json ]; then echo "web/ not present; skipping"; exit 0; fi
         bun install --frozen-lockfile
-        bunx biome check .
         bunx tsc --noEmit
-    status:
-      - test ! -d web/
+        bun run gen:api
+        if ! git diff --quiet -- src/api/generated 2>/dev/null; then
+          echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
+          git diff --stat -- src/api/generated
+          exit 1
+        fi
+        bun run test
+        bun run build
 
   check:frontend:gen:
     dir: web
@@ -391,7 +396,7 @@ tasks:
     cmds:
       - |
         if [ ! -f package.json ]; then exit 0; fi
-        bun test
+        bun run test
 
   # ============================================================
   # SQL

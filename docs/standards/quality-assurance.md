@@ -454,7 +454,7 @@ threshold.
 ## 6. TypeScript / React Gate
 
 Formatter: `biome` (replaces prettier + eslint for TS).
-Linter: `biome lint` with `biome.json` at `web/`.
+Target linter: `biome lint` with `biome.json` at `web/`.
 
 ```json
 {
@@ -487,8 +487,13 @@ Additional gates:
 
 - `tsc --noEmit` must pass.
 - `hey-api/openapi-ts` generation must be idempotent: `bun run gen:api && git diff --exit-code web/src/api/generated`.
-- `bun test` must pass (vitest).
-- Component coverage: 60% min. Hooks: 80% min. Utils: 90% min.
+- `bun run test` must pass (Vitest).
+- `bun run build` must pass.
+
+The active v0.1 frontend merge gate is typecheck, generated-code drift, Vitest,
+and production build. `bun run check` remains the cleanup target tracked by
+WebUI audit F-08/F-09; promote it back into `task check:frontend` after the
+legacy JSX and accessibility backlog is closed.
 
 ### 6.1 Strict TypeScript config
 

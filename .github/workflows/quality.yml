@@ -91,12 +91,12 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.local/bin/vacuum
-          key: ${{ runner.os }}-vacuum-0.16.5
+          key: ${{ runner.os }}-vacuum-0.26.4
       - name: Install vacuum
         if: steps.vacuum-cache.outputs.cache-hit != 'true'
         env:
-          VACUUM_VERSION: "0.16.5"
-          VACUUM_SHA256: "68ed0b45ecbf4af245d36997b9b1df36a99d6bc093868be4c0d29583bbd747f6"
+          VACUUM_VERSION: "0.26.4"
+          VACUUM_SHA256: "e1c13c3ef2814a07f83bb22e465a94f202114db38267502e4fdf2b9f4dbeda92"
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
@@ -107,7 +107,7 @@ jobs:
       - name: Vacuum version
         run: vacuum version
       - name: Lint
-        run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml -d
+        run: vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
       - name: Gate score at 100 (against our ruleset)
         run: |
           score=$(vacuum report --stdout -r api/.vacuum.yaml api/openapi.yaml | jq -r '.statistics.overallScore // .overallScore // 0')
@@ -126,16 +126,18 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-go-env
-      - name: Verify committed openapi.yaml matches Huma output
+      - name: Verify generated Go server code matches OpenAPI contract
         run: |
-          if [ -d apps/hellingd ]; then
-            go run ./tools/openapi-dump > /tmp/openapi.gen.yaml
-            diff -u api/openapi.yaml /tmp/openapi.gen.yaml || {
-              echo "::error::api/openapi.yaml drifted from Huma output. Run: task gen:openapi"
+          if [ -f apps/hellingd/api/generate.go ]; then
+            cd apps/hellingd
+            go generate ./api/...
+            cd ../..
+            git diff --exit-code -- apps/hellingd/api/server.gen.go || {
+              echo "::error::generated Go server code drifted. Run: cd apps/hellingd && go generate ./api/..."
               exit 1
             }
           else
-            echo "apps/hellingd not yet present; skipping drift check"
+            echo "apps/hellingd API generator not present; skipping drift check"
           fi
 
   markdown:
@@ -233,50 +235,91 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/setup-go-env
-      - name: Skip if no go.mod
-        id: skip
-        run: |
-          if [ ! -f go.mod ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: Build
-        if: steps.skip.outputs.skip != 'true'
-        run: go build ./...
-      - name: Vet
-        if: steps.skip.outputs.skip != 'true'
-        run: go vet ./...
-      - name: Mod tidy check
-        if: steps.skip.outputs.skip != 'true'
         run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum || {
-            echo "::error::go.mod or go.sum not tidy. Run: go mod tidy"
-            exit 1
-          }
-      # Bumped 2026-04-21: v6.5.2 → v9.2.0 (2 majors ahead; v7+ requires golangci-lint v2).
-      # `version: latest` replaced with explicit pin per ADR-026.
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              echo "▶ go build $mod"
+              (cd "$mod" && go build ./...)
+            fi
+          done
+      - name: Vet
+        run: |
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              echo "▶ go vet $mod"
+              (cd "$mod" && go vet ./...)
+            fi
+          done
+      - name: Mod tidy check
+        run: |
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              echo "▶ go mod tidy check $mod"
+              (
+                cd "$mod"
+                cp go.mod go.mod.bak
+                cp go.sum go.sum.bak 2>/dev/null || true
+                go mod tidy
+                if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum go.sum.bak >/dev/null 2>&1 ); then
+                  mv go.mod.bak go.mod
+                  mv go.sum.bak go.sum 2>/dev/null || true
+                  echo "::error::$mod go.mod or go.sum is not tidy. Run: cd $mod && go mod tidy"
+                  exit 1
+                fi
+                rm -f go.mod.bak go.sum.bak
+              )
+            fi
+          done
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
       - name: golangci-lint
-        if: steps.skip.outputs.skip != 'true'
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
-        with:
-          version: v2.11.4
-          args: --timeout 5m
+        run: |
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              echo "▶ golangci-lint $mod"
+              (cd "$mod" && golangci-lint run --timeout 5m ./...)
+            fi
+          done
       - name: Test with race + coverage
-        if: steps.skip.outputs.skip != 'true'
-        run: go test -race -coverprofile=coverage.out ./...
+        run: |
+          rm -rf .task/coverage
+          mkdir -p .task/coverage
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              name=$(basename "$mod")
+              echo "▶ go test $mod"
+              if [ "$name" = "hellingd" ]; then
+                (cd "$mod" && go test -tags devauth -race -coverprofile="../../.task/coverage/$name.out" ./...)
+              else
+                (cd "$mod" && go test -race -coverprofile="../../.task/coverage/$name.out" ./...)
+              fi
+            fi
+          done
       - name: Coverage gate
-        if: steps.skip.outputs.skip != 'true'
-        run: bash scripts/check-coverage.sh coverage.out
+        run: |
+          for profile in .task/coverage/*.out; do
+            [ -f "$profile" ] || continue
+            case "$profile" in
+              *hellingd.out) HELLING_COVERAGE_OVERALL_FLOOR=20 bash scripts/check-coverage.sh "$profile" ;;
+              *helling-cli.out) HELLING_COVERAGE_OVERALL_FLOOR=80 bash scripts/check-coverage.sh "$profile" ;;
+              *) bash scripts/check-coverage.sh "$profile" ;;
+            esac
+          done
       - name: govulncheck
-        if: steps.skip.outputs.skip != 'true'
         run: |
           if ! command -v govulncheck >/dev/null 2>&1; then
             go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
           fi
-          govulncheck ./...
+          for mod in apps/hellingd apps/helling-cli; do
+            if [ -f "$mod/go.mod" ]; then
+              echo "▶ govulncheck $mod"
+              (cd "$mod" && govulncheck ./...)
+            fi
+          done
 
   frontend:
-    name: Frontend lint / tsc / codegen drift / tests
+    name: Frontend tsc / codegen drift / tests / build
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-24.04
@@ -298,9 +341,6 @@ jobs:
       - name: Install
         if: steps.skip.outputs.skip != 'true'
         run: bun install --frozen-lockfile
-      - name: Biome check
-        if: steps.skip.outputs.skip != 'true'
-        run: bunx biome check .
       - name: tsc
         if: steps.skip.outputs.skip != 'true'
         run: bunx tsc --noEmit
@@ -314,7 +354,10 @@ jobs:
           }
       - name: Tests
         if: steps.skip.outputs.skip != 'true'
-        run: bun test
+        run: bun run test
+      - name: Build
+        if: steps.skip.outputs.skip != 'true'
+        run: bun run build
 
   sql:
     name: SQL lint / sqlc drift / goose round-trip

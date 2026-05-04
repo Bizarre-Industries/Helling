@@ -99,3 +99,52 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 	}
 	return n, nil
 }
+
+// ListUsers returns all users ordered by creation time.
+func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, username, password_hash, created_at, is_admin FROM users ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("listing users: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		var createdAt int64
+		var isAdmin int
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin); err != nil {
+			return nil, fmt.Errorf("scanning user: %w", err)
+		}
+		u.CreatedAt = time.Unix(createdAt, 0).UTC()
+		u.IsAdmin = isAdmin != 0
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+// UpdateUser updates the password hash and admin flag for a user.
+func (s *Store) UpdateUser(ctx context.Context, id int64, passwordHash string, isAdmin bool) error {
+	admin := 0
+	if isAdmin {
+		admin = 1
+	}
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = ?, is_admin = ? WHERE id = ?`,
+		passwordHash, admin, id,
+	)
+	if err != nil {
+		return fmt.Errorf("updating user %d: %w", id, err)
+	}
+	return nil
+}
+
+// DeleteUser removes a user and cascades to sessions, tokens, etc.
+func (s *Store) DeleteUser(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("deleting user %d: %w", id, err)
+	}
+	return nil
+}

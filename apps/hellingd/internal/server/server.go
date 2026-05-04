@@ -19,6 +19,7 @@ import (
 
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/proxy"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
 
@@ -51,6 +52,8 @@ type Config struct {
 	Auth        AuthSettings
 	IncusProber IncusProber
 	Incus       incus.Client
+	IncusProxy  *proxy.IncusProxy
+	PodmanProxy *proxy.PodmanProxy
 }
 
 // Server is the top-level HTTP server.
@@ -112,21 +115,114 @@ func (s *Server) routes() chi.Router {
 	r.Route("/v1", func(r chi.Router) {
 		// Public auth endpoints.
 		r.Post("/auth/login", s.handleLogin)
+		r.Post("/auth/setup", s.handleSetup)
 
 		// Authenticated surface.
 		r.Group(func(r chi.Router) {
 			r.Use(s.authMiddleware)
+
+			// Auth.
 			r.Post("/auth/logout", s.handleLogout)
 			r.Get("/auth/me", s.handleMe)
+			r.Post("/auth/mfa/complete", s.handleMFAComplete)
+			r.Post("/auth/totp/setup", s.handleTOTPSetup)
+			r.Post("/auth/totp/verify", s.handleTOTPVerify)
+			r.Delete("/auth/totp", s.handleTOTPDelete)
+			r.Get("/auth/tokens", s.handleListTokens)
+			r.Post("/auth/tokens", s.handleCreateToken)
+			r.Delete("/auth/tokens/{id}", s.handleRevokeToken)
+
+			// Instances.
 			r.Get("/instances", s.handleListInstances)
 			r.Post("/instances", s.handleCreateInstance)
 			r.Get("/instances/{name}", s.handleGetInstance)
 			r.Delete("/instances/{name}", s.handleDeleteInstance)
 			r.Post("/instances/{name}/start", s.handleStartInstance)
 			r.Post("/instances/{name}/stop", s.handleStopInstance)
+
+			// Operations.
 			r.Get("/operations", s.handleListOperations)
 			r.Get("/operations/{id}", s.handleGetOperation)
+
+			// Users.
+			r.Get("/users", s.handleListUsers)
+			r.Post("/users", s.handleCreateUser)
+			r.Get("/users/{id}", s.handleGetUser)
+			r.Put("/users/{id}", s.handleUpdateUser)
+			r.Delete("/users/{id}", s.handleDeleteUser)
+
+			// System.
+			r.Get("/system/info", s.handleSystemInfo)
+			r.Get("/system/hardware", s.handleSystemHardware)
+			r.Get("/system/config", s.handleSystemConfig)
+			r.Put("/system/config", s.handleSystemConfigUpdate)
+			r.Post("/system/upgrade", s.handleSystemUpgrade)
+			r.Get("/system/diagnostics", s.handleSystemDiagnostics)
+
+			// Schedules.
+			r.Get("/schedules", s.handleListSchedules)
+			r.Post("/schedules", s.handleCreateSchedule)
+			r.Get("/schedules/{id}", s.handleGetSchedule)
+			r.Put("/schedules/{id}", s.handleUpdateSchedule)
+			r.Delete("/schedules/{id}", s.handleDeleteSchedule)
+			r.Post("/schedules/{id}/run", s.handleRunSchedule)
+
+			// Webhooks.
+			r.Get("/webhooks", s.handleListWebhooks)
+			r.Post("/webhooks", s.handleCreateWebhook)
+			r.Get("/webhooks/{id}", s.handleGetWebhook)
+			r.Put("/webhooks/{id}", s.handleUpdateWebhook)
+			r.Delete("/webhooks/{id}", s.handleDeleteWebhook)
+			r.Post("/webhooks/{id}/test", s.handleTestWebhook)
+
+			// BMC.
+			r.Get("/bmc", s.handleListBMC)
+			r.Post("/bmc", s.handleCreateBMC)
+			r.Get("/bmc/{id}", s.handleGetBMC)
+			r.Delete("/bmc/{id}", s.handleDeleteBMC)
+			r.Post("/bmc/{id}/power", s.handleBMCPower)
+			r.Get("/bmc/{id}/sensors", s.handleBMCSensors)
+			r.Get("/bmc/{id}/sel", s.handleBMCSEL)
+
+			// Kubernetes.
+			r.Get("/kubernetes", s.handleListK8s)
+			r.Post("/kubernetes", s.handleCreateK8s)
+			r.Get("/kubernetes/{name}", s.handleGetK8s)
+			r.Delete("/kubernetes/{name}", s.handleDeleteK8s)
+			r.Post("/kubernetes/{name}/scale", s.handleScaleK8s)
+			r.Post("/kubernetes/{name}/upgrade", s.handleUpgradeK8s)
+			r.Get("/kubernetes/{name}/kubeconfig", s.handleK8sKubeconfig)
+
+			// Firewall.
+			r.Get("/firewall/host", s.handleListFirewallRules)
+			r.Post("/firewall/host", s.handleCreateFirewallRule)
+			r.Delete("/firewall/host/{id}", s.handleDeleteFirewallRule)
+
+			// Audit.
+			r.Get("/audit", s.handleAuditQuery)
+			r.Get("/audit/export", s.handleAuditExport)
+
+			// Notifications.
+			r.Get("/notifications/channels", s.handleListNotificationChannels)
+			r.Post("/notifications/channels", s.handleCreateNotificationChannel)
+			r.Delete("/notifications/channels/{id}", s.handleDeleteNotificationChannel)
+			r.Post("/notifications/channels/{id}/test", s.handleTestNotificationChannel)
+
+			// Events.
+			r.Get("/events", s.handleEvents)
 		})
+	})
+
+	// Proxy pass-through to Incus and Podman Unix sockets (ADR-014).
+	// Authenticated, but not under /v1 — these are native upstream APIs.
+	r.Group(func(r chi.Router) {
+		r.Use(s.authMiddleware)
+		if s.cfg.IncusProxy != nil {
+			r.Handle("/api/incus/*", s.cfg.IncusProxy)
+		}
+		if s.cfg.PodmanProxy != nil {
+			r.Handle("/api/podman/*", s.cfg.PodmanProxy)
+		}
 	})
 
 	r.NotFound(s.handleNotFound)

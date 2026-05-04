@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lxc/incus/v6/shared/api"
-
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
@@ -22,16 +20,15 @@ type fakeIncus struct {
 	}
 }
 
-func (f *fakeIncus) ListInstances(_ context.Context) ([]api.Instance, error) {
+func (f *fakeIncus) ListInstances(_ context.Context) ([]incus.Instance, error) {
 	panic("ListInstances not expected in poller tests")
 }
 
-func (f *fakeIncus) GetInstance(_ context.Context, _ string) (*api.Instance, error) {
+func (f *fakeIncus) GetInstance(_ context.Context, _ string) (*incus.Instance, error) {
 	panic("GetInstance not expected in poller tests")
 }
 
-//nolint:gocritic // interface method; struct passed by value upstream
-func (f *fakeIncus) CreateInstance(_ context.Context, _ api.InstancesPost) (incus.OperationHandle, error) {
+func (f *fakeIncus) CreateInstance(_ context.Context, _ incus.InstanceCreate) (incus.OperationHandle, error) {
 	panic("CreateInstance not expected in poller tests")
 }
 

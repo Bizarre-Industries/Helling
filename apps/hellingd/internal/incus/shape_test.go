@@ -3,20 +3,16 @@ package incus
 import (
 	"testing"
 	"time"
-
-	"github.com/lxc/incus/v6/shared/api"
 )
 
 func TestToInstance(t *testing.T) {
 	t.Parallel()
 	created := time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
-	in := &api.Instance{
-		InstancePut: api.InstancePut{
-			Architecture: "x86_64",
-			Config: map[string]string{
-				"image.alias":         "images:debian/13",
-				"volatile.base_image": "deadbeef",
-			},
+	in := &Instance{
+		Architecture: "x86_64",
+		Config: map[string]string{
+			"image.alias":         "images:debian/13",
+			"volatile.base_image": "deadbeef",
 		},
 		Name:      "web-1",
 		Type:      "container",
@@ -43,11 +39,9 @@ func TestToInstance(t *testing.T) {
 
 func TestToInstanceFingerprintFallback(t *testing.T) {
 	t.Parallel()
-	in := &api.Instance{
-		InstancePut: api.InstancePut{
-			Config: map[string]string{
-				"volatile.base_image": "fp-only",
-			},
+	in := &Instance{
+		Config: map[string]string{
+			"volatile.base_image": "fp-only",
 		},
 		Name:   "x",
 		Type:   "container",

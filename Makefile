@@ -27,6 +27,7 @@ GO_TEST_FLAGS        := -race -count=1
 GO_BUILD_FLAGS       := -trimpath -ldflags '$(LDFLAGS)'
 
 OUT_DIR := ./bin
+GENERATED_PATHS := apps/hellingd/api apps/helling-cli/internal/client web/src/api/generated
 
 # ---- Help ----------------------------------------------------------------
 
@@ -80,9 +81,11 @@ generate-web: ## Regenerate the TypeScript client (Orval)
 
 .PHONY: check-generated
 check-generated: generate ## Fail if generated artifacts drift from spec
-	@if [ -n "$$(git status --porcelain)" ]; then \
+	@if ! git diff --quiet -- $(GENERATED_PATHS) || \
+		[ -n "$$(git ls-files --others --exclude-standard -- $(GENERATED_PATHS))" ]; then \
 		echo "✗ generated artifacts are out of date. Run 'make generate' and commit."; \
-		git --no-pager diff --stat; \
+		git --no-pager diff --stat -- $(GENERATED_PATHS); \
+		git ls-files --others --exclude-standard -- $(GENERATED_PATHS); \
 		exit 1; \
 	fi
 	@echo "✓ generated artifacts are clean"

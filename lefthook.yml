@@ -44,10 +44,9 @@ pre-commit:
       tags: markdown fast
       glob: "*.md"
       exclude: "refs/.*"
-      # IMPORTANT: pass staged files ONLY, not a trailing glob. The prior
-      # form ("markdownlint-cli2 {staged_files}") caused lefthook to append
-      # the glob default, which made the linter scan every .md in the repo.
-      run: markdownlint-cli2 {staged_files}
+      # IMPORTANT: pass staged files ONLY and disable config globs. Otherwise
+      # markdownlint-cli2 also expands **/*.md from .markdownlint-cli2.yaml.
+      run: markdownlint-cli2 --no-globs {staged_files}
 
     prettier-md:
       tags: markdown format fast

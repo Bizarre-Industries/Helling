@@ -165,14 +165,13 @@ tasks:
 
   check:markdown:
     cmds:
-      # Globs and ignores live in .markdownlint-cli2.yaml. No CLI args needed.
-      - markdownlint-cli2
-      - prettier --check "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
+      - git ls-files -z '*.md' | xargs -0 markdownlint-cli2 --no-globs
+      - git ls-files -z '*.md' | xargs -0 prettier --check --ignore-path .gitignore --ignore-path .prettierignore
 
   fmt:markdown:
     cmds:
-      - markdownlint-cli2 --fix || true
-      - prettier --write "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
+      - git ls-files -z '*.md' | xargs -0 markdownlint-cli2 --fix --no-globs || true
+      - git ls-files -z '*.md' | xargs -0 prettier --write --ignore-path .gitignore --ignore-path .prettierignore
 
   # ============================================================
   # YAML — excludes refs/ and api/openapi.yaml

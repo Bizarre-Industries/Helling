@@ -42,6 +42,7 @@ ND = "ND"        # Neighbor Discovery / non-disclosure etc.
 OT = "OT"        # Operational Technology
 IST = "IST"      # Instance State / Iraq Standard Time etc.
 HPE = "HPE"      # Hewlett Packard Enterprise, appears in hardware mock data
+abd = "abd"      # Historical changelog entry quotes a typo-fixture token.
 
 [default.extend-identifiers]
 # Identifiers that look like typos but aren't.

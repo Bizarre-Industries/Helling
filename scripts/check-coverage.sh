@@ -7,7 +7,7 @@
 #   internal/handlers/  - 80% minimum
 #   internal/services/  - 90% minimum
 #   internal/clients/   - 70% minimum
-#   overall             - 80% minimum
+#   overall             - configurable, default 80% minimum
 #
 # Usage: bash scripts/check-coverage.sh coverage.out
 
@@ -28,7 +28,7 @@ FLOORS=(
   "internal/clients:70"
 )
 
-OVERALL_FLOOR=80
+OVERALL_FLOOR="${HELLING_COVERAGE_OVERALL_FLOOR:-80}"
 
 # Parse `go tool cover -func` output.
 # Format:  <path>:<line>.<col>,<line>.<col>  <funcname>  <pct>

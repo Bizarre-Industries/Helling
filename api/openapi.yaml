@@ -114,7 +114,7 @@ paths:
               example:
                 data:
                   mfa_required: true
-                  mfa_token: 4lPzYfV5LqVf4BOVrYpKZRCi4spPnP91
+                  mfa_token: c08f4a7281b54d9abef67c210d3e49a2
         '204':
           description: Browser-compatible login successful response for cookie-only clients.
           headers:
@@ -150,7 +150,7 @@ paths:
             schema:
               $ref: '#/components/schemas/MFACompleteRequest'
             example:
-              mfa_token: 4lPzYfV5LqVf4BOVrYpKZRCi4spPnP91
+              mfa_token: c08f4a7281b54d9abef67c210d3e49a2
               totp_code: '123456'
       responses:
         '200':
@@ -549,7 +549,7 @@ components:
           description: Opaque pre-session challenge token returned by `/auth/login`.
           minLength: 16
           maxLength: 256
-          example: 4lPzYfV5LqVf4BOVrYpKZRCi4spPnP91
+          example: c08f4a7281b54d9abef67c210d3e49a2
         totp_code:
           type: string
           description: Six-digit TOTP code from the user's authenticator app.
@@ -598,7 +598,7 @@ components:
         mfa_token:
           type: string
           description: Opaque pre-session MFA token. Present only when `mfa_required` is true.
-          example: 4lPzYfV5LqVf4BOVrYpKZRCi4spPnP91
+          example: c08f4a7281b54d9abef67c210d3e49a2
 
     User:
       type: object

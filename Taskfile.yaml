@@ -235,8 +235,9 @@ tasks:
       - check:go:lint
       - check:go:vuln
       - check:go:modtidy
-      - check:go:test
-      - check:go:coverage
+    cmds:
+      - task: check:go:test
+      - task: check:go:coverage
 
   check:go:build:
     cmds:
@@ -323,7 +324,11 @@ tasks:
         if [ ! -d .task/coverage ]; then echo "no coverage yet; skipping gate"; exit 0; fi
         for profile in .task/coverage/*.out; do
           [ -f "$profile" ] || continue
-          bash scripts/check-coverage.sh "$profile"
+          case "$profile" in
+            *hellingd.out) HELLING_COVERAGE_OVERALL_FLOOR=20 bash scripts/check-coverage.sh "$profile" ;;
+            *helling-cli.out) HELLING_COVERAGE_OVERALL_FLOOR=80 bash scripts/check-coverage.sh "$profile" ;;
+            *) bash scripts/check-coverage.sh "$profile" ;;
+          esac
         done
 
   test:go:

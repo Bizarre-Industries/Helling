@@ -42,7 +42,7 @@ Runs in parallel:
 | `markdown`          | markdownlint-cli2, prettier --check                                                 | Any lint or format violation                                       |
 | `yaml`              | yamllint -s                                                                         | Any warning or error                                               |
 | `shell`             | shellcheck -S style, shfmt -d                                                       | Any violation                                                      |
-| `go`                | build + vet + golangci-lint + govulncheck + go.mod tidy + test with race + coverage | Any fail, or coverage below per-package floors                     |
+| `go`                | build + vet + golangci-lint + govulncheck + go.mod tidy + test with race + coverage | Any fail, or coverage below the active module floor                |
 | `frontend`          | biome check, tsc --noEmit, generated-code drift, bun test                           | Any fail                                                           |
 | `sql`               | sqlfluff, sqlc drift, goose round-trip                                              | Any fail                                                           |
 | `secrets`           | gitleaks detect                                                                     | Any finding                                                        |

@@ -20,21 +20,29 @@
 ### Auth
 
 ```bash
-helling auth login                     # Interactive PAM login, stores JWT
+helling auth setup --api http+unix:///run/helling/api.sock \
+  --setup-token-file /etc/helling/setup-token
+                                      # Create first admin with installer setup token
+helling auth login                     # Interactive local login, stores JWT
 helling auth logout                    # Clear stored tokens
 helling auth token create NAME         # Create API token
 helling auth token list                # List API tokens
 helling auth token revoke ID           # Revoke API token
 ```
 
+`helling auth setup` never accepts the setup token or first-admin password as
+argv values. Interactive runs prompt without echo and ask for password
+confirmation. Automation must use `--password-file` and `--setup-token-file`
+so secrets do not appear in shell history or process listings.
+
 ### Users
 
 ```bash
 helling user list                      # List users
-helling user create USERNAME           # Create user (PAM)
+helling user create USERNAME           # Create local user
 helling user get USERNAME              # Get user details (status, 2FA, last login)
 helling user update USERNAME           # Update user (2FA status, role)
-helling user delete USERNAME           # Delete user (PAM)
+helling user delete USERNAME           # Delete local user
 helling user set-scope USER SCOPE      # Assign user trust scope
 ```
 
@@ -149,8 +157,8 @@ Helling OpenAPI operationIds whose CLI command names differ from the naive camel
 
 - operationId: healthGet → `helling system health`
 - operationId: eventsSse → `helling events tail`
-- operationId: authSetup → first-boot flow via `helling auth login` (wizard fallback)
-- operationId: authRefresh → auto-refresh inside `client.Do` (no explicit subcommand)
+- operationId: authSetup → first-boot flow via `helling auth setup`
+- operationId: authSetupStatus → WebUI first-boot status probe
 - operationId: authMfaComplete → `helling auth login` MFA prompt branch + `helling auth mfa` parent
 - operationId: authTotpSetup → `helling auth mfa setup`
 - operationId: authTotpVerify → `helling auth mfa verify`

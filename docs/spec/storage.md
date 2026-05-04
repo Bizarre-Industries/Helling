@@ -1,6 +1,6 @@
 # Storage Specification
 
-All Incus storage operations go through the proxy (ADR-014). hellingd forwards requests from `/api/incus/*` to the Incus HTTPS listener on `127.0.0.1:8443` using the caller's per-user TLS certificate identity.
+Incus storage operations go through the proxy (ADR-014). In v0.1 raw Incus proxy access is admin-only and uses the restricted Incus user socket; ADR-024 per-user TLS certificate identity over loopback HTTPS is deferred until it is wired end to end.
 
 For the full Incus storage API, see [Incus REST API](https://linuxcontainers.org/incus/docs/main/rest-api-spec/).
 

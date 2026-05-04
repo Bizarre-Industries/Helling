@@ -1,6 +1,13 @@
 # ADR-043: Huma via humago for Helling-owned HTTP layer
 
-> Status: Accepted (2026-04-20)
+> Status: Superseded for v0.1 (2026-05-04). Huma remains a possible post-v0.1 migration path.
+
+## 2026-05-04 Update
+
+v0.1 returned to a spec-first OpenAPI workflow: `api/openapi.yaml` is the source
+contract, and generated Go/TypeScript artifacts are derived from it. This ADR is
+retained as historical design context and a possible future migration path, but
+it is not the active v0.1 implementation contract.
 
 ## Context
 

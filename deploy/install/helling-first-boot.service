@@ -1,0 +1,15 @@
+[Unit]
+Description=Complete Helling first-boot installation
+Documentation=https://github.com/Bizarre-Industries/Helling
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/helling/.first-boot-complete
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/helling/helling-first-boot
+RemainAfterExit=yes
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target

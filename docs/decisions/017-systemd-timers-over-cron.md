@@ -2,7 +2,7 @@
 
 > Status: Accepted
 >
-> Amended 2026-04-20 by ADR-050 (hellingd non-root). Root-based assumptions removed; unit management now via DBus + polkit + auditable SUID helper for symlink operations.
+> Amended 2026-05-04 by ADR-050. v0.1 does not install a broad DBus/polkit unit-management grant; schedule unit mutation stays deferred until the narrow helper is implemented and reviewed.
 
 ## Context
 
@@ -18,7 +18,7 @@ Helling is an OS. systemd is always present. systemd timers are the standard Lin
 
 ## Decision
 
-Backup and snapshot schedules write systemd timer + service units to `/etc/systemd/system/helling-managed/` (a group-writable staging directory owned `root:helling 0750`), then link them into `/etc/systemd/system/` via a small auditable SUID helper and call systemd over DBus to reload/enable.
+Backup and snapshot schedules eventually write systemd timer + service units to `/etc/systemd/system/helling-managed/` (a group-writable staging directory owned `root:helling 0750`), then link them into `/etc/systemd/system/` via a small auditable privileged helper. v0.1 does not ship this mutation path.
 
 Example: a daily backup schedule for instance `vm-web-1` creates:
 
@@ -50,29 +50,29 @@ ExecStart=/usr/local/bin/helling schedule run backup vm-web-1
 
 The `helling schedule run` command calls the hellingd API, which triggers the Incus backup via the proxy.
 
-### Unit-management flow (non-root hellingd, per ADR-050)
+### Future unit-management flow (non-root hellingd, per ADR-050)
 
 hellingd runs as the `helling` system user. Writing units goes through two staged steps, not a direct write to `/etc/systemd/system/`:
 
 1. **Write unit body** to `/etc/systemd/system/helling-managed/` (owned `root:helling` mode `0750`; hellingd, as a member of `helling`, can write here).
-2. **Link into active unit path** via the shipped SUID helper `/usr/lib/helling/helling-unit-link` (mode `4750`, owner `root:helling`). The helper validates the filename matches `^helling-[a-z0-9-]+\.(timer|service)$`, refuses anything else, and calls `systemctl link` + `systemctl daemon-reload` + `systemctl enable --now` over its root-owned DBus connection.
-3. **hellingd observes result** over the system DBus (`org.freedesktop.systemd1`) using `godbus/dbus/v5`. Status queries, enabled-state checks, and `systemctl list-timers` equivalents all go through DBus. No shell-out to `systemctl` from hellingd directly.
+2. **Link into active unit path** via a reviewed helper `/usr/lib/helling/helling-unit-link` (mode `4750`, owner `root:helling`). The helper validates the filename matches `^helling-[a-z0-9-]+\.(timer|service)$`, refuses anything else, and performs the minimum root-owned systemd operations needed to enable the unit.
+3. **hellingd observes result** through the reviewed helper/API path. No direct shell-out to `systemctl` from hellingd is allowed.
 
-Polkit ensures hellingd cannot call `ManagerInterface.StartUnit` / `StopUnit` on anything outside the `helling-*` pattern — see ADR-050 for the policy.
+No broad polkit rule is installed in v0.1 — see ADR-050 for the current policy.
 
 Schedule CRUD in hellingd:
 
 - `POST /api/v1/schedules` → writes timer+service unit files to staging, invokes SUID helper to link+enable, tracks result
-- `GET /api/v1/schedules` → DBus `ListUnits` filtered by `helling-*.timer` prefix
-- `DELETE /api/v1/schedules/{id}` → DBus `StopUnit` + `DisableUnitFiles` + remove-and-unlink via SUID helper
-- Status: DBus `GetUnit` + `Unit.Properties`
+- `GET /api/v1/schedules` → list tracked `helling-*.timer` units through the reviewed implementation
+- `DELETE /api/v1/schedules/{id}` → stop/disable/remove through the reviewed helper implementation
+- Status: unit state through the reviewed implementation
 
 ## Consequences
 
 **Easier:**
 
 - Schedules survive hellingd restarts (systemd manages them independently)
-- DBus `ListUnits` returns all `helling-*` timers with metadata in one call (faster than parsing `systemctl list-timers` output)
+- The reviewed implementation can return all `helling-*` timers with metadata without parsing arbitrary shell output in the daemon
 - `journalctl -u helling-backup-vm-web-1` shows execution history (works under non-root via `systemd-journal` group)
 - No gocron dependency, no SQLite schedule tables
 - `Persistent=true` catches up on missed runs after reboot
@@ -83,7 +83,7 @@ Schedule CRUD in hellingd:
 
 - Small SUID helper is new code; must stay ~40 LOC and be fuzzed against directory-traversal and unit-name injection.
 - Staging-dir design means two writes per schedule CRUD (body write, then link).
-- Testing requires a real systemd + polkit configuration; use Lima VM in CI, not a bare container.
+- Testing requires a real systemd configuration; use VM tests, not a bare container.
 - Uninstall (`apt purge helling`) must clean up both the staging dir and any live symlinks in `/etc/systemd/system/`.
 
 ## References

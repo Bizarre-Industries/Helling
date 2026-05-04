@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable MD040 MD024 -->
 
-Normative quality gates for every Helling artifact: OpenAPI contract, Go code, TypeScript code, markdown, YAML, shell, SQL, container images, dependencies.
+Normative quality gates for every Helling artifact: OpenAPI contract, Go code, TypeScript code, markdown, YAML, shell, SQL, installer packaging, dependencies.
 
 Principle: **every artifact must pass its quality gate on every push. No gate is optional. No exceptions without a documented waiver.**
 
@@ -55,19 +55,17 @@ vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 
 Exit code non-zero fails the job.
 
-### 1.5 Gate semantics after ADR-043 (2026-04-20)
+### 1.5 Gate Semantics
 
-With Huma as the contract source for Helling-owned endpoints, the generated OpenAPI artifact should auto-score 100/100 by construction for structural/doc coverage categories.
+`api/openapi.yaml` is the source of truth. The OpenAPI gate validates two classes of failure:
 
-The OpenAPI gate now validates two classes of failure:
-
-1. Struct-tag/doc-comment drift from intended API semantics.
+1. Manual contract drift from intended API semantics.
 2. Custom design-intent rules that protect Helling wire contracts.
 
 Practical implication:
 
-- Legacy hygiene rules such as `helling-required-description` become largely redundant because descriptions are enforced at the Go type/field layer before generation.
-- Intent-oriented rules remain valuable regression detectors and must stay enabled.
+- Hygiene rules such as `helling-required-description` stay enabled because the contract is hand-reviewed.
+- Generated Go/TypeScript drift is checked separately after code generation.
 
 Rules that remain high-value include:
 
@@ -76,7 +74,7 @@ Rules that remain high-value include:
 - Error envelope consistency for mutation and auth/error paths.
 - Pagination contract enforcement for list endpoints.
 
-Any gate failure is treated as a code/type contract regression, not a manual YAML formatting task.
+Any gate failure is treated as a contract regression.
 
 ### 1.6 Concrete before/after: `POST /api/v1/auth/login`
 
@@ -87,7 +85,7 @@ Any gate failure is treated as a code/type contract regression, not a manual YAM
   post:
     tags: [Auth]
     operationId: authLogin
-    summary: PAM authenticate and issue JWT pair
+    summary: Authenticate local user and issue JWT pair
     security: []
     requestBody:
       required: true
@@ -121,9 +119,9 @@ Any gate failure is treated as a code/type contract regression, not a manual YAM
   post:
     tags: [Auth]
     operationId: authLogin
-    summary: PAM authenticate and issue JWT pair
+    summary: Authenticate local user and issue JWT pair
     description: |
-      Authenticates a user via the host PAM stack and issues a short-lived
+      Authenticates a Helling-managed local user and issues a short-lived
       access token plus a refresh cookie. If TOTP is enrolled for the user,
       the response is `202 Accepted` with an `mfa_token`; complete the flow
       via `POST /api/v1/auth/mfa/complete`.
@@ -132,7 +130,7 @@ Any gate failure is treated as a code/type contract regression, not a manual YAM
     security: []
     requestBody:
       required: true
-      description: PAM credentials, optionally with a TOTP code for single-shot login.
+      description: Local credentials, optionally with a TOTP code for single-shot login.
       content:
         application/json:
           schema:
@@ -151,15 +149,15 @@ Any gate failure is treated as a code/type contract regression, not a manual YAM
                 totp_code: "492018"
     responses:
       "200":
-        description: Login successful. Access token returned; refresh token set as `helling_refresh` cookie.
+        description: Login successful. Access token returned; session cookie set as `helling_session`.
         headers:
           Set-Cookie:
-            description: httpOnly, Secure, SameSite=Strict refresh cookie.
+            description: httpOnly, Secure, SameSite=Lax session cookie.
             schema:
               type: string
               example: >-
-                helling_refresh=eyJ...; HttpOnly; Secure; SameSite=Strict;
-                Path=/api/v1/auth; Max-Age=604800
+                helling_session=...; HttpOnly; Secure; SameSite=Lax;
+                Path=/; Max-Age=604800
         content:
           application/json:
             schema:
@@ -200,7 +198,7 @@ Every field in a request/response schema must carry constraints aligned with `do
 ```yaml
 User:
   type: object
-  description: A Helling-managed user account, backed by a PAM identity.
+  description: A Helling-managed local user account.
   required: [id, username, role, status, created_at]
   properties:
     id:
@@ -218,7 +216,7 @@ User:
     role:
       type: string
       description: Fixed Helling role (ADR-032).
-      enum: [admin, user, auditor]
+      enum: [admin, user]
       example: admin
     status:
       type: string
@@ -233,7 +231,7 @@ User:
 
 AuthLoginRequest:
   type: object
-  description: PAM login credentials.
+  description: Local login credentials.
   required: [username, password]
   properties:
     username:
@@ -543,12 +541,11 @@ Additional gate: `sqlc generate` must be idempotent. `sqlc generate && git diff 
 
 ---
 
-## 8. Dockerfile / Container Image Gate
+## 8. Installer Packaging Gate
 
-Not used for Helling v0.1 production (ADR-021). Applies only to CI images and optional try-it images.
+Helling v0.1 ships through the Debian-first ISO/systemd path from ADR-021.
 
-Linter: `hadolint`. Gate: zero errors at severity `info` or above.
-Scanner: `grype` (see §9).
+Gate: `scripts/check-iso-config.sh` validates the live-build source profile, preseed payload hook, first-boot script wiring, setup-token path, socket group, and detached-signing support. Image vulnerability scanning applies to release artifacts and SBOMs in §9, not a Dockerfile.
 
 ---
 
@@ -705,7 +702,7 @@ CI: `lychee --offline docs/ --no-progress` on every push (external checks weekly
 # typos.toml
 [default]
 extend-ignore-re = [
-  "hellingd", "hellingprox", "helling_.*",
+  "hellingd", "helling-proxy", "helling_.*",
   "incusd", "incus-.*",
   "\\$ref",
 ]

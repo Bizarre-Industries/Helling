@@ -24,7 +24,7 @@ Validation failure response uses `VALIDATION_FAILED` envelope with field details
 ### Password
 
 - Length: 8..1024
-- No composition requirements at Helling layer (PAM policy may enforce stricter rules)
+- No composition requirements beyond length at the Helling layer
 
 ### URL
 
@@ -44,13 +44,13 @@ Validation failure response uses `VALIDATION_FAILED` envelope with field details
 
 ### Role/status enums
 
-- Role: `admin | user | auditor`
+- Role label: `admin | user`
 - User status: `active | disabled`
 - Token scope: `read | write | admin`
 
 ## Endpoint-Specific Examples
 
-- `POST /api/v1/users`: username + role required.
+- `POST /api/v1/users`: username + password required; `is_admin` defaults false.
 - `POST /api/v1/schedules`: type, target, cron required and validated.
 - `POST /api/v1/webhooks`: name, url, events required; each event must exist in docs/spec/events.md catalog.
 

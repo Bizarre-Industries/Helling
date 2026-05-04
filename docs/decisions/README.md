@@ -25,25 +25,25 @@
 | 021 | ISO-only installation                                         | Accepted              |
 | 022 | No CAPMVM / Flintlock                                         | Accepted              |
 | 023 | No custom image format                                        | Accepted              |
-| 024 | Incus per-user TLS auth from v0.1                             | Accepted              |
+| 024 | Incus per-user TLS auth                                       | Deferred for v0.1     |
 | 025 | Signed APT repository via GitHub Pages for updates            | Accepted              |
 | 026 | SHA-pin all third-party GitHub Actions                        | Accepted              |
 | 027 | Two-daemon split                                              | Accepted              |
 | 028 | Unix socket between daemons                                   | Accepted              |
-| 029 | Dedicated hellingprox system user                             | Accepted              |
+| 029 | Dedicated hellingprox system user                             | Superseded by ADR-037 |
 | 030 | Argon2id password hashing                                     | Accepted              |
 | 031 | Ed25519 JWT signing                                           | Accepted              |
 | 032 | Three fixed roles for v0.1                                    | Accepted              |
 | 034 | Lima dev environment                                          | Accepted              |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
-| 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
+| 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Deferred for v0.1     |
 | 037 | Caddy as edge service                                         | Accepted              |
 | 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
 | 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
 | 040 | net/http ServeMux over chi                                    | Accepted              |
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 | 042 | Security scanning stack consolidation                         | Accepted              |
-| 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |
+| 043 | Huma with humago for Helling-owned HTTP layer                 | Superseded for v0.1   |
 | 044 | hey-api/openapi-ts for WebUI code generation                  | Accepted              |
 | 045 | reprepro for APT repository tooling                           | Accepted              |
 | 046 | live-build for ISO build tooling                              | Accepted              |

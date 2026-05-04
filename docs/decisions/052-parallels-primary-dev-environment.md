@@ -8,7 +8,7 @@
 
 Helling targets Debian-first host behavior. Backend (`hellingd`) requires:
 
-- systemd, DBus, polkit (ADR-050 — non-root daemon via systemd interaction)
+- systemd (ADR-050 — non-root daemon with no broad v0.1 unit-management grant)
 - Incus on the host (ADR-001, ADR-024, ADR-036)
 - Podman on the host (ADR-004, ADR-035)
 - Real APT install path for release-shaped validation (ADR-021, ADR-045, ADR-046)
@@ -33,16 +33,16 @@ Parallels Desktop on macOS becomes the primary documented Debian dev/test VM for
 
 Easier:
 
-- A real Debian system with systemd, DBus, polkit, Incus, and Podman is one `task vm:parallels:up` away on every macOS contributor laptop that has Parallels Desktop installed.
+- A real Debian system with systemd, Incus, and Podman is one `task vm:parallels:up` away on every macOS contributor laptop that has Parallels Desktop installed.
 - Inner dev loop (`task vm:parallels:dev`) is a build + rsync + service restart that finishes in seconds.
 - Release-gate validation (`task vm:parallels:release-test`) drives the same `.deb` flow that ships to users via ADR-045 / ADR-046.
-- VM snapshots make destructive testing (Incus storage operations, polkit edge cases) cheap to roll back.
+- VM snapshots make destructive testing (Incus storage operations, installer edge cases) cheap to roll back.
 
 Harder / costs:
 
 - Parallels Desktop is commercial software with a license cost. Contributors who cannot fund a license use the Lima fallback (ADR-034) instead.
 - Two VM tooling surfaces (Parallels primary, Lima fallback) must stay in sync. Mitigated by mirroring the task namespace (`vm:parallels:*` and `vm:lima:*`) so command shape is identical.
-- Cross-compile from macOS to linux with CGO (sqlite/pam) is constrained. The deploy scripts try pure cross-compile first and fall back to building inside the VM.
+- Cross-compile from macOS to Linux is supported by the pure-Go v0.1 stack; deploy scripts can still fall back to building inside the VM when host tooling is missing.
 
 ## References
 
@@ -51,4 +51,4 @@ Harder / costs:
 - `docs/roadmap/checklist.md` — v0.1.0-alpha tracking items.
 - ADR-034 — Lima dev environment (now fallback).
 - ADR-045 — reprepro APT repository tooling (consumed by the `.deb` deploy path).
-- ADR-050 — non-root hellingd via DBus + polkit (constrains target environment).
+- ADR-050 — non-root hellingd with deferred privileged-helper design (constrains target environment).

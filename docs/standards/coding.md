@@ -82,7 +82,7 @@ if err != nil {
 
 ### Validation
 
-- Input validation happens at the API boundary, via `oapi-codegen/nethttp-middleware` running the OpenAPI spec. Trust the validated types after that.
+- Input validation happens at the API boundary. Public JSON handlers enforce the constraints declared in `api/openapi.yaml`; generated types alone are not enough.
 - Domain-level invariants (e.g. "instance name unique per project") live in the service layer, not the handler.
 
 ### Concurrency
@@ -94,7 +94,7 @@ if err != nil {
 ### Configuration
 
 - `config.Config` struct loaded once at startup. Fields are exported, JSON-tagged for YAML loading via `yaml.v3`.
-- Config sources, in order of precedence: CLI flags → env vars (`HELLING_*` prefix) → `/etc/helling/config.yaml` → defaults.
+- Config sources, in order of precedence: CLI flags → env vars (`HELLING_*` prefix) → `/etc/helling/helling.yaml` → defaults.
 - No global state. Pass `Config` (or relevant subset) into the constructors that need it.
 
 ## Style

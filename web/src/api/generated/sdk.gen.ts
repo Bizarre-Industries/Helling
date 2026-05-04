@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthMfaCompleteData, AuthMfaCompleteErrors, AuthMfaCompleteResponses, CreateInstanceData, CreateInstanceErrors, CreateInstanceResponses, DeleteInstanceData, DeleteInstanceErrors, DeleteInstanceResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetHealthData, GetHealthResponses, GetInstanceData, GetInstanceErrors, GetInstanceResponses, GetOperationData, GetOperationErrors, GetOperationResponses, GetVersionData, GetVersionResponses, ListInstancesData, ListInstancesErrors, ListInstancesResponses, ListOperationsData, ListOperationsErrors, ListOperationsResponses, LogoutData, LogoutErrors, LogoutResponses, StartInstanceData, StartInstanceErrors, StartInstanceResponses, StopInstanceData, StopInstanceErrors, StopInstanceResponses } from './types.gen';
+import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthMfaCompleteData, AuthMfaCompleteErrors, AuthMfaCompleteResponses, AuthSetupData, AuthSetupErrors, AuthSetupResponses, AuthSetupStatusData, AuthSetupStatusErrors, AuthSetupStatusResponses, CreateInstanceData, CreateInstanceErrors, CreateInstanceResponses, DeleteInstanceData, DeleteInstanceErrors, DeleteInstanceResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetHealthData, GetHealthResponses, GetInstanceData, GetInstanceErrors, GetInstanceResponses, GetOperationData, GetOperationErrors, GetOperationResponses, GetVersionData, GetVersionResponses, ListInstancesData, ListInstancesErrors, ListInstancesResponses, ListOperationsData, ListOperationsErrors, ListOperationsResponses, LogoutData, LogoutErrors, LogoutResponses, StartInstanceData, StartInstanceErrors, StartInstanceResponses, StopInstanceData, StopInstanceErrors, StopInstanceResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -43,6 +43,30 @@ export const getVersion = <ThrowOnError extends boolean = false>(options?: Optio
  */
 export const authLogin = <ThrowOnError extends boolean = false>(options: Options<AuthLoginData, ThrowOnError>) => (options.client ?? client).post<AuthLoginResponses, AuthLoginErrors, ThrowOnError>({
     url: '/auth/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Report whether first-admin setup is required
+ *
+ * Returns whether the daemon currently has zero users and will accept one-time setup.
+ */
+export const authSetupStatus = <ThrowOnError extends boolean = false>(options?: Options<AuthSetupStatusData, ThrowOnError>) => (options?.client ?? client).get<AuthSetupStatusResponses, AuthSetupStatusErrors, ThrowOnError>({ url: '/auth/setup/status', ...options });
+
+/**
+ * Create the first admin user
+ *
+ * One-time first-boot setup. This endpoint is available only while no
+ * users exist and requires the installer setup token from
+ * `/etc/helling/setup-token`.
+ *
+ */
+export const authSetup = <ThrowOnError extends boolean = false>(options: Options<AuthSetupData, ThrowOnError>) => (options.client ?? client).post<AuthSetupResponses, AuthSetupErrors, ThrowOnError>({
+    url: '/auth/setup',
     ...options,
     headers: {
         'Content-Type': 'application/json',

@@ -14,7 +14,7 @@ Helling has eight version gates documented in `docs/roadmap/checklist.md` (v0.1.
 
 Today this is improvised. The risk: the gap between "tag pushed" and "next plan exists" is where momentum dies.
 
-A fully automated plan generator that uses a language model to synthesize new direction is out of scope per the project's no-AI-references rule. A deterministic generator that snapshots state and produces a plan skeleton is in scope and removes the busywork.
+A fully automated plan generator that uses a language model to synthesize new direction is out of scope. A deterministic generator that snapshots state and produces a plan skeleton is in scope and removes the busywork.
 
 ## Decision
 
@@ -24,9 +24,9 @@ Components:
 
 - **`scripts/plan-next-version.sh`** — deterministic local generator. Reads `docs/roadmap/checklist.md`, identifies the lowest version gate with open items, lists those open items, lists recent ADRs in `docs/decisions/`, lists open audits in `docs/audits/`, lists prior `docs/plans/*.md` files, and writes a snapshot file at `docs/plans/v<next-version>-plan.md`. No language-model usage; pure git + grep + awk.
 - **`Taskfile.yaml` `plan:next-version`** — wraps the script for manual runs.
-- **Claude Code PostToolUse hook** — `.claude/settings.json` registers a `PostToolUse: Bash` hook that reads `${CLAUDE_TOOL_INPUT_command}`, detects tag-push patterns (`git push --tags`, `git push origin v*`, `git push.*refs/tags/v*`), and runs `scripts/claude-hooks/post-bash-version-shipped.sh`. The hook script regenerates the deterministic snapshot via `task plan:next-version`, then emits an `additionalContext` blob telling Claude to enter plan mode and produce the full tracking plan for the next gate. The agent does the analysis + plan synthesis; the hook is the trigger.
+- **Agent PostToolUse hook** — `.claude/settings.json` and `.codex/hooks.json` register a `PostToolUse: Bash` hook that reads the just-run shell command, detects tag-push patterns (`git push --tags`, `git push origin v*`, `git push.*refs/tags/v*`), and runs `scripts/agent-hooks/post-bash-version-shipped.sh`. The hook script regenerates the deterministic snapshot via `task plan:next-version`, then emits an `additionalContext` blob telling the agent to enter plan mode and produce the full tracking plan for the next gate. The agent does the analysis + plan synthesis; the hook is the trigger.
 
-The deterministic generator runs on every tag and produces the same factual snapshot regardless of who pushed. The Claude Code hook is the trigger that re-engages the agent for synthesis after each ship.
+The deterministic generator runs on every tag and produces the same factual snapshot regardless of who pushed. The agent hook is the trigger that re-engages the agent for synthesis after each ship.
 
 ## Consequences
 
@@ -34,19 +34,20 @@ Easier:
 
 - Every release tag automatically re-engages the agent for next-version planning. No improvised handoff.
 - The deterministic snapshot encodes project review structure (open checklist items, recent ADRs, audits, prior plans) so the agent's synthesis starts from a consistent base.
-- The same script runs locally (`task plan:next-version`) and via the Claude Code hook.
+- The same script runs locally (`task plan:next-version`) and via the Claude/Codex hooks.
 
 Harder / costs:
 
 - The generator must stay in sync with the checklist heading convention (`## v<version> Gate`). Schema drift would silently break the generator. Mitigation: the script asserts on the heading regex and exits non-zero if no gate is found.
-- Plan synthesis (sequencing, scope) is still human + agent work — the generator only assembles raw facts. The Claude Code hook hands those facts to the agent on tag push and asks for a full plan.
-- The Claude Code hook lives in `.claude/settings.json` (project-shared, committed). Contributors who don't run Claude Code still get the deterministic snapshot via the GHA-free local task; they just don't get the agent re-engagement.
+- Plan synthesis (sequencing, scope) is still human + agent work — the generator only assembles raw facts. The hook hands those facts to the agent on tag push and asks for a full plan.
+- The agent hook is wired in `.claude/settings.json` and `.codex/hooks.json` (project-shared, committed). Contributors who do not run either agent still get the deterministic snapshot via the local task; they just do not get agent re-engagement.
 
 ## References
 
 - `scripts/plan-next-version.sh` — deterministic snapshot generator.
-- `scripts/claude-hooks/post-bash-version-shipped.sh` — Claude Code PostToolUse hook body.
-- `.claude/settings.json` — registers the PostToolUse hook on `Bash` tool calls.
+- `scripts/agent-hooks/post-bash-version-shipped.sh` — shared PostToolUse hook body.
+- `scripts/claude-hooks/post-bash-version-shipped.sh` — compatibility wrapper.
+- `.claude/settings.json` and `.codex/hooks.json` — register the PostToolUse hook on `Bash` tool calls.
 - `Taskfile.yaml` `plan:next-version` — local entry point.
 - `docs/roadmap/checklist.md` — source of open items.
 - `docs/roadmap/plan.md` — ADR table.

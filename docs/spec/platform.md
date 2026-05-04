@@ -111,7 +111,7 @@ See docs/spec/upgrades.md for the normative upgrade sequence and rollback behavi
 GET /api/v1/system/diagnostics → self-test results
 ```
 
-Checks: Incus HTTPS listener reachable, Podman socket reachable, disk space, memory, systemd services running, certificate expiry.
+Checks: Incus restricted user socket reachable, Podman socket reachable, disk space, memory, and systemd services running. Deferred ADR-024 diagnostics will add Incus HTTPS/mTLS certificate expiry checks.
 
 ---
 

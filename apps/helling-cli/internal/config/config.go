@@ -17,11 +17,12 @@ import (
 type Profile struct {
 	// API is the hellingd endpoint base URL, e.g. http://127.0.0.1:8080.
 	API string `yaml:"api"`
-	// RefreshCookie is the helling_refresh cookie captured during login. Opaque
-	// to the CLI; surfaced only in the Cookie header for /api/v1/auth/refresh.
+	// RefreshCookie stores the server-issued helling_session cookie captured
+	// during login. Opaque to the CLI; surfaced only in the Cookie header for
+	// requests that need server-side session revocation.
 	RefreshCookie string `yaml:"refresh_cookie,omitempty"`
-	// AccessToken is the last-issued JWT access token. Short-lived (15m) so
-	// the CLI auto-refreshes via RefreshCookie when verification fails.
+	// AccessToken is the last-issued JWT access token. Short-lived (15m);
+	// v0.1 does not expose a separate refresh endpoint.
 	AccessToken string `yaml:"access_token,omitempty"`
 	// Token is an operator-supplied API token (helling_*) for non-interactive
 	// automation. When set, overrides AccessToken.

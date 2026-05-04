@@ -1,0 +1,18 @@
+# Project-local Codex config for Helling. User-global defaults still live in
+# ~/.codex/config.toml; this file documents the repo MCP and hook baseline.
+
+[features]
+codex_hooks = true
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@2.2.3"]
+enabled = false
+
+[mcp_servers.claude-code]
+command = "bash"
+args = ["-lc", "repo=\"${HELLING_REPO_ROOT:-$PWD}\"; exec \"$repo/scripts/run-peer-agent.sh\" claude mcp serve"]
+enabled = false

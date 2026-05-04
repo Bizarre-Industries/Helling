@@ -110,7 +110,8 @@ install_go_tools() {
     skip "vacuum"
   else
     log "Installing vacuum..."
-    curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL https://quobix.com/scripts/install_vacuum.sh | INSTALL_DIR="$HOME/.local/bin" sh
     done_ "vacuum"
   fi
 

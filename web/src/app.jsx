@@ -42,7 +42,6 @@ const {
   TaskDrawer,
   CommandPalette,
   ToastStack,
-  Modal,
   ConfirmModal,
   PageDashboard,
   PageInstances,
@@ -99,7 +98,13 @@ const CRUMBS = {
 
 function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
-  const [setupDone, setSetupDone] = useState(true); // once booted, skip setup
+  const [setupDone, setSetupDone] = useState(() => {
+    try {
+      return localStorage.getItem('helling-setup-dismissed') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [page, setPage] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -191,7 +196,20 @@ function App() {
     return (
       <>
         <Suspense fallback={<PageSkeleton />}>
-          <PageSetup onDone={() => setSetupDone(true)} />
+          <PageSetup
+            onDone={() => {
+              try {
+                localStorage.setItem('helling-setup-dismissed', '1');
+              } catch {}
+              setSetupDone(true);
+            }}
+            onCancel={() => {
+              try {
+                localStorage.setItem('helling-setup-dismissed', '1');
+              } catch {}
+              setSetupDone(true);
+            }}
+          />
         </Suspense>
         <ToastStack />
         {modalState && <ModalHost state={modalState} onClose={() => setModalState(null)} />}
@@ -203,7 +221,15 @@ function App() {
     return (
       <>
         <Suspense fallback={<PageSkeleton />}>
-          <PageLogin onLogin={() => setAuthed(true)} onEnterSetup={() => setSetupDone(false)} />
+          <PageLogin
+            onLogin={() => setAuthed(true)}
+            onEnterSetup={() => {
+              try {
+                localStorage.removeItem('helling-setup-dismissed');
+              } catch {}
+              setSetupDone(false);
+            }}
+          />
         </Suspense>
         <ToastStack />
       </>
@@ -211,7 +237,8 @@ function App() {
   }
 
   // figure out crumbs + page render
-  let crumbs, body;
+  let crumbs;
+  let body;
   if (page.startsWith('instance:')) {
     const name = page.split(':')[1];
     crumbs = ['Datacenter', 'Instances', name];

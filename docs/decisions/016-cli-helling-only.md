@@ -14,7 +14,7 @@ The `helling` CLI covers only Helling-specific features that `incus`, `podman`, 
 
 ```bash
 helling auth login/logout/token        # Helling JWT auth
-helling user list/create/delete        # Helling user management (PAM)
+helling user list/create/delete        # Helling local user management
 helling schedule list/create/delete    # Backup scheduling (systemd timers)
 helling webhook list/create/delete     # Webhook management
 helling bmc scan/power/sensors         # BMC management (bmclib)

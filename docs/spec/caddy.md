@@ -18,12 +18,13 @@ Normative behavior for Caddy as Helling edge service (ADR-037).
 - Helling API: `/api/v1/*`
 - Incus proxy path: `/api/incus/*`
 - Podman proxy path: `/api/podman/*`
-- Health passthrough: `/api/v1/health`
+- Health passthrough: `/healthz`
+- Legacy installer/smoke compatibility rewrite: `/api/v1/health` -> `/healthz`
 
 ## Upstream Transport
 
 - Caddy -> `hellingd` transport uses Unix socket.
-- Default upstream socket: `/run/helling/hellingd.sock`
+- Default upstream socket: `/run/helling/api.sock`
 - Socket path and mode must match `docs/spec/config.md`.
 
 ## TLS Modes
@@ -64,5 +65,6 @@ CSP policy is defined by application/security standards and must not break SSE/W
 
 - `systemctl status caddy` is active.
 - `https://<host>:8006/` serves WebUI.
-- `/api/v1/health` returns success through Caddy path.
+- `/healthz` returns success through Caddy path.
+- `/api/v1/health` rewrites to `/healthz` for installer and smoke compatibility.
 - `/api/incus/*` and `/api/podman/*` proxy paths remain reachable when authorized.

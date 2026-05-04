@@ -12,11 +12,11 @@
 
 Execution order aligned with accepted ADRs and active migration decisions:
 
-1. Freeze hand-authored OpenAPI changes.
-2. Implement Huma spike endpoints (`POST /api/v1/auth/login`, `GET /api/v1/users`).
-3. Generate and validate `api/openapi.yaml` with vacuum.
-4. Expand Huma coverage to all Helling-owned routes.
-5. Migrate WebUI API generation to hey-api/openapi-ts.
+1. Keep `api/openapi.yaml` as the v0.1 source-of-truth contract.
+2. Implement Helling-owned endpoints behind chi + oapi-codegen stubs.
+3. Validate `api/openapi.yaml` with vacuum.
+4. Regenerate Go server, Go CLI client, and WebUI client artifacts from the committed contract.
+5. Keep WebUI API generation on `@hey-api/openapi-ts`.
 6. Land tooling and hook package.
 7. Complete drift cleanup in docs/standards/spec/design.
 
@@ -79,25 +79,25 @@ Exit criteria:
 | 021 | ISO-only installation                                         | Accepted              |
 | 022 | No CAPMVM / Flintlock                                         | Accepted              |
 | 023 | No custom image format                                        | Accepted              |
-| 024 | Incus per-user TLS auth from v0.1                             | Accepted              |
+| 024 | Incus per-user TLS auth                                       | Deferred for v0.1     |
 | 025 | Signed APT repository via GitHub Pages for updates            | Accepted              |
 | 026 | SHA-pin all third-party GitHub Actions                        | Accepted              |
 | 027 | Two-daemon split                                              | Accepted              |
 | 028 | Unix socket between daemons                                   | Accepted              |
-| 029 | Dedicated hellingprox system user                             | Accepted              |
+| 029 | Dedicated hellingprox system user                             | Superseded by ADR-037 |
 | 030 | Argon2id password hashing                                     | Accepted              |
 | 031 | Ed25519 JWT signing                                           | Accepted              |
 | 032 | Three fixed roles for v0.1                                    | Accepted              |
 | 034 | Lima dev environment                                          | Accepted (fallback)   |
 | 035 | Supersede ADR-011 with proxy-only Podman access               | Accepted              |
-| 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Accepted              |
+| 036 | Incus HTTPS loopback transport for delegated-user proxy calls | Deferred for v0.1     |
 | 037 | Caddy as edge service                                         | Accepted              |
 | 038 | SQL-first with sqlc + goose over GORM + Atlas provider        | Accepted              |
 | 039 | age over bespoke AES-256-GCM secret envelope                  | Accepted              |
 | 040 | net/http ServeMux over chi                                    | Accepted              |
 | 041 | URI major versioning for Helling-owned API surfaces           | Accepted              |
 | 042 | Security scanning stack consolidation                         | Accepted              |
-| 043 | Huma with humago for Helling-owned HTTP layer                 | Accepted              |
+| 043 | Huma with humago for Helling-owned HTTP layer                 | Superseded for v0.1   |
 | 044 | hey-api/openapi-ts for WebUI code generation                  | Accepted              |
 | 045 | reprepro for APT repository tooling                           | Accepted              |
 | 046 | live-build for ISO build tooling                              | Accepted              |
@@ -113,7 +113,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 | #   | Tool                                | What It Automates                                  | Version      |
 | --- | ----------------------------------- | -------------------------------------------------- | ------------ |
-| 1   | Huma v2 + humago                    | Go HTTP operations + generated OpenAPI from code   | v0.1.0-alpha |
+| 1   | oapi-codegen server                 | Go chi server types/stubs from OpenAPI             | v0.1.0-alpha |
 | 2   | oapi-codegen (client)               | Go typed HTTP client for CLI                       | v0.1.0-alpha |
 | 3   | hey-api/openapi-ts                  | TS SDK + fetch client + TanStack Query integration | v0.1.0-alpha |
 | 4   | Makefile generate + check-generated | Pipeline glue, CI gate                             | v0.1.0-alpha |
@@ -135,7 +135,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 | 20  | goss + packer                       | VM-level system validation                         | v0.8.0       |
 | 21  | Cobra doc generation                | Man pages + markdown CLI reference                 | v1.0.0       |
 | 22  | nfpm                                | .deb packaging                                     | v1.0.0       |
-| 23  | live-build                          | Bootable ISO image (ADR-046)                       | v1.0.0       |
+| 23  | live-build                          | Bootable ISO image (ADR-046)                       | v0.1.0-alpha |
 | 24  | nfpm + signed APT repo              | .deb publish + indexed/signed repository updates   | v1.0.0       |
 | 25  | GoReleaser                          | Release pipeline                                   | v1.0.0       |
 | 26  | Cosign + SLSA                       | Artifact signing + provenance                      | v1.0.0       |
@@ -152,18 +152,18 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 
 #### Backend (Beta)
 
-- [ ] Proxy middleware: `/api/incus/*` → Incus HTTPS loopback, `/api/podman/*` → Podman socket
+- [ ] Proxy middleware: `/api/incus/*` → restricted Incus user socket in v0.1, `/api/podman/*` → Podman socket
 - [ ] JWT validation on proxy requests
-- [ ] RBAC: per-user Incus TLS certificate identity enforcement
+- [ ] RBAC: admin-only raw proxy gate; per-user Incus TLS identity is deferred until ADR-024 is wired
 - [ ] Audit logging to systemd journal (ADR-019)
-- [ ] Auth handlers: setup, login (PAM), refresh, logout, TOTP, API tokens
-- [ ] User handlers: CRUD (role/status and Incus trust identity lifecycle)
+- [ ] Auth handlers: setup status, setup, login (local password), logout, TOTP, API tokens
+- [ ] User handlers: CRUD (`is_admin` plus Incus trust identity lifecycle)
 - [ ] System handlers: info, hardware, config, diagnostics
 - [ ] Health endpoint
 - [ ] SSE events endpoint (aggregates Incus events)
 - [ ] OpenAPI spec: ~40 Helling endpoints with envelopes, pagination, error schemas
-- [ ] Huma operation registration + generated OpenAPI from code
-- [ ] Delete legacy: manual router, all handlers\_\*.go, strict_handlers.go, response.go
+- [ ] oapi-codegen server/model drift gate from `api/openapi.yaml`
+- [ ] Delete legacy stubs that return fake success for deferred operations
 - [ ] Delete Docker mode: Dockerfile, devauth.go, entrypoint.sh
 - [ ] Remove unused Go deps (podman bindings, google/nftables, gocron)
 

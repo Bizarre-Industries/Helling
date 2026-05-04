@@ -26,7 +26,7 @@ This is a deliberate scope cut from the earlier "300+ endpoint platform" framing
                        │ HTTPS
                        ▼
 ┌────────────────────────────────────────────────────────────┐
-│  helling-proxy   (TLS termination + static web + reverse)   │
+│  Caddy edge service (TLS + static web + reverse proxy)      │
 └──────────────────────┬─────────────────────────────────────┘
                        │ Unix socket (/run/helling/api.sock)
                        ▼
@@ -51,11 +51,11 @@ This is a deliberate scope cut from the earlier "300+ endpoint platform" framing
 
 The backend daemon. Owns: HTTP routing, request validation, business logic, persistence, Incus interaction. Listens on a Unix socket only. Never exposed directly to the network.
 
-### 2.2 helling-proxy
+### 2.2 Caddy edge service
 
-TLS terminator and static asset server. Reads the API socket from `hellingd` and proxies to it. Serves the React bundle from disk. Runs as an unprivileged user. Listens on `:443` (and optional `:80` redirect).
+TLS terminator and static asset server. Reads the API socket from `hellingd` and proxies to it. Serves the React bundle from disk. Runs as an unprivileged user. Listens on `:8006` in v0.1.
 
-The reason this is a separate process: `hellingd` requires membership in the `incus` group (or `incus-admin` for VM/storage management). Running TLS handling in that same process expands the attack surface unnecessarily. Splitting it lets the public-facing process stay unprivileged.
+The reason this is a separate process: `hellingd` requires membership in the `incus` group. Running TLS handling in that same process expands the attack surface unnecessarily. Splitting it lets the public-facing process stay unprivileged.
 
 ### 2.3 helling-cli
 
@@ -63,18 +63,18 @@ Local CLI client. Talks to `hellingd` over the same Unix socket using the same O
 
 ### 2.4 web
 
-React 19 + TypeScript + Vite + antd v6. SPA. Calls the API through `helling-proxy`. Dashboard shell + container list + container detail in v0.1. Generated TypeScript client from `api/openapi.yaml` via Orval.
+React 19 + TypeScript + Vite. SPA. Calls the API through Caddy. Dashboard shell + container list + container detail in v0.1. Generated TypeScript client from `api/openapi.yaml` via `@hey-api/openapi-ts`.
 
 ## 3. Request lifecycle (v0.1)
 
 A typical authenticated request:
 
-1. Browser → `helling-proxy:443` over TLS.
-2. `helling-proxy` strips TLS, forwards to `hellingd` over `/run/helling/api.sock`. Adds `X-Forwarded-For` and a request ID header.
-3. `hellingd`'s chi router matches the path against the generated OpenAPI server.
-4. Middleware chain: request ID → structured logger → recoverer → CORS (if enabled) → OpenAPI request validator (`oapi-codegen/nethttp-middleware`) → auth.
+1. Browser → Caddy on `:8006` over TLS.
+2. Caddy strips TLS and forwards to `hellingd` over `/run/helling/api.sock`.
+3. `hellingd`'s chi router matches the path.
+4. Middleware chain: request ID → structured logger → recoverer → timeout → auth.
 5. Auth middleware accepts either the session cookie (HTTP-only, `Secure`, `SameSite=Lax`) or a bearer token. Session cookies are looked up by hashed token in `sessions`; API tokens are looked up by hashed token in `api_tokens`; access JWTs are verified with the persisted Ed25519 signing key. 401 if invalid/expired.
-6. Generated handler invokes the service layer.
+6. Handler invokes the service layer.
 7. Service layer reads/writes the SQLite store and/or calls the Incus client over its own Unix socket.
 8. Response shaped per OpenAPI spec, JSON-encoded, returned.
 
@@ -151,9 +151,9 @@ We do **not** persist instance state in SQLite. Incus is the source of truth for
 
 ## 5. Incus integration
 
-`hellingd` talks to Incus through a narrow internal client built on Go's standard `net/http` transport over the Incus Unix socket. The default empty socket path resolves to `$INCUS_SOCKET` or `/var/lib/incus/unix.socket`. The direct Incus module dependency is intentionally avoided until the upstream vulnerability set is clear for our import graph.
+`hellingd` talks to Incus through a narrow internal client built on Go's standard `net/http` transport over the Incus restricted user socket at `/var/lib/incus/user.socket`. The direct Incus module dependency is intentionally avoided until the upstream vulnerability set is clear for our import graph.
 
-Service account: the `hellingd` systemd unit runs as the `helling` user, added to the `incus` group (not `incus-admin` until VM/storage management is needed in a later milestone). `incus-admin` is escalation, not default.
+Service account: the `hellingd` systemd unit runs as the `helling` user, added to the `incus` group. `incus-admin` is escalation, not default; if a future feature needs that authority it must move into a separate privileged helper rather than promoting `hellingd`.
 
 Operations against Incus are async. The pattern:
 
@@ -194,7 +194,7 @@ Generation:
 - Server: `oapi-codegen` with `chi-server` output, generated into `apps/hellingd/api/server.gen.go`.
 - Models: same package, `apps/hellingd/api/types.gen.go`.
 - Go client: `oapi-codegen` with `client` output, into `apps/helling-cli/internal/client/client.gen.go`.
-- TS client: `Orval` into `web/src/api/generated/`. React Query hooks output enabled.
+- TS client: `@hey-api/openapi-ts` into `web/src/api/generated/`. React Query hooks output enabled.
 
 Generated files are committed. `make check-generated` confirms the working tree is clean after `make generate`. CI fails on drift.
 
@@ -214,25 +214,25 @@ Single host, Debian 13 (or current Debian stable):
 
 ```text
 systemd
-  ├── helling.service      (hellingd, runs as user `helling`, group `incus`)
-  └── helling-proxy.service (helling-proxy, runs as user `helling-proxy`)
+  ├── hellingd.service (hellingd, runs as user `helling`)
+  └── caddy.service    (Caddy, member of group `helling-proxy`)
 ```
 
 State directories:
 
 - `/var/lib/helling` — SQLite + state, owned by `helling:helling`
 - `/run/helling/api.sock` — Unix socket, group `helling-proxy`, mode 0660
-- `/etc/helling/config.yaml` — config, root:helling 0640
+- `/etc/helling/helling.yaml` — config, root:helling 0640
 - `/var/log/helling/` — logs (or rely on journald)
 
-Container image: a single Debian-slim image with both binaries and the web bundle. systemd-less (just an entrypoint script). For now, the systemd path is primary; container is a convenience target.
+Container images are not shipped in v0.1. Helling installs through the Debian-first ISO/systemd path from ADR-021.
 
 ## 10. Open questions (must resolve before v0.1 ships)
 
 1. **SQLite driver**: pure-Go `modernc.org/sqlite` (no CGO) vs CGO `mattn/go-sqlite3`. Default: pure-Go. Re-evaluate if benchmarks show meaningful regression for our workload (mostly small writes).
 2. **Migration tool**: `golang-migrate/migrate` library, hand-rolled `embed.FS` runner, or `pressly/goose`. Default: hand-rolled (it's ~150 LOC and removes a dep).
 3. **OpenAPI spec format**: 3.0 vs 3.1. oapi-codegen still has limited 3.1 support — start with 3.0.x for the contract, revisit when oapi-codegen catches up.
-4. **TLS cert sourcing for helling-proxy**: file paths only in v0.1 (`tls.cert`, `tls.key`), or include built-in `autocert`/Let's Encrypt? Default: file paths only.
+4. **TLS cert sourcing for Caddy**: file paths only in v0.1 (`tls.cert`, `tls.key`), or Caddy-managed ACME for public hosts? Default: file paths only in the ISO profile.
 5. **Web auth store**: cookie session (this doc) vs bearer token in `localStorage`. Default: cookie. localStorage tokens have known XSS-exfil risk.
 
 ## 11. Non-goals and explicit rejections
@@ -242,7 +242,7 @@ Container image: a single Debian-slim image with both binaries and the web bundl
 - **No Kubernetes orchestration.** It's a different product. Helling is for people who don't want K8s.
 - **No "API gateway" abstraction layer.** chi + middleware is enough.
 - **No GraphQL.** REST + JSON. The spec drives the contract.
-- **No microservices in v0.1.** Three binaries (`hellingd`, `helling-proxy`, `helling-cli`) is the floor, not a starting point.
+- **No microservices in v0.1.** Two Helling Go binaries (`hellingd`, `helling-cli`) plus packaged Caddy is the floor, not a starting point.
 - **No event bus, message queue, or pub/sub.** State changes are synchronous DB writes; long-running work is goroutines + the `operations` table.
 
 ## 12. Glossary

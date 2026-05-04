@@ -27,7 +27,7 @@ bun run fmt          # biome format --write
 
 ## Regenerating the API client
 
-Whenever `api/openapi.yaml` changes (Huma updates a route, new error envelope, etc.), regen:
+Whenever `api/openapi.yaml` changes (route shape, schema, or error envelope), regen:
 
 ```sh
 bun run gen:api
@@ -50,8 +50,8 @@ Until migration completes:
 Per [`docs/spec/auth.md`](../docs/spec/auth.md) §2.2:
 
 - **Access token** lives in memory only (`src/api/auth-store.ts`). Never localStorage. XSS-safe.
-- **Refresh token** lives in an `httpOnly`, `Secure`, `SameSite=Strict` cookie set by hellingd. The browser sends it automatically on `POST /api/v1/auth/refresh`.
-- A page reload starts unauthenticated until the refresh path is wired (audit follow-up F-04).
+- **Session cookie** lives in an `httpOnly`, `Secure`, `SameSite=Lax` cookie set by hellingd.
+- A page reload starts unauthenticated in v0.1 because there is no separate `/auth/refresh` endpoint.
 
 ## Tooling
 

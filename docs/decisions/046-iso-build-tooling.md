@@ -21,7 +21,7 @@ Rationale:
 - live-build integrates with Debian preseed for unattended install automation — directly answers the "3 questions" contract in ADR-021.
 - Debian-native tool, Debian-packaged, maintained by the debian-live team. Matches ADR-002.
 - Output is a hybrid ISO9660 bootable on BIOS and UEFI, dd-able to USB. One artifact, many use cases.
-- Preseed + late_command hooks handle Helling-specific first-boot work (create admin account via PAM, drop initial auth tokens, start hellingd).
+- Preseed + first-boot hooks handle Helling-specific first-boot work (create a one-time setup token, start hellingd, and let the browser/CLI setup flow create the first admin).
 
 Rejected alternatives:
 

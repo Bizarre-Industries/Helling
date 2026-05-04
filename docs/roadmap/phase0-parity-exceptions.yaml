@@ -12,22 +12,12 @@
 
 exceptions:
   # ── Auth ───────────────────────────────────────────────────────────────────
-  # authSetup / authLogin / authRefresh / authLogout: server-side implemented in
-  # PR B (argon2id + Ed25519 JWT + cookie-backed refresh sessions per
-  # docs/spec/auth.md §2). CLI surface lands in PR F, WebUI in PR G.
-  - operation_id: authSetup
-    missing: webui
-    reason: "Server-side PR B; CLI PR F (first-boot wizard via `helling auth login`); WebUI pending"
-    target_version: "v0.1.0-alpha"
-
+  # authLogin / authLogout: server-side implemented in PR B
+  # (argon2id + Ed25519 JWT + cookie-backed sessions per docs/spec/auth.md §2).
+  # CLI surface lands in PR F, WebUI in PR G.
   - operation_id: authLogin
     missing: webui
     reason: "Server-side PR B; CLI PR F (`helling auth login`); WebUI pending"
-    target_version: "v0.1.0-alpha"
-
-  - operation_id: authRefresh
-    missing: webui
-    reason: "Server-side PR B; CLI PR F (auto-refresh inside client.Do); WebUI pending"
     target_version: "v0.1.0-alpha"
 
   - operation_id: authLogout

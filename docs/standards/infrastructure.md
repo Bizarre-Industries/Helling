@@ -9,17 +9,19 @@ How Helling is deployed, monitored, backed up, and operated. Based on SRE princi
 ### Incus Transport Listener Policy
 
 ```text
-RULE: Delegated-user Incus operations must use the local HTTPS listener with mTLS identity.
+RULE: v0.1 raw Incus proxy operations are admin-only over the restricted Incus user socket.
+
+Deferred ADR-024 rule: delegated-user Incus operations must use the local HTTPS listener with mTLS identity once non-admin proxy access ships.
 
 Requirements:
-  - Set `core.https_address` to `127.0.0.1:8443` on the host.
-  - `/api/incus/*` requests from hellingd must present the caller's per-user TLS certificate.
-  - Incus Unix socket is reserved for host administrator CLI operations only.
+  - v0.1 `/api/incus/*` rejects non-admin users.
+  - v0.1 hellingd connects to `/var/lib/incus/user.socket` as the `helling` user.
+  - Do not use the Incus admin socket or `incus-admin` group from hellingd.
   - Do not use query-parameter project scoping as an authorization boundary.
 
 Verify:
-  - `incus config get core.https_address` returns `127.0.0.1:8443`
-  - Delegated user calls are denied when trust restrictions do not allow the action.
+  - `id helling` includes `incus` and does not include `incus-admin`.
+  - Non-admin raw proxy requests return forbidden instead of being forwarded.
 ```
 
 ### Incus Minimum Version

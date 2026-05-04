@@ -6,7 +6,7 @@
 
 The previous architecture maintained two runtime paths:
 
-1. **Docker try-it mode:** A Dockerfile, a `devauth` build tag that bypassed PAM authentication, TCP listener support, mode detection logic, conditional feature flags, and graceful degradation for missing Incus/Podman. This created a crippled demo that showed Podman container management through a web UI — making Helling look like "Portainer with extra steps." Users never saw VMs, clustering, storage pools, SPICE console, firewall, or backups — the actual product.
+1. **Docker try-it mode:** A Dockerfile, a `devauth` build tag that bypassed authentication, TCP listener support, mode detection logic, conditional feature flags, and graceful degradation for missing Incus/Podman. This created a crippled demo that showed Podman container management through a web UI — making Helling look like "Portainer with extra steps." Users never saw VMs, clustering, storage pools, SPICE console, firewall, or backups — the actual product.
 
 2. **Bare metal mode:** The real product, running on Debian 13 with Incus and Podman.
 
@@ -23,7 +23,7 @@ One install method: boot the Helling ISO. The ISO is a Debian 13 derivative with
 - systemd is always present. hellingd assumes it.
 - No mode detection. No conditional features. No graceful degradation.
 - No TCP listener. hellingd listens on a Unix socket. Period.
-- No `devauth` build tag. PAM authentication always.
+- No `devauth` build tag. The real local auth stack always runs.
 - No Dockerfile. No Docker image publishing.
 
 For development and CI testing, use a Lima VM or Vagrant box with the same ISO or a Debian 13 base with Incus + Podman pre-installed. This is a real test environment, not a fake one.

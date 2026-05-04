@@ -1,20 +1,21 @@
-# ADR-032: Three fixed roles for v0.1
+# ADR-032: Two fixed roles for v0.1
 
 > Status: Accepted (2026-04-19)
 
 ## Context
 
-Role definitions are currently spread across docs with optional custom-role language mixed into v0.1 scope. The first release needs a stable, testable RBAC baseline.
+Role definitions are currently spread across docs with optional custom-role language mixed into v0.1 scope. The first release needs a stable, testable RBAC baseline that matches the implemented user schema.
 
 ## Decision
 
-Helling v0.1 supports exactly three built-in roles:
+Helling v0.1 supports exactly two built-in roles:
 
 - `admin`: full management access
 - `user`: standard operational access within assigned scope
-- `auditor`: read-only access for observability and compliance
 
-Custom roles, policy composition, and per-resource role authoring are out of scope for v0.1.
+The persisted model is `is_admin`; API and CLI surfaces may render that as the derived role label `admin` or `user`.
+
+Custom roles, an `auditor` role, policy composition, and per-resource role authoring are out of scope for v0.1.
 
 ## Consequences
 

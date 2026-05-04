@@ -16,6 +16,7 @@
 #
 # Inputs:
 #   docs/roadmap/checklist.md       gate headings + open items
+#   HELLING_SHIPPED_TAG             optional shipped tag for hook-triggered next gate selection
 #   git tag --list 'v*'             most-recent tag (for "since" reporting)
 #   docs/decisions/*.md             ADR backlog
 #   docs/audits/*.md                open audits
@@ -44,7 +45,13 @@ fail() {
 
 # ---- discover the just-shipped tag (most recent annotated tag matching v*) ----
 
-PREV_TAG="$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)"
+PREV_TAG="${HELLING_SHIPPED_TAG:-}"
+if [ -n "$PREV_TAG" ] && [[ ! "$PREV_TAG" =~ ^v[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9._-]+)?$ ]]; then
+  fail "HELLING_SHIPPED_TAG is not a release tag: $PREV_TAG"
+fi
+if [ -z "$PREV_TAG" ]; then
+  PREV_TAG="$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)"
+fi
 if [ -z "$PREV_TAG" ]; then
   log "No prior v* tag found; treating as initial release"
   PREV_TAG="v0.0.0"
@@ -57,7 +64,7 @@ fi
 NEXT_VERSION=""
 OPEN_COUNT=0
 
-awk_find_next() {
+awk_find_open_gates() {
   awk '
     /^## (v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+)?) Gate$/ {
       ver = $2
@@ -71,13 +78,43 @@ awk_find_next() {
     END {
       for (i = 1; i <= n; i++) {
         v = order[i]
-        if (open[v] > 0) { print v "\t" open[v]; exit }
+        if (open[v] > 0) { print v "\t" open[v] }
       }
     }
   ' "$CHECKLIST"
 }
 
-read -r NEXT_VERSION OPEN_COUNT <<<"$(awk_find_next || true)"
+version_gt() {
+  local candidate="$1"
+  local baseline="$2"
+  python3 - "$candidate" "$baseline" <<'PY'
+import re
+import sys
+
+def parse(version: str):
+    match = re.match(r"^v(\d+)[.](\d+)[.](\d+)(?:-([A-Za-z0-9._-]+))?$", version)
+    if not match:
+        raise SystemExit(1)
+    major, minor, patch, suffix = match.groups()
+    # Release tags sort after prereleases for the same numeric version.
+    suffix_key = (1, "") if suffix is None else (0, suffix)
+    return (int(major), int(minor), int(patch), suffix_key)
+
+raise SystemExit(0 if parse(sys.argv[1]) > parse(sys.argv[2]) else 1)
+PY
+}
+
+while IFS=$'\t' read -r candidate count; do
+  if [ -z "$candidate" ]; then
+    continue
+  fi
+  if [ -n "${HELLING_SHIPPED_TAG:-}" ] && ! version_gt "$candidate" "$PREV_TAG"; then
+    continue
+  fi
+  NEXT_VERSION="$candidate"
+  OPEN_COUNT="$count"
+  break
+done < <(awk_find_open_gates || true)
 
 if [ -z "${NEXT_VERSION:-}" ]; then
   done_ "All version gates closed. No next-version plan needed."

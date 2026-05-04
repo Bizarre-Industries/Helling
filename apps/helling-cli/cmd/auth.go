@@ -13,10 +13,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/client"
 	"github.com/Bizarre-Industries/helling/apps/helling-cli/internal/config"
@@ -28,12 +30,111 @@ func NewAuthCmd() *cobra.Command {
 		Use:   "auth",
 		Short: "Manage the CLI session (login, logout, whoami)",
 	}
+	cmd.AddCommand(newAuthSetupCmd())
 	cmd.AddCommand(newAuthLoginCmd())
 	cmd.AddCommand(newAuthLogoutCmd())
 	cmd.AddCommand(newAuthWhoamiCmd())
 	cmd.AddCommand(newAuthTokenCmd())
 	cmd.AddCommand(newAuthMfaCmd())
 	return cmd
+}
+
+func newAuthSetupCmd() *cobra.Command {
+	var username, passwordFile, setupTokenFile string
+	cmd := &cobra.Command{
+		Use:   "setup",
+		Short: "Create the first admin account with the installer setup token",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runAuthSetup(cmd, &username, passwordFile, setupTokenFile)
+		},
+	}
+	cmd.Flags().StringVar(&username, "username", "admin", "Initial admin username")
+	cmd.Flags().StringVar(&passwordFile, "password-file", "", "Read initial admin password from file (prompted when omitted)")
+	cmd.Flags().StringVar(&setupTokenFile, "setup-token-file", "", "Read setup token from file, usually /etc/helling/setup-token (prompted when omitted)")
+	return cmd
+}
+
+func runAuthSetup(cmd *cobra.Command, username *string, passwordFile, setupTokenFile string) error {
+	api, _ := cmd.Flags().GetString("api")
+	if api == "" {
+		prof, _ := config.Load("")
+		api = prof.API
+	}
+	if api == "" {
+		return errors.New("--api is required for first-admin setup (e.g. http+unix:///run/helling/api.sock)")
+	}
+	if err := promptIfEmpty(cmd, username, "Username: "); err != nil {
+		return err
+	}
+	password, passwordPrompted, err := readSetupSecret(cmd, passwordFile, "password-file", "Password: ")
+	if err != nil {
+		return err
+	}
+	if passwordPrompted {
+		confirmation, err := promptSecret(cmd, "password-file", "Confirm password: ")
+		if err != nil {
+			return err
+		}
+		if password != confirmation {
+			return errors.New("passwords do not match")
+		}
+	}
+	setupToken, _, err := readSetupSecret(cmd, setupTokenFile, "setup-token-file", "Setup token: ")
+	if err != nil {
+		return err
+	}
+	inputs, err := validateAuthSetupInputs(*username, password, setupToken)
+	if err != nil {
+		return err
+	}
+
+	prof, err := config.Load("")
+	if err != nil {
+		return err
+	}
+	prof.API = api
+	cli, err := client.New(&prof, api)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+	defer cancel()
+	if _, err := cli.Do(ctx, "POST", "/api/v1/auth/setup", map[string]string{
+		"username":    inputs.username,
+		"password":    password,
+		"setup_token": inputs.setupToken,
+	}); err != nil {
+		return err
+	}
+	if err := config.Save(&prof, ""); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(cmd.OutOrStdout(), "Created first admin %s at %s. Run 'helling auth login' next.\n", inputs.username, api)
+	return err
+}
+
+type authSetupInputs struct {
+	username   string
+	setupToken string
+}
+
+func validateAuthSetupInputs(username, password, setupToken string) (authSetupInputs, error) {
+	username = strings.TrimSpace(username)
+	setupToken = strings.TrimSpace(setupToken)
+	if username == "" {
+		return authSetupInputs{}, errors.New("username is required")
+	}
+	if len(username) > 64 {
+		return authSetupInputs{}, errors.New("username must be at most 64 characters")
+	}
+	if len(password) < 8 || len(password) > 256 {
+		return authSetupInputs{}, errors.New("password must be 8 to 256 characters")
+	}
+	if len(setupToken) < 32 || len(setupToken) > 128 {
+		return authSetupInputs{}, errors.New("setup token must be 32 to 128 characters")
+	}
+	return authSetupInputs{username: username, setupToken: setupToken}, nil
 }
 
 func newAuthLoginCmd() *cobra.Command {
@@ -62,8 +163,15 @@ func runAuthLogin(cmd *cobra.Command, username, password *string) error {
 	if err := promptIfEmpty(cmd, username, "Username: "); err != nil {
 		return err
 	}
-	if err := promptIfEmpty(cmd, password, "Password: "); err != nil {
+	if err := promptSecretIfEmpty(cmd, password, "password", "Password: "); err != nil {
 		return err
+	}
+	usernameValue := strings.TrimSpace(*username)
+	if usernameValue == "" {
+		return errors.New("username is required")
+	}
+	if *password == "" {
+		return errors.New("password is required")
 	}
 
 	prof, err := config.Load("")
@@ -79,7 +187,7 @@ func runAuthLogin(cmd *cobra.Command, username, password *string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 	defer cancel()
 
-	access, err := performLogin(ctx, cmd, cli, *username, *password)
+	access, err := performLogin(ctx, cmd, cli, usernameValue, *password)
 	if err != nil {
 		return err
 	}
@@ -89,7 +197,7 @@ func runAuthLogin(cmd *cobra.Command, username, password *string) error {
 	if err := config.Save(&prof, ""); err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(cmd.OutOrStdout(), "Logged in as %s at %s.\n", *username, api)
+	_, err = fmt.Fprintf(cmd.OutOrStdout(), "Logged in as %s at %s.\n", usernameValue, api)
 	return err
 }
 
@@ -103,6 +211,48 @@ func promptIfEmpty(cmd *cobra.Command, target *string, prompt string) error {
 	}
 	*target = v
 	return nil
+}
+
+func promptSecretIfEmpty(cmd *cobra.Command, target *string, flagName, prompt string) error {
+	if *target != "" {
+		return nil
+	}
+	v, err := promptSecret(cmd, flagName, prompt)
+	if err != nil {
+		return err
+	}
+	*target = v
+	return nil
+}
+
+func readSetupSecret(cmd *cobra.Command, filePath, flagName, prompt string) (value string, prompted bool, err error) {
+	if filePath != "" {
+		raw, err := os.ReadFile(filePath) // #nosec G304 -- local operator-supplied secret file.
+		if err != nil {
+			return "", false, fmt.Errorf("read --%s %s: %w", flagName, filePath, err)
+		}
+		return strings.TrimRight(string(raw), "\r\n"), false, nil
+	}
+	v, err := promptSecret(cmd, flagName, prompt)
+	return v, true, err
+}
+
+func promptSecret(cmd *cobra.Command, flagName, prompt string) (string, error) {
+	inFile, ok := cmd.InOrStdin().(*os.File)
+	if !ok || !term.IsTerminal(int(inFile.Fd())) {
+		return "", fmt.Errorf("--%s is required in non-interactive mode", flagName)
+	}
+	if _, err := fmt.Fprint(cmd.OutOrStdout(), prompt); err != nil {
+		return "", err
+	}
+	raw, err := term.ReadPassword(int(inFile.Fd()))
+	if _, printErr := fmt.Fprintln(cmd.OutOrStdout()); printErr != nil && err == nil {
+		err = printErr
+	}
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
 }
 
 func performLogin(ctx context.Context, cmd *cobra.Command, cli *client.Client, username, password string) (string, error) {

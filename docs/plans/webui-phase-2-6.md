@@ -472,7 +472,7 @@ After Phase 2 split + Phase 4 spike, the only legacy `.jsx` files are the un-por
 3. **Migration regression** — three-page spike (Phase 4) might miss visual signature (stencil/lime/dot). Mitigated by `localStorage.helling.spike = '1'` flag for A/B; ADR-051 reopens if the visual bar isn't met.
 4. **Test scaffold churn** — adding vitest may surface flakiness in the existing j/k/Enter/x/s keyboard handler. Treat any test-uncovered bug as a Phase 1 follow-up commit, not a Phase 2 blocker.
 5. **Type harmonization scope creep** — F-43 expands Instance/Container types to ~14 fields each. Tempting to over-engineer. Stick to: hand-write from official Incus REST docs once, no codegen for the proxy layer.
-6. **Logout flow** — Phase 1's TopBar `onLogout` calls `clearAccessToken()` locally. It does **not** call `authLogout` on the server to revoke the refresh token cookie. Add to Phase 3 scope as an addendum: wire `useLogoutMutation` calling `POST /api/v1/auth/logout` then `clearAccessToken()`.
+6. **Logout flow** — Phase 1's TopBar `onLogout` calls `clearAccessToken()` locally. It does **not** call `authLogout` on the server to revoke the session cookie. Add to Phase 3 scope as an addendum: wire `useLogoutMutation` calling `POST /api/v1/auth/logout` then `clearAccessToken()`.
 
 ## Critical files (quick reference)
 

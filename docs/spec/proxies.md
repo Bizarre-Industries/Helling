@@ -4,9 +4,9 @@ This document specifies the behavior of the authenticated reverse proxy layer th
 
 ## Overview
 
-The proxy forwards three types of requests:
+The proxy forwards three types of requests in the long-term design. v0.1 keeps raw Incus and Podman proxy routes admin-only; non-admin proxy requests are rejected until ADR-024 per-user Incus mTLS is wired end to end.
 
-1. **Incus requests:** `/api/incus/*` → Incus HTTPS loopback API (per-user mTLS identity)
+1. **Incus requests:** `/api/incus/*` → Incus restricted user socket in v0.1; HTTPS loopback with per-user mTLS is deferred
 2. **Podman requests:** `/api/podman/*` → Podman Unix socket
 3. **Helling requests:** `/api/v1/*` → Helling-specific handlers (no proxy)
 
@@ -24,9 +24,9 @@ Client Request
   ├─ /api/podman/* → Podman Proxy
   └─ /api/v1/* → Helling Handler
   ↓
-[For Proxies: Load User Identity]
-  ├─ Incus: Load user's TLS client certificate
-  └─ Podman: Unix socket access via group membership
+[For Proxies: Enforce Admin Gate]
+  ├─ Incus: Reject non-admin; forward through restricted user socket in v0.1
+  └─ Podman: Reject non-admin mutation unless explicitly allowed
   ↓
 [Forward Request + Audit Log (async)]
   ↓
@@ -35,7 +35,7 @@ Client Request
 
 ## TLS Client Lifecycle (Incus Proxy)
 
-Per-user client certificates are created during user onboarding and reused across requests.
+This section is the ADR-024 target design, not current v0.1 behavior. Per-user client certificates will be created during user onboarding and reused across requests once loopback HTTPS delegated transport ships.
 
 ### Certificate Pool
 
@@ -77,7 +77,7 @@ func getIncusClient(user string) (*IncusClient, error) {
 
 ## WebSocket Semantics
 
-WebSocket upgrade requests (console, exec, serial) are forwarded to Incus with per-user mTLS identity.
+WebSocket upgrade requests (console, exec, serial) follow the same v0.1 admin-only proxy gate. Per-user mTLS identity is deferred with the rest of ADR-024.
 
 ### JWT Validity During WebSocket Connection
 
@@ -213,7 +213,7 @@ SPICE console access (VGA console via SPICE protocol per ADR-010) is forwarded t
 
 - **Path:** `/api/incus/1.0/instances/{name}/console?type=vga`
 - **Protocol:** WebSocket tunnel to SPICE server
-- **Auth:** JWT validated before upgrade; per-user mTLS identity used for Incus connection
+- **Auth:** JWT validated before upgrade; v0.1 requires admin role for raw Incus proxy paths
 - **Idle timeout:** 15 minutes (same as other WebSockets)
 
 ## Rate Limiting

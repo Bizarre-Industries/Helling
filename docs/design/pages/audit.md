@@ -12,7 +12,7 @@ Route: `/audit`
 
 ## Layout
 
-Sidebar: "Audit" selected (admin and auditor role only, per ADR-032). Main panel: filter toolbar + `ProTable` of records. Detail in expanded row or side `Drawer` showing the full structured event.
+Sidebar: "Audit" selected (admin role only, per ADR-032). Main panel: filter toolbar + `ProTable` of records. Detail in expanded row or side `Drawer` showing the full structured event.
 
 ## API Endpoints
 
@@ -92,7 +92,7 @@ The diff viewer displays `HELLING_BEFORE` on the left and `HELLING_AFTER` on the
 
 ### Error State
 
-403: redirect to `/403` with explanation (non-admin / non-auditor user). 429 on export: banner "Export rate limit reached. Try again in X minutes or narrow the filter."
+403: redirect to `/403` with explanation (non-admin user). 429 on export: banner "Export rate limit reached. Try again in X minutes or narrow the filter."
 
 ### Large Result Warning
 
@@ -118,7 +118,7 @@ If the filter returns >10,000 matching events, banner: "10,000+ events match. Ex
 - Spec: docs/spec/webui-spec.md (Audit section)
 - API: `/api/v1/audit` in api/openapi.yaml (tag: Audit)
 - ADR: 019 (journal over sqlite audit)
-- ADR: 032 (three fixed roles — admin and auditor see audit; user does not)
+- ADR: 032 (two fixed roles — admin sees audit; user does not)
 - Pattern: docs/design/patterns/data-tables.md
 - Pattern: docs/design/patterns/detail-views.md
 - Pattern: docs/design/patterns/empty-states.md

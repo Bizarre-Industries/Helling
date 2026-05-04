@@ -22,6 +22,10 @@ type User struct {
 // ErrNotFound is returned when a lookup matches no rows.
 var ErrNotFound = errors.New("store: not found")
 
+// ErrUsersExist is returned when first-admin bootstrap is attempted after any
+// user already exists.
+var ErrUsersExist = errors.New("store: users already exist")
+
 // CreateUser inserts a new user and returns the persisted row.
 // Caller is responsible for hashing the password (use internal/auth.Hash).
 func (s *Store) CreateUser(ctx context.Context, username, passwordHash string, isAdmin bool) (User, error) {
@@ -46,6 +50,49 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash string, i
 		Username:     username,
 		PasswordHash: passwordHash,
 		IsAdmin:      isAdmin,
+		CreatedAt:    time.Unix(now, 0).UTC(),
+	}, nil
+}
+
+// CreateFirstAdmin inserts the first user as an admin only when the users table
+// is still empty. The emptiness check and insert share one SQLite transaction so
+// concurrent first-boot setup requests cannot create multiple bootstrap admins.
+func (s *Store) CreateFirstAdmin(ctx context.Context, username, passwordHash string) (User, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return User{}, fmt.Errorf("begin first-admin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var n int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+		return User{}, fmt.Errorf("counting users for first admin: %w", err)
+	}
+	if n > 0 {
+		return User{}, ErrUsersExist
+	}
+
+	now := time.Now().Unix()
+	res, err := tx.ExecContext(ctx,
+		`INSERT INTO users (username, password_hash, created_at, is_admin) VALUES (?, ?, ?, 1)`,
+		username, passwordHash, now,
+	)
+	if err != nil {
+		return User{}, fmt.Errorf("inserting first admin %q: %w", username, err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return User{}, fmt.Errorf("getting first admin id: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return User{}, fmt.Errorf("commit first-admin tx: %w", err)
+	}
+
+	return User{
+		ID:           id,
+		Username:     username,
+		PasswordHash: passwordHash,
+		IsAdmin:      true,
 		CreatedAt:    time.Unix(now, 0).UTC(),
 	}, nil
 }

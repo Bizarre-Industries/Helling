@@ -8,7 +8,7 @@ This doc describes the security posture Helling commits to. Anything not listed 
 
 **Assumed adversaries:**
 
-- Unauthenticated attacker on the public network reaching `helling-proxy:443`
+- Unauthenticated attacker on the public network reaching Caddy on `:8006`
 - Authenticated low-privilege user trying to escalate
 - Local non-root user on the host (with shell access but not in the `helling` or `incus` group)
 
@@ -24,16 +24,16 @@ This doc describes the security posture Helling commits to. Anything not listed 
 ```text
 Network (public)
   ↓ TLS
-helling-proxy   ← runs as user `helling-proxy`, no group memberships
+Caddy           ← runs as user `caddy`, supplementary group `helling-proxy`
   ↓ Unix socket /run/helling/api.sock (mode 0660, group helling-proxy)
-hellingd        ← runs as user `helling`, group `incus` (NOT incus-admin)
-  ↓ Unix socket /var/lib/incus/unix.socket
+hellingd        ← runs as user `helling`, supplementary groups `helling-proxy`, `incus`
+  ↓ Unix socket /var/lib/incus/user.socket
 incusd          ← root daemon
 ```
 
-Two non-root users, two sockets, no shared filesystem state outside `/var/lib/helling` (owned by `helling:helling`, mode 0750).
+Two non-root service users, two sockets, no shared filesystem state outside `/var/lib/helling` (owned by `helling:helling`, mode 0750).
 
-The `incus` group grants restricted Incus access — no `incus admin` operations. v0.1 doesn't need them. If a future feature needs `incus-admin`, it moves into a privileged sub-process gated behind the operations API, not by promoting `hellingd` itself.
+The `incus` group grants restricted Incus user-socket access — no `incus admin` operations. v0.1 doesn't need them. If a future feature needs `incus-admin`, it moves into a privileged sub-process gated behind the operations API, not by promoting `hellingd` itself.
 
 ## Authentication
 
@@ -44,6 +44,7 @@ The `incus` group grants restricted Incus access — no `incus admin` operations
 - **TOTP**: optional per user, but strictly enforced once enabled. Password login creates only a pre-session MFA challenge; the server issues no cookie or access JWT until a valid TOTP code or one-time recovery code is verified.
 - **Recovery codes**: 128-bit random values shown once during enrollment and stored only as argon2id hashes.
 - **API tokens**: random `helling_` tokens are shown once, stored only as SHA-256 hashes, and checked for expiry plus `read`/`write`/`admin` scope before use.
+- **First-admin setup**: requires the one-time installer setup token from `/etc/helling/setup-token` while user count is zero. No default password or environment-carried setup secret is accepted.
 - **Login rate limit**: 5 failures per username per 15 minutes, 20 failures per source IP per 15 minutes. Implemented as in-memory token bucket with persistence across restart deferred to v0.2.
 - **No password reset in v0.1.** Admin resets via CLI (`helling admin reset-password <user>`).
 
@@ -57,7 +58,7 @@ The `incus` group grants restricted Incus access — no `incus admin` operations
 
 ## Input validation
 
-- Every request is validated against the OpenAPI spec by `oapi-codegen/nethttp-middleware` before reaching handlers.
+- Every externally reachable request must be validated at the handler boundary against the constraints in `api/openapi.yaml`; generated types are not a substitute for runtime checks on public JSON bodies.
 - Server side never trusts client-supplied IDs. Resource ownership is checked on every state-changing request.
 - Instance names match the regex in the OpenAPI parameter; rejection is at the middleware layer.
 
@@ -77,7 +78,7 @@ The `incus` group grants restricted Incus access — no `incus admin` operations
 ## Network exposure
 
 - `hellingd` listens **only** on a Unix socket. No TCP listener exists.
-- `helling-proxy` is the only network-facing process. It binds `:443` (TLS) and optionally `:80` (HTTP→HTTPS redirect only).
+- Caddy is the only network-facing process. It binds `:8006` with internal TLS in v0.1 and forwards to hellingd over `/run/helling/api.sock`.
 - No outbound network calls from `hellingd` in v0.1 except the Incus socket.
 - Raw Incus/Podman proxy routes are admin-only. Non-admin Incus proxy access must use ADR-024 per-user mTLS once that transport is wired; until then, non-admin raw proxy requests are rejected rather than forwarded through daemon authority.
 

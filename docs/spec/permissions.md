@@ -6,7 +6,6 @@ Roles:
 
 - `admin`
 - `user`
-- `auditor`
 
 Legend:
 
@@ -17,48 +16,48 @@ Legend:
 
 ## Helling API (`/api/v1/*`)
 
-| Endpoint Group                         | admin                 | user                         | auditor         |
-| -------------------------------------- | --------------------- | ---------------------------- | --------------- |
-| auth setup/login/refresh/logout        | YES                   | YES                          | YES             |
-| auth totp management                   | SELF                  | SELF                         | SELF            |
-| auth token list/create/revoke          | SELF + admin override | SELF                         | SELF            |
-| users list/get                         | YES                   | SELF                         | YES (read-only) |
-| users create/update/delete             | YES                   | NO                           | NO              |
-| schedules list/get                     | YES                   | SCOPE                        | YES (read-only) |
-| schedules create/update/delete/run     | YES                   | SCOPE                        | NO              |
-| webhooks list/get                      | YES                   | NO                           | YES (read-only) |
-| webhooks create/update/delete/test     | YES                   | NO                           | NO              |
-| kubernetes list/get                    | YES                   | SCOPE                        | YES (read-only) |
-| kubernetes create/delete/scale/upgrade | YES                   | SCOPE                        | NO              |
-| kubernetes kubeconfig                  | YES                   | SCOPE                        | YES (read-only) |
-| system info/hardware/diagnostics       | YES                   | NO                           | YES (read-only) |
-| system config read                     | YES                   | NO                           | YES (read-only) |
-| system config write/upgrade            | YES                   | NO                           | NO              |
-| firewall host list                     | YES                   | NO                           | YES (read-only) |
-| firewall host create/delete            | YES                   | NO                           | NO              |
-| audit query/export                     | YES                   | SELF (query own events only) | YES             |
-| events SSE                             | YES                   | YES (filtered)               | YES (filtered)  |
-| health                                 | YES                   | YES                          | YES             |
+| Endpoint Group                         | admin                 | user                         |
+| -------------------------------------- | --------------------- | ---------------------------- |
+| auth setup/status/login/logout         | YES                   | YES                          |
+| auth totp management                   | SELF                  | SELF                         |
+| auth token list/create/revoke          | SELF + admin override | SELF                         |
+| users list/get                         | YES                   | SELF                         |
+| users create/update/delete             | YES                   | NO                           |
+| schedules list/get                     | YES                   | NO                           |
+| schedules create/update/delete/run     | YES                   | NO                           |
+| webhooks list/get                      | YES                   | NO                           |
+| webhooks create/update/delete/test     | YES                   | NO                           |
+| kubernetes list/get                    | YES                   | NO                           |
+| kubernetes create/delete/scale/upgrade | YES                   | NO                           |
+| kubernetes kubeconfig                  | YES                   | NO                           |
+| system info/hardware/diagnostics       | YES                   | NO                           |
+| system config read                     | YES                   | NO                           |
+| system config write/upgrade            | YES                   | NO                           |
+| firewall host list                     | YES                   | NO                           |
+| firewall host create/delete            | YES                   | NO                           |
+| audit query/export                     | YES                   | SELF (query own events only) |
+| events SSE                             | YES                   | YES (filtered)               |
+| health                                 | YES                   | YES                          |
 
 ## Incus Proxy (`/api/incus/*`)
 
-Helling enforces role gate, then forwards with caller-specific Incus client certificate identity (ADR-024 + ADR-036).
+v0.1 raw Incus proxy requests are admin-only and forward through the restricted Incus user socket. Caller-specific Incus client certificate identity (ADR-024 + ADR-036) is the post-v0.1 delegation path.
 
-| Method Class                                | admin | user  | auditor                            |
-| ------------------------------------------- | ----- | ----- | ---------------------------------- |
-| Read (`GET`)                                | YES   | SCOPE | SCOPE (read-only cert constraints) |
-| Mutation (`POST`, `PUT`, `PATCH`, `DELETE`) | YES   | SCOPE | NO                                 |
+| Method Class                                | admin | user |
+| ------------------------------------------- | ----- | ---- |
+| Read (`GET`)                                | YES   | NO   |
+| Mutation (`POST`, `PUT`, `PATCH`, `DELETE`) | YES   | NO   |
 
-`SCOPE` is ultimately enforced by Incus trust restrictions on the certificate presented by hellingd.
+`SCOPE` for non-admin Incus proxy use returns when Incus trust restrictions are enforced by the certificate presented by hellingd.
 
 ## Podman Proxy (`/api/podman/*`)
 
 Role gate is enforced in Helling middleware prior to proxying.
 
-| Method Class                                | admin | user | auditor |
-| ------------------------------------------- | ----- | ---- | ------- |
-| Read (`GET`)                                | YES   | YES  | YES     |
-| Mutation (`POST`, `PUT`, `PATCH`, `DELETE`) | YES   | YES  | NO      |
+| Method Class                                | admin | user |
+| ------------------------------------------- | ----- | ---- |
+| Read (`GET`)                                | YES   | NO   |
+| Mutation (`POST`, `PUT`, `PATCH`, `DELETE`) | YES   | NO   |
 
 ## Notes
 

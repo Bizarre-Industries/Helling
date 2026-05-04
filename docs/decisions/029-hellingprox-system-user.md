@@ -1,6 +1,6 @@
 # ADR-029: Dedicated hellingprox system user
 
-> Status: Accepted (2026-04-19)
+> Status: Superseded by ADR-037. v0.1 uses packaged Caddy as the edge service and keeps `helling-proxy` only as the Unix-socket group.
 
 ## Context
 
@@ -8,7 +8,7 @@ Running both daemons as root expands impact of web-facing compromise.
 
 ## Decision
 
-Run the edge service as dedicated low-privilege system user `hellingprox`.
+Historical decision: run the custom Go edge service as dedicated low-privilege system user `hellingprox`.
 
 - No shell login
 - Minimal filesystem permissions

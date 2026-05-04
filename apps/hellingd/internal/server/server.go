@@ -39,6 +39,7 @@ type AuthSettings struct {
 	UsernameWindow time.Duration
 	IPLimit        int
 	IPWindow       time.Duration
+	SetupTokenPath string
 	Argon2         auth.Argon2Params
 	JWTSigner      *auth.JWTSigner
 }
@@ -65,6 +66,7 @@ type Server struct {
 	router      chi.Router
 	userLimiter *auth.RateLimiter
 	ipLimiter   *auth.RateLimiter
+	setup       firstAdminSetupService
 	mfaMu       sync.Mutex
 	mfaTokens   map[string]mfaChallenge
 }
@@ -94,6 +96,7 @@ func New(cfg *Config) (*Server, error) {
 		cfg:         *cfg,
 		userLimiter: auth.NewRateLimiter(cfg.Auth.UsernameLimit, cfg.Auth.UsernameWindow),
 		ipLimiter:   auth.NewRateLimiter(cfg.Auth.IPLimit, cfg.Auth.IPWindow),
+		setup:       newFirstAdminSetupService(cfg.Store, cfg.Auth.Argon2, cfg.Auth.SetupTokenPath),
 		mfaTokens:   make(map[string]mfaChallenge),
 	}
 	s.router = s.routes()
@@ -142,6 +145,7 @@ func (s *Server) routes() chi.Router {
 func (s *Server) registerV1Routes(r chi.Router) {
 	// Public auth endpoints.
 	r.Post("/auth/login", s.handleLogin)
+	r.Get("/auth/setup/status", s.handleSetupStatus)
 	r.Post("/auth/setup", s.handleSetup)
 	r.Post("/auth/mfa/complete", s.handleMFAComplete)
 

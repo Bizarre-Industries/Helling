@@ -14,7 +14,7 @@ Security threat model baseline for Helling management plane.
 - Admin/user credentials
 - JWT/API tokens
 - age identity and encrypted secrets
-- Incus delegated-user trust certificates
+- Deferred Incus delegated-user trust certificates
 - Control-plane SQLite state
 - Audit/event records
 
@@ -22,7 +22,7 @@ Security threat model baseline for Helling management plane.
 
 1. Browser/UI -> Caddy edge service
 2. Caddy -> hellingd Unix socket
-3. hellingd -> Incus HTTPS loopback (mTLS)
+3. hellingd -> restricted Incus user socket in v0.1
 4. hellingd -> Podman Unix socket
 5. hellingd -> SQLite/host filesystem
 
@@ -37,9 +37,9 @@ Risks:
 
 Mitigations:
 
-- PAM + JWT + TOTP
+- local password auth + setup token + JWT + TOTP
 - short-lived access tokens + revocable refresh/session state
-- per-user mTLS cert identity for Incus proxy path
+- admin-only raw proxy gate for v0.1; per-user mTLS cert identity is deferred
 
 ### Tampering
 
@@ -111,7 +111,7 @@ Mitigations:
 ## Residual Risks (v0.1)
 
 - No enterprise IdP/SSO in v0.1.
-- Operational misconfiguration risk remains if PAM/Caddy/systemd are altered outside documented contracts.
+- Operational misconfiguration risk remains if Caddy/systemd are altered outside documented contracts.
 
 ## Review Cadence
 

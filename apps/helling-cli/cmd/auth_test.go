@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -74,7 +75,7 @@ func TestAuthLogin_StoresTokensAndPrintsConfirmation(t *testing.T) {
 	useTempConfigDir(t)
 	srv := fakeHellingd(t, map[string]http.HandlerFunc{
 		"/api/v1/auth/login": func(w http.ResponseWriter, _ *http.Request) {
-			http.SetCookie(w, &http.Cookie{Name: "helling_refresh", Value: "refresh-xyz"})
+			http.SetCookie(w, &http.Cookie{Name: "helling_session", Value: "session-xyz"})
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{"access_token": "jwt.live", "token_type": "Bearer", "expires_in": 900},
 			})
@@ -96,9 +97,64 @@ func TestAuthLogin_StoresTokensAndPrintsConfirmation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if prof.AccessToken != "jwt.live" || prof.RefreshCookie != "helling_refresh=refresh-xyz" {
+	if prof.AccessToken != "jwt.live" || prof.RefreshCookie != "helling_session=session-xyz" {
 		t.Fatalf("profile not persisted: %+v", prof)
 	}
+}
+
+func TestAuthSetup_PostsFirstAdminPayload(t *testing.T) {
+	useTempConfigDir(t)
+	var saw map[string]string
+	srv := fakeHellingd(t, map[string]http.HandlerFunc{
+		"/api/v1/auth/setup": func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&saw); err != nil {
+				t.Fatalf("decode setup body: %v", err)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": 1, "username": "admin", "is_admin": true, "created_at": "2026-05-04T12:00:00Z",
+			})
+		},
+	})
+
+	passwordFile := writeSecretFile(t, "secret-password-123\n")
+	setupTokenFile := writeSecretFile(t, "0123456789abcdef0123456789abcdef\n")
+	out, err := runCmd(t,
+		[]string{
+			"setup",
+			"--username", "admin",
+			"--password-file", passwordFile,
+			"--setup-token-file", setupTokenFile,
+			"--api", srv.URL,
+		},
+		"",
+	)
+	if err != nil {
+		t.Fatalf("setup: %v out=%q", err, out)
+	}
+	if saw["username"] != "admin" || saw["password"] != "secret-password-123" || saw["setup_token"] == "" {
+		t.Fatalf("unexpected setup body: %+v", saw)
+	}
+	if !strings.Contains(out, "Created first admin admin") {
+		t.Fatalf("unexpected stdout: %q", out)
+	}
+	path, _ := config.Path()
+	prof, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prof.API != srv.URL {
+		t.Fatalf("profile API = %q, want %q", prof.API, srv.URL)
+	}
+}
+
+func writeSecretFile(t *testing.T, value string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte(value), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func TestAuthLogin_MFAFlow(t *testing.T) {
@@ -117,7 +173,7 @@ func TestAuthLogin_MFAFlow(t *testing.T) {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			http.SetCookie(w, &http.Cookie{Name: "helling_refresh", Value: "mfa-refresh"})
+			http.SetCookie(w, &http.Cookie{Name: "helling_session", Value: "mfa-session"})
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{"access_token": "jwt.mfa"},
 			})
@@ -169,7 +225,7 @@ func TestAuthLogout_ClearsProfile(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "meta": map[string]any{}})
 		},
 	})
-	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x", RefreshCookie: "helling_refresh=a"})
+	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x", RefreshCookie: "helling_session=a"})
 	out, err := runCmd(t, []string{"logout"}, "")
 	if err != nil {
 		t.Fatalf("logout: %v out=%q", err, out)
@@ -192,9 +248,9 @@ func TestConfigPath_TempDirIsolation(t *testing.T) {
 	}
 }
 
-// TestAuthLogin_PromptsForMissingFields exercises the interactive prompt
-// branch for both username and password.
-func TestAuthLogin_PromptsForMissingFields(t *testing.T) {
+// TestAuthLogin_PromptsForMissingUsername exercises the non-secret prompt
+// branch. Secret fields require flags outside an interactive terminal.
+func TestAuthLogin_PromptsForMissingUsername(t *testing.T) {
 	useTempConfigDir(t)
 	srv := fakeHellingd(t, map[string]http.HandlerFunc{
 		"/api/v1/auth/login": func(w http.ResponseWriter, _ *http.Request) {
@@ -205,8 +261,8 @@ func TestAuthLogin_PromptsForMissingFields(t *testing.T) {
 	})
 
 	_, err := runCmd(t,
-		[]string{"login", "--api", srv.URL},
-		"admin\npromptpw1234\n",
+		[]string{"login", "--password", "promptpw1234", "--api", srv.URL},
+		"admin\n",
 	)
 	if err != nil {
 		t.Fatalf("login: %v", err)
@@ -215,6 +271,43 @@ func TestAuthLogin_PromptsForMissingFields(t *testing.T) {
 	prof, _ := config.Load(path)
 	if prof.AccessToken != "jwt.prompt" {
 		t.Fatalf("token not stored: %+v", prof)
+	}
+}
+
+func TestAuthLogin_MissingPasswordFailsNonInteractive(t *testing.T) {
+	useTempConfigDir(t)
+	_, err := runCmd(t, []string{"login", "--username", "admin", "--api", "http://127.0.0.1:8080"}, "")
+	if err == nil {
+		t.Fatal("expected missing password error")
+	}
+	if !strings.Contains(err.Error(), "--password is required in non-interactive mode") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAuthSetup_MissingSecretFilesFailNonInteractive(t *testing.T) {
+	useTempConfigDir(t)
+	_, err := runCmd(t,
+		[]string{"setup", "--username", "admin", "--api", "http://127.0.0.1:8080"},
+		"",
+	)
+	if err == nil {
+		t.Fatal("expected missing password-file error")
+	}
+	if !strings.Contains(err.Error(), "--password-file is required in non-interactive mode") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	passwordFile := writeSecretFile(t, "secret-password-123\n")
+	_, err = runCmd(t,
+		[]string{"setup", "--username", "admin", "--password-file", passwordFile, "--api", "http://127.0.0.1:8080"},
+		"",
+	)
+	if err == nil {
+		t.Fatal("expected missing setup-token-file error")
+	}
+	if !strings.Contains(err.Error(), "--setup-token-file is required in non-interactive mode") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

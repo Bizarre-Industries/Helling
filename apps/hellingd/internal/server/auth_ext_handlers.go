@@ -1,11 +1,17 @@
 package server
 
 import (
+	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,49 +23,57 @@ import (
 // ---- setup (first admin) ----
 
 type setupRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	SetupToken string `json:"setup_token"`
 }
 
+type setupStatusResponse struct {
+	SetupRequired bool `json:"setup_required"`
+}
+
+const maxSetupRequestBytes = 1024
+
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
-	n, err := s.cfg.Store.CountUsers(r.Context())
+	required, err := s.setup.SetupRequired(r.Context())
 	if err != nil {
-		s.cfg.Logger.Error("setup: count users", slog.Any("err", err))
+		s.cfg.Logger.Error("setup: check required", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
-	if n > 0 {
+	if !required {
 		writeError(w, http.StatusConflict, "already_setup", "admin user already exists")
 		return
 	}
 
-	var req setupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+	req, ok := s.decodeSetupRequest(w, r)
+	if !ok {
 		return
 	}
-	req.Username = strings.TrimSpace(req.Username)
-	if req.Username == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "bad_request", "username and password required")
-		return
-	}
-	if len(req.Password) < 8 {
-		writeError(w, http.StatusBadRequest, "bad_request", "password must be at least 8 characters")
+	if !s.authorizeSetupToken(w, r, req.SetupToken) {
 		return
 	}
 
-	hash, err := auth.Hash(req.Password, s.cfg.Auth.Argon2)
+	u, err := s.setup.CreateFirstAdmin(r.Context(), req)
 	if err != nil {
-		s.cfg.Logger.Error("setup: hash password", slog.Any("err", err))
-		writeError(w, http.StatusInternalServerError, "internal", "internal error")
-		return
-	}
-
-	u, err := s.cfg.Store.CreateUser(r.Context(), req.Username, hash, true)
-	if err != nil {
+		if errors.Is(err, store.ErrUsersExist) {
+			writeError(w, http.StatusConflict, "already_setup", "admin user already exists")
+			return
+		}
 		s.cfg.Logger.Error("setup: create user", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
+	}
+
+	s.cfg.Logger.LogAttrs(r.Context(), slog.LevelInfo, "setup_admin_created",
+		slog.Int64("user_id", u.ID),
+		slog.String("username", u.Username),
+		slog.String("source_ip", clientIP(r)),
+		slog.String("request_id", RequestIDFromContext(r.Context())),
+	)
+
+	if err := s.setup.RetireSetupToken(); err != nil {
+		s.cfg.Logger.Warn("setup: retire token", slog.Any("err", err))
 	}
 
 	writeJSON(w, http.StatusCreated, userResponse{
@@ -68,6 +82,160 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		IsAdmin:   u.IsAdmin,
 		CreatedAt: u.CreatedAt,
 	})
+}
+
+func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
+	required, err := s.setup.SetupRequired(r.Context())
+	if err != nil {
+		s.cfg.Logger.Error("setup: status", slog.Any("err", err))
+		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, setupStatusResponse{SetupRequired: required})
+}
+
+func (s *Server) decodeSetupRequest(w http.ResponseWriter, r *http.Request) (setupRequest, bool) {
+	var req setupRequest
+	r.Body = http.MaxBytesReader(w, r.Body, maxSetupRequestBytes)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return setupRequest{}, false
+	}
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return setupRequest{}, false
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || req.Password == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "username and password required")
+		return setupRequest{}, false
+	}
+	if len(req.Username) > 64 {
+		writeError(w, http.StatusBadRequest, "bad_request", "username must be at most 64 characters")
+		return setupRequest{}, false
+	}
+	if len(req.Password) < 8 || len(req.Password) > 256 {
+		writeError(w, http.StatusBadRequest, "bad_request", "password must be 8 to 256 characters")
+		return setupRequest{}, false
+	}
+	req.SetupToken = strings.TrimSpace(req.SetupToken)
+	if len(req.SetupToken) < 32 || len(req.SetupToken) > 128 {
+		writeError(w, http.StatusBadRequest, "bad_request", "setup token must be 32 to 128 characters")
+		return setupRequest{}, false
+	}
+	return req, true
+}
+
+func (s *Server) authorizeSetupToken(w http.ResponseWriter, r *http.Request, token string) bool {
+	if err := s.setup.VerifySetupToken(token); err != nil {
+		switch {
+		case errors.Is(err, errSetupTokenUnavailable):
+			s.cfg.Logger.Error("setup: token unavailable", slog.Any("err", err))
+			writeError(w, http.StatusServiceUnavailable, "setup_locked", "setup token is not available")
+		default:
+			s.cfg.Logger.Warn("setup: invalid token", slog.String("source_ip", clientIP(r)))
+			writeError(w, http.StatusUnauthorized, "invalid_setup_token", "setup token is invalid")
+		}
+		return false
+	}
+	return true
+}
+
+type firstAdminSetupService interface {
+	SetupRequired(ctx context.Context) (bool, error)
+	VerifySetupToken(provided string) error
+	CreateFirstAdmin(ctx context.Context, req setupRequest) (store.User, error)
+	RetireSetupToken() error
+}
+
+type storeFirstAdminSetupService struct {
+	store          *store.Store
+	argon2         auth.Argon2Params
+	setupTokenPath string
+	mu             sync.Mutex
+}
+
+func newFirstAdminSetupService(st *store.Store, argon2 auth.Argon2Params, setupTokenPath string) firstAdminSetupService {
+	return &storeFirstAdminSetupService{store: st, argon2: argon2, setupTokenPath: setupTokenPath}
+}
+
+func (svc *storeFirstAdminSetupService) SetupRequired(ctx context.Context) (bool, error) {
+	n, err := svc.store.CountUsers(ctx)
+	if err != nil {
+		return false, fmt.Errorf("count users: %w", err)
+	}
+	return n == 0, nil
+}
+
+func (svc *storeFirstAdminSetupService) CreateFirstAdmin(ctx context.Context, req setupRequest) (store.User, error) {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+
+	n, err := svc.store.CountUsers(ctx)
+	if err != nil {
+		return store.User{}, fmt.Errorf("count users: %w", err)
+	}
+	if n > 0 {
+		return store.User{}, store.ErrUsersExist
+	}
+
+	hash, err := auth.Hash(req.Password, svc.argon2)
+	if err != nil {
+		return store.User{}, fmt.Errorf("hash password: %w", err)
+	}
+
+	u, err := svc.store.CreateFirstAdmin(ctx, req.Username, hash)
+	if err != nil {
+		return store.User{}, err
+	}
+	return u, nil
+}
+
+var errSetupTokenUnavailable = errors.New("setup token unavailable")
+
+func (svc *storeFirstAdminSetupService) VerifySetupToken(provided string) error {
+	path := svc.setupTokenPath
+	if path == "" {
+		return errSetupTokenUnavailable
+	}
+	raw, err := os.ReadFile(path) // #nosec G304 -- setup token path is operator config validated at startup.
+	if err != nil {
+		return fmt.Errorf("%w: %w", errSetupTokenUnavailable, err)
+	}
+	expected := strings.TrimSpace(string(raw))
+	provided = strings.TrimSpace(provided)
+	if expected == "" {
+		return errSetupTokenUnavailable
+	}
+	if provided == "" {
+		return errors.New("setup token required")
+	}
+	if subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) != 1 {
+		return errors.New("setup token mismatch")
+	}
+	return nil
+}
+
+func (svc *storeFirstAdminSetupService) RetireSetupToken() error {
+	path := svc.setupTokenPath
+	if path == "" {
+		return errSetupTokenUnavailable
+	}
+	if err := os.Remove(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		f, truncateErr := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0) // #nosec G304 -- setup token path is operator config validated at startup.
+		if truncateErr != nil {
+			return fmt.Errorf("retiring setup token %s: %w", path, errors.Join(err, truncateErr))
+		}
+		if closeErr := f.Close(); closeErr != nil {
+			return fmt.Errorf("truncating setup token %s: close: %w", path, closeErr)
+		}
+	}
+	return nil
 }
 
 // ---- API tokens ----

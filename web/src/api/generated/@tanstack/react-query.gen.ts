@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { authLogin, authMfaComplete, createInstance, deleteInstance, getCurrentUser, getHealth, getInstance, getOperation, getVersion, listInstances, listOperations, logout, type Options, startInstance, stopInstance } from '../sdk.gen';
-import type { AuthLoginData, AuthLoginError, AuthLoginResponse, AuthMfaCompleteData, AuthMfaCompleteError, AuthMfaCompleteResponse, CreateInstanceData, CreateInstanceError, CreateInstanceResponse, DeleteInstanceData, DeleteInstanceError, DeleteInstanceResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetHealthData, GetHealthResponse, GetInstanceData, GetInstanceError, GetInstanceResponse, GetOperationData, GetOperationError, GetOperationResponse, GetVersionData, GetVersionResponse, ListInstancesData, ListInstancesError, ListInstancesResponse, ListOperationsData, ListOperationsError, ListOperationsResponse, LogoutData, LogoutError, LogoutResponse, StartInstanceData, StartInstanceError, StartInstanceResponse, StopInstanceData, StopInstanceError, StopInstanceResponse } from '../types.gen';
+import { authLogin, authMfaComplete, authSetup, authSetupStatus, createInstance, deleteInstance, getCurrentUser, getHealth, getInstance, getOperation, getVersion, listInstances, listOperations, logout, type Options, startInstance, stopInstance } from '../sdk.gen';
+import type { AuthLoginData, AuthLoginError, AuthLoginResponse, AuthMfaCompleteData, AuthMfaCompleteError, AuthMfaCompleteResponse, AuthSetupData, AuthSetupError, AuthSetupResponse, AuthSetupStatusData, AuthSetupStatusError, AuthSetupStatusResponse, CreateInstanceData, CreateInstanceError, CreateInstanceResponse, DeleteInstanceData, DeleteInstanceError, DeleteInstanceResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetHealthData, GetHealthResponse, GetInstanceData, GetInstanceError, GetInstanceResponse, GetOperationData, GetOperationError, GetOperationResponse, GetVersionData, GetVersionResponse, ListInstancesData, ListInstancesError, ListInstancesResponse, ListOperationsData, ListOperationsError, ListOperationsResponse, LogoutData, LogoutError, LogoutResponse, StartInstanceData, StartInstanceError, StartInstanceResponse, StopInstanceData, StopInstanceError, StopInstanceResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -92,6 +92,48 @@ export const authLoginMutation = (options?: Partial<Options<AuthLoginData>>): Us
     const mutationOptions: UseMutationOptions<AuthLoginResponse, AuthLoginError, Options<AuthLoginData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await authLogin({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const authSetupStatusQueryKey = (options?: Options<AuthSetupStatusData>) => createQueryKey('authSetupStatus', options);
+
+/**
+ * Report whether first-admin setup is required
+ *
+ * Returns whether the daemon currently has zero users and will accept one-time setup.
+ */
+export const authSetupStatusOptions = (options?: Options<AuthSetupStatusData>) => queryOptions<AuthSetupStatusResponse, AuthSetupStatusError, AuthSetupStatusResponse, ReturnType<typeof authSetupStatusQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await authSetupStatus({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: authSetupStatusQueryKey(options)
+});
+
+/**
+ * Create the first admin user
+ *
+ * One-time first-boot setup. This endpoint is available only while no
+ * users exist and requires the installer setup token from
+ * `/etc/helling/setup-token`.
+ *
+ */
+export const authSetupMutation = (options?: Partial<Options<AuthSetupData>>): UseMutationOptions<AuthSetupResponse, AuthSetupError, Options<AuthSetupData>> => {
+    const mutationOptions: UseMutationOptions<AuthSetupResponse, AuthSetupError, Options<AuthSetupData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await authSetup({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -29,9 +29,8 @@ helling/
 ├── apps/
 │   ├── hellingd/           # Backend daemon
 │   ├── helling-cli/        # CLI client
-│   └── helling-proxy/      # TLS terminator + static web serving
 ├── web/                    # React 19 + Vite + antd dashboard
-├── deploy/                 # Dockerfile, systemd units, packaging
+├── deploy/                 # Installer ISO profile, Caddy config, systemd units, packaging
 ├── docs/
 │   ├── spec/               # Architecture, source-of-truth specs
 │   ├── design/             # Design notes per feature
@@ -46,7 +45,7 @@ helling/
 ## Required toolchain
 
 - Go 1.26+ (1.26.2 recommended)
-- Bun (frontend tooling and Orval generation)
+- Bun (frontend tooling and Hey API generation)
 - Incus 6.0 LTS or later (for runtime; not required to build)
 - golangci-lint, gofumpt, goimports
 
@@ -56,6 +55,8 @@ Install everything else with:
 make dev-setup
 ```
 
+Installer ISO usage is documented in [`docs/install.md`](docs/install.md).
+
 ## Quick start (development)
 
 ```bash
@@ -63,7 +64,7 @@ git clone https://github.com/Bizarre-Industries/helling.git
 cd helling
 make dev-setup
 make generate         # OpenAPI → Go server, Go client, TS client
-make build            # produces ./bin/hellingd, ./bin/helling, ./bin/helling-proxy
+make build            # produces ./bin/hellingd and ./bin/helling
 ./bin/hellingd        # listens on /run/helling/api.sock by default
 ```
 
@@ -78,7 +79,7 @@ make web-dev          # Vite dev server, proxies /v1 to hellingd
 See [docs/spec/architecture.md](docs/spec/architecture.md) for the canonical design. Short version:
 
 - `hellingd` is the backend. Listens on a Unix socket. Talks to Incus over its socket.
-- `helling-proxy` terminates TLS and serves the web bundle. Forwards API calls to `hellingd`.
+- Caddy terminates TLS and serves the web bundle. Forwards API calls to `hellingd`.
 - `helling-cli` is a CLI that hits the same socket.
 - SQLite for Helling's own state (users, sessions, operations). Incus is the source of truth for instance state.
 

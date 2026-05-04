@@ -42,7 +42,6 @@ func userClient(ctx context.Context) (*client.Client, context.Context, context.C
 	return cli, c, cancel, nil
 }
 
-//nolint:dupl // list rendering parallels token.go list; kept separate for schema clarity.
 func newUserListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -61,7 +60,7 @@ func newUserListCmd() *cobra.Command {
 				Data []struct {
 					ID       string `json:"id"`
 					Username string `json:"username"`
-					Role     string `json:"role"`
+					IsAdmin  bool   `json:"is_admin"`
 					Status   string `json:"status"`
 				} `json:"data"`
 			}
@@ -75,7 +74,11 @@ func newUserListCmd() *cobra.Command {
 			var b strings.Builder
 			fmt.Fprintf(&b, "%-24s %-20s %-10s %-10s\n", "ID", "USERNAME", "ROLE", "STATUS")
 			for _, u := range env.Data {
-				fmt.Fprintf(&b, "%-24s %-20s %-10s %-10s\n", u.ID, u.Username, u.Role, u.Status)
+				role := "user"
+				if u.IsAdmin {
+					role = "admin"
+				}
+				fmt.Fprintf(&b, "%-24s %-20s %-10s %-10s\n", u.ID, u.Username, role, u.Status)
 			}
 			_, werr := fmt.Fprint(cmd.OutOrStdout(), b.String())
 			return werr
@@ -84,7 +87,8 @@ func newUserListCmd() *cobra.Command {
 }
 
 func newUserCreateCmd() *cobra.Command {
-	var role, password string
+	var isAdmin bool
+	var password string
 	c := &cobra.Command{
 		Use:   "create <username>",
 		Short: "Create a Helling-managed user",
@@ -95,7 +99,7 @@ func newUserCreateCmd() *cobra.Command {
 				return err
 			}
 			defer cancel()
-			body := map[string]any{"username": args[0], "role": role}
+			body := map[string]any{"username": args[0], "is_admin": isAdmin}
 			if password != "" {
 				body["password"] = password
 			}
@@ -107,7 +111,7 @@ func newUserCreateCmd() *cobra.Command {
 			return werr
 		},
 	}
-	c.Flags().StringVar(&role, "role", "user", "Role: admin|user|auditor")
+	c.Flags().BoolVar(&isAdmin, "admin", false, "Create an admin user")
 	c.Flags().StringVar(&password, "password", "", "Optional password (argon2id hashed)")
 	return c
 }

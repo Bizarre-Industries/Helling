@@ -1,6 +1,6 @@
 // Helling WebUI — Login page (extracted from pages.jsx during Phase 2A).
 //
-// Wires the PAM credentials form to authLogin + authMfaComplete from the
+// Wires the local-account credentials form to authLogin + authMfaComplete from the
 // generated SDK. On success calls setAccessToken (memory-only per
 // docs/spec/auth.md §2.2), which fires the 'auth:session-changed' event;
 // app.jsx's subscription flips authed=true.
@@ -12,7 +12,7 @@
 //   onEnterSetup  — optional callback shown as a "First-time setup" link
 //                   when set. app.jsx passes setSetupDone(false).
 
-import { type KeyboardEvent, useState } from 'react';
+import { type KeyboardEvent, useId, useState } from 'react';
 import { setAccessToken } from '../../api/auth-store';
 import { authLogin, authMfaComplete } from '../../api/generated/sdk.gen';
 import { I } from '../../primitives/icon';
@@ -25,6 +25,7 @@ interface PageLoginProps {
 type Stage = 'creds' | 'totp';
 
 export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
+  const formId = useId();
   const [stage, setStage] = useState<Stage>('creds');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -189,12 +190,14 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
         {stage === 'creds' ? (
           <>
             <label
+              htmlFor={`${formId}-username`}
               className="mono dim"
               style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase' }}
             >
               Username
             </label>
             <input
+              id={`${formId}-username`}
               className="input"
               style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
               value={username}
@@ -205,12 +208,14 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
               disabled={busy}
             />
             <label
+              htmlFor={`${formId}-password`}
               className="mono dim"
               style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase' }}
             >
               Password
             </label>
             <input
+              id={`${formId}-password`}
               type="password"
               className="input"
               style={{ marginTop: 4, marginBottom: 14, width: '100%' }}
@@ -230,20 +235,18 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
               {busy ? 'Signing in…' : 'Continue'} <I n="arrow-right" s={13} />
             </button>
             <div className="mono dim" style={{ fontSize: 11, marginTop: 16, textAlign: 'center' }}>
-              Authenticated via PAM
+              Helling local account
               {typeof onEnterSetup === 'function' && (
                 <>
                   {' · '}
-                  <a
-                    href="#"
+                  <button
+                    type="button"
                     className="link"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onEnterSetup();
-                    }}
+                    style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
+                    onClick={onEnterSetup}
                   >
                     First-time setup
-                  </a>
+                  </button>
                 </>
               )}
             </div>
@@ -295,18 +298,18 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
               {busy ? 'Verifying…' : 'Sign in'} <I n="arrow-right" s={13} />
             </button>
             <div className="mono dim" style={{ fontSize: 11, marginTop: 14, textAlign: 'center' }}>
-              <a
-                href="#"
+              <button
+                type="button"
                 className="link"
-                onClick={(e) => {
-                  e.preventDefault();
+                style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
+                onClick={() => {
                   setStage('creds');
                   setError(null);
                   setTotp('');
                 }}
               >
                 Back
-              </a>
+              </button>
             </div>
           </>
         )}

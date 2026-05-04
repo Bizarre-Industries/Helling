@@ -17,8 +17,8 @@ No sidebar, no resource tree. Full-page centered forms. Minimal chrome -- logo, 
 ## API Endpoints
 
 - `POST /api/v1/auth/login` -- authenticate (username, password, optional TOTP)
-- `POST /api/v1/auth/setup` -- create first admin (only works when zero users exist)
-- `POST /api/v1/auth/refresh` -- refresh JWT
+- `POST /api/v1/auth/setup` -- create first admin (requires `/etc/helling/setup-token` while zero users exist)
+- `GET /api/v1/auth/setup/status` -- detect whether first-admin setup is still required
 - `POST /api/v1/auth/logout` -- invalidate session
 
 > Note: WebAuthn auth flows are deferred to v0.5+ and intentionally excluded from v0.1 UI/API scope.
@@ -27,14 +27,15 @@ No sidebar, no resource tree. Full-page centered forms. Minimal chrome -- logo, 
 
 ### Setup (`/setup`)
 
-- `Card` centered -- "Welcome to Helling. Create your admin account to get started."
-- `ProForm` -- username Input, password Input.Password, confirm Input.Password. One Button: "Create Account".
-- Three fields only. No email, no org name, no terms checkbox. Respect the user's time.
+- `Card` centered -- "Create the first admin."
+- `Form` -- username Input, password Input.Password, confirm Input.Password, setup token Input.Password. One Button: "Create account".
+- The setup token is printed by first boot at `/etc/helling/setup-token`; it prevents public first-admin takeover before the real admin is created.
+- `/setup` does not configure disks, networking, telemetry, or reboots. The ISO and first-boot service handle host installation before the browser flow starts.
 
 ### Login (`/login`)
 
 - `Card` centered -- logo, title
-- `ProForm` -- username Input, password Input.Password, realm Select (if multiple PAM realms configured, hidden if only one), optional TOTP Input (shown after first submit if 2FA enabled for user).
+- `ProForm` -- username Input, password Input.Password, optional TOTP Input (shown after first submit if 2FA enabled for user).
 - "Remember me" Checkbox (extends JWT expiry)
 
 ### First-Load Experience
@@ -47,8 +48,8 @@ No sidebar, no resource tree. Full-page centered forms. Minimal chrome -- logo, 
 
 ## Data Model
 
-- LoginRequest: `username`, `password`, `totp_code`, `realm`
-- SetupRequest: `username`, `password`
+- LoginRequest: `username`, `password`
+- SetupRequest: `username`, `password`, `setup_token`
 - AuthResponse: `token` (JWT), `user{}`, `expires_at`
 - Session: `id`, `device`, `ip`, `last_active`
 

@@ -8,16 +8,17 @@
 
 ### Proxy
 
-Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy/`). Internal CA + per-user cert issuance + per-request TLS Transport selection complete (PRs O-1..R). Remaining beta work is live verification against real Incus + Podman upstreams (docs/spec/internal-ca.md).
+Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy/`). v0.1 allows admin-only raw native proxy access; non-admin raw proxy requests are rejected until ADR-024 per-user Incus mTLS is wired end to end. Remaining beta work is live verification against real Incus + Podman upstreams (docs/spec/internal-ca.md).
 
 - [x] Proxy scaffold exists and forwards requests via httputil.ReverseProxy (unit + integration tests in `apps/hellingd/internal/proxy/`)
 - [x] WebSocket upgrades pass through to upstream (covered by `TestProxy_WebSocketUpgradePassesThrough` in PR O-4)
-- [x] Internal CA bootstrap + per-user cert issuance on userCreate (PRs O-1..O-5; gated behind `HELLING_CA_DIR`)
-- [x] Per-user mTLS Transport selector (covered by `TestProxy_UserTLSProvider_ForwardsCert` + fallback variants in PR R / O-6)
+- [ ] Internal CA bootstrap + per-user cert issuance on userCreate (deferred until ADR-024 implementation is present in this daemon)
+- [ ] Per-user mTLS Transport selector (deferred until ADR-024 implementation is present in this daemon)
 - [x] `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8443/api/incus/1.0/instances | jq '.metadata'` returns Incus instances (live verify via `task test:integration:vm` against the Parallels VM with `HELLING_VM_HOST` + `HELLING_VM_TOKEN` set; ADR-052)
 - [x] `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8443/api/podman/libpod/containers/json | jq '.[0].Names'` returns Podman containers (same target)
 - [x] Unauthenticated request to proxy returns 401 (covered by `TestProxy_Unauthenticated_Returns401`)
-- [x] Non-admin user gets per-user Incus identity via mTLS (per-user Transport selector — PR R / O-6)
+- [x] Non-admin raw proxy request is rejected instead of using the daemon Unix socket authority (`TestNonAdminCannotUseRawProxy`)
+- [ ] Non-admin user gets per-user Incus identity via mTLS (deferred until ADR-024 implementation is present in this daemon)
 
 ### Auth
 

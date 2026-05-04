@@ -40,6 +40,7 @@ func main() {
 	}
 }
 
+//nolint:gocyclo // Startup wires config, store, auth keys, Incus, router, listener, and shutdown in one place.
 func run() error {
 	configPath := flag.String("config", "/etc/helling/config.yaml", "path to config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
@@ -83,6 +84,11 @@ func run() error {
 		return fmt.Errorf("bootstrapping admin: %w", err)
 	}
 
+	jwtSigner, err := auth.LoadOrCreateJWTSigner(cfg.Auth.JWTSigningKeyPath)
+	if err != nil {
+		return fmt.Errorf("loading JWT signing key: %w", err)
+	}
+
 	// Connect to Incus. A failure here is non-fatal: the daemon still serves
 	// /healthz, /v1/version, and the auth surface; instance/operation
 	// endpoints will return 503 until Incus is reachable.
@@ -100,11 +106,13 @@ func run() error {
 		Version: server.VersionInfo{Version: version, Commit: commit, BuildTime: buildTime},
 		Auth: server.AuthSettings{
 			SessionTTL:     time.Duration(cfg.Auth.SessionTTLHours) * time.Hour,
+			AccessTTL:      time.Duration(cfg.Auth.AccessTTLMinutes) * time.Minute,
 			UsernameLimit:  5,
 			UsernameWindow: 15 * time.Minute,
 			IPLimit:        20,
 			IPWindow:       15 * time.Minute,
 			Argon2:         argon2ParamsFromConfig(cfg.Auth),
+			JWTSigner:      jwtSigner,
 		},
 		IncusProber: incusProber(cfg.Incus.SocketPath),
 		Incus:       incusClient,

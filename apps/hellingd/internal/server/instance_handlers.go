@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	incusapi "github.com/lxc/incus/v6/shared/api"
 
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
@@ -91,13 +90,10 @@ func (s *Server) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 		req.Type = "container"
 	}
 
-	post := incusapi.InstancesPost{
-		Name: req.Name,
-		Type: incusapi.InstanceType(req.Type),
-		Source: incusapi.InstanceSource{
-			Type:  "image",
-			Alias: req.Image,
-		},
+	post := incus.InstanceCreate{
+		Name:  req.Name,
+		Type:  req.Type,
+		Image: req.Image,
 		Start: req.Start,
 	}
 	op, err := s.cfg.Incus.CreateInstance(r.Context(), post)

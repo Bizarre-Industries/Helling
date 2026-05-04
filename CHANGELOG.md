@@ -10,6 +10,36 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug fixes
 
+- Stabilize v0.1 backend gates ([`00eb26e`])
+- Harden v0.1 auth boundaries ([`f5a6080`])
+- Scope local verification gates ([`1b10f51`])
+
+
+### Build
+
+- Bump github.com/go-jose/go-jose/v4 ([`c0d74b0`])
+
+
+### CI
+
+- Bump github/codeql-action in the github-official group ([`b4305e4`])
+- Bump crate-ci/typos in the linters-and-build group ([`403bad5`])
+- Bump DavidAnson/markdownlint-cli2-action from 23.0.0 to 23.1.0 ([`396d58d`])
+
+
+### Chore
+
+- Tighten agent tooling — slash commands, skills, hook fixes ([`2f82dd2`])
+
+
+### Features
+
+- Wire Incus instance + operations endpoints (Stage 3) ([`a07f83d`])
+## [0.1.0-alpha] — 2026-05-03
+
+
+### Bug fixes
+
 - Upgrade codeql-action to v4 and guard grype against missing go.mod ([`f2c2424`])
 - Improve OpenSSF Scorecard from 5.7 toward 7.0 ([`832a331`])
 - Adjust branch formatting in workflow triggers and update Prettier command ([`769690c`])
@@ -20,6 +50,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move github.com/google/uuid to required dependencies ([`dfd8d36`])
 - Correct baseUrl and ensure consistent casing in file names ([`feeecce`])
 - Phase 1 audit fix-pass — auth, error boundary, a11y, build ([`1992e3c`])
+- Close v0.1 vertical-slice gates for push gate ([`c481147`])
+- Align hooks + settings to Helling ([`1df8bd8`])
+
+
+### Build
+
+- Fix generate-web script + go.work-aware lint ([`95172e6`])
 
 
 ### CI
@@ -34,6 +71,12 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Bump DavidAnson/markdownlint-cli2-action from 22.0.0 to 23.0.0 ([`155cfc5`])
 - Bump crate-ci/typos in the linters-and-build group ([`c61ac98`])
 - Bump actions/setup-go in the github-official group ([`02ade1a`])
+- Add make-check workflow ([`266c4a3`])
+- Pin actions to commit SHAs (ADR-026) ([`68f9aa1`])
+- Add bun install + per-module govulncheck ([`372ada9`])
+- Bump golangci-lint to v1.65.0 (Go 1.26 support) ([`58c2528`])
+- Use golangci-lint v1.64.8 (last v1.x release; matches local toolchain) ([`2da8176`])
+- Install golangci-lint via 'go install' so runner Go (1.26) compiles it ([`9c7e00f`])
 
 
 ### Chore
@@ -46,6 +89,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Drop helling-proxy/helling-agent references ([`56765ea`])
 - Bump vite ([`7916293`])
 - Annotate auth exceptions with shipping status (PR H) ([`c441308`])
+- Close hygiene + automation tail (Phase A) ([`d18792f`])
+- Per-app module layout (hellingd, helling-cli) ([`8f90feb`])
+- Ignore .claude/.last-shipped-tag hook artifact ([`ed5bfc8`])
 
 
 ### Documentation
@@ -80,6 +126,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Mark Phase 2A auth subfolder complete; chunk Phase 2A by section ([`7a69122`])
 - Import full audit, expand checklist Phases 3-6, add F-ID tracking hook ([`27ba17f`])
 - Generalize tracking gate to all docs; strip Claude/AI references; add SessionStart sanity hook ([`16ceda0`])
+- Annotate WebUI Phase 2/3 F-IDs with scaffold-landed notes ([`fc9fdda`])
+- Tick Phase 2A search subfolder (c98ec3f) ([`4409074`])
+- Realign architecture/standards/roadmap to v0.1 vertical-slice scope ([`ce0a097`])
 
 
 ### Features
@@ -133,11 +182,18 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Auth token subcommand (PR V) ([`f1ff973`])
 - Auth mfa subcommand (PR W) ([`0d49300`])
 - Adopt Parallels Desktop as primary macOS dev/test VM ([`7a7371c`])
+- Rate limiter, integration target, frontend hooks (Phase B) ([`5de6f09`])
+- Phase C/D foundations — stores, normalizer, QueryStateView, events poll ([`1367cad`])
+- Add PageBMC component and integrate into app.jsx ([`30ab4f5`])
+- Rewrite openapi.yaml to v0.1 vertical-slice surface ([`4fc4bf1`])
+- Add mark-replanned, never-guess, and replan-on-tag scripts for version management ([`e7cede8`])
+- Wire login/logout/me + bootstrap admin (Stage 2) ([`237c92d`])
 
 
 ### Performance
 
 - Icon barrel — bundle 1.26MB → 482KB (audit F-30 + F-51) ([`8a08cc5`])
+- Lazy-load extracted pages with Suspense (Phase 2C, F-29 partial) ([`5c449e0`])
 
 
 ### Refactor
@@ -152,6 +208,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Extract PageLogs to web/src/pages/admin/logs.tsx (Phase 2A continues) ([`1892440`])
 - Extract PageOps and add warning handling to operations page (Phase 2A continues) ([`14caf91`])
 - Extract PageUsers to web/src/pages/admin/users.tsx (Phase 2A continues) ([`19a974e`])
+- Extract PageSearch + PageSearchResults to pages/search/ (Phase 2A) ([`c98ec3f`])
+- Extract PageNetworking + Copyable primitive (Phase 2A) ([`789c69e`])
+- Extract PageSchedules to pages/schedules/ + tick F-29 (Phase 2A) ([`27bc66d`])
+- Lowercase module path 'helling' (was mixed Helling/helling) ([`cb5f3d4`])
+- Replace huma+goose+jwt stack with chi+sql.DB scaffold ([`564d4b0`])
 
 
 ### Style
@@ -159,6 +220,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prettier auto-format 4 files ([`fdfcf4c`])
 - Prettier auto-format patch-applied files ([`bc2d3ef`])
 - Standardize quotes in hey-api configuration and reorder imports in client.ts ([`f349f71`])
+- Re-sort icons.ts imports alphabetically (linter) ([`008d5e0`])
 
 
 ### Tests
@@ -166,4 +228,5 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Auth repo + real-handler integration coverage ([`2af11ff`])
 - Cover TOTP/recovery/api-token CRUD + close PR C parity ([`ace771c`])
 - Vitest scaffold + 3 smoke tests guard Phase 1 (audit F-40) ([`ab83985`])
+- Replace typo-flagged 'abd' with 'xyz' in HashToken collision test ([`506db85`])
 

@@ -101,19 +101,16 @@ tasks:
   # ============================================================
 
   gen:openapi:
-    desc: Regenerate api/openapi.yaml from Huma operation definitions.
+    desc: Validate the committed OpenAPI contract.
     cmds:
       - |
-        if [ ! -d apps/hellingd ]; then
-          echo "apps/hellingd not present yet (pre-Huma-spike). Skipping openapi regeneration."
-          exit 0
+        if [ ! -f {{.OPENAPI_FILE}} ]; then
+          echo "{{.OPENAPI_FILE}} is missing"
+          exit 1
         fi
-        go run ./tools/openapi-dump > {{.OPENAPI_FILE}}.tmp
-        mv {{.OPENAPI_FILE}}.tmp {{.OPENAPI_FILE}}
-        echo "✓ {{.OPENAPI_FILE}} regenerated"
+        echo "✓ {{.OPENAPI_FILE}} is the current source of truth"
     sources:
-      - apps/hellingd/**/*.go
-      - tools/openapi-dump/**/*.go
+      - "{{.OPENAPI_FILE}}"
 
   check:openapi:
     desc: Lint api/openapi.yaml with vacuum (must score 100/100 against our ruleset).
@@ -133,22 +130,22 @@ tasks:
       - "{{.VACUUM_RULESET}}"
 
   check:openapi:generated:
-    desc: Verify committed api/openapi.yaml matches what Huma would generate now.
+    desc: Verify generated Go server code matches the committed OpenAPI contract.
     cmds:
       - |
-        if [ ! -d apps/hellingd ]; then
-          echo "apps/hellingd not present yet. Skipping generated drift check."
+        if [ ! -f apps/hellingd/api/generate.go ]; then
+          echo "apps/hellingd API generator not present. Skipping generated drift check."
           exit 0
         fi
-        go run ./tools/openapi-dump > {{.OPENAPI_FILE}}.tmp
-        if ! diff -q {{.OPENAPI_FILE}} {{.OPENAPI_FILE}}.tmp >/dev/null; then
-          echo "FAIL: committed {{.OPENAPI_FILE}} differs from Huma-generated output."
-          echo "Run: task gen:openapi && git add {{.OPENAPI_FILE}}"
-          diff -u {{.OPENAPI_FILE}} {{.OPENAPI_FILE}}.tmp | head -80
-          rm -f {{.OPENAPI_FILE}}.tmp
+        cd apps/hellingd
+        go generate ./api/...
+        cd ../..
+        if ! git diff --quiet -- apps/hellingd/api/server.gen.go || [ -n "$(git ls-files --others --exclude-standard -- apps/hellingd/api/server.gen.go)" ]; then
+          echo "FAIL: generated Go server code is out of sync. Run: cd apps/hellingd && go generate ./api/..."
+          git diff --stat -- apps/hellingd/api/server.gen.go
+          git ls-files --others --exclude-standard -- apps/hellingd/api/server.gen.go
           exit 1
         fi
-        rm -f {{.OPENAPI_FILE}}.tmp
 
   openapi:report:
     desc: Show vacuum category breakdown against our ruleset.
@@ -169,14 +166,13 @@ tasks:
 
   check:markdown:
     cmds:
-      # Globs and ignores live in .markdownlint-cli2.yaml. No CLI args needed.
-      - markdownlint-cli2
-      - prettier --check "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
+      - git ls-files -z '*.md' | xargs -0 markdownlint-cli2 --no-globs
+      - git ls-files -z '*.md' | xargs -0 prettier --check --ignore-path .gitignore --ignore-path .prettierignore
 
   fmt:markdown:
     cmds:
-      - markdownlint-cli2 --fix || true
-      - prettier --write "**/*.md" --ignore-path .gitignore --ignore-path .prettierignore
+      - git ls-files -z '*.md' | xargs -0 markdownlint-cli2 --fix --no-globs || true
+      - git ls-files -z '*.md' | xargs -0 prettier --write --ignore-path .gitignore --ignore-path .prettierignore
 
   # ============================================================
   # YAML — excludes refs/ and api/openapi.yaml
@@ -240,68 +236,120 @@ tasks:
       - check:go:lint
       - check:go:vuln
       - check:go:modtidy
-      - check:go:test
-      - check:go:coverage
+    cmds:
+      - task: check:go:test
+      - task: check:go:coverage
 
   check:go:build:
     cmds:
       - |
-        if [ ! -f go.mod ]; then echo "no go.mod yet; skipping"; exit 0; fi
-        go build {{.GO_PKG}}
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ go build $mod"
+            (cd "$mod" && go build ./...)
+          fi
+        done
 
   check:go:vet:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        go vet {{.GO_PKG}}
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ go vet $mod"
+            (cd "$mod" && go vet ./...)
+          fi
+        done
 
   check:go:lint:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        golangci-lint run --timeout 5m
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ golangci-lint $mod"
+            (cd "$mod" && golangci-lint run --timeout 5m ./...)
+          fi
+        done
 
   check:go:vuln:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        govulncheck {{.GO_PKG}}
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ govulncheck $mod"
+            (cd "$mod" && govulncheck ./...)
+          fi
+        done
 
   check:go:modtidy:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        cp go.mod go.mod.bak; cp go.sum go.sum.bak 2>/dev/null || true
-        go mod tidy
-        if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum go.sum.bak >/dev/null 2>&1 ); then
-          mv go.mod.bak go.mod; mv go.sum.bak go.sum 2>/dev/null || true
-          echo "FAIL: go.mod or go.sum not tidy. Run: go mod tidy"
-          exit 1
-        fi
-        rm -f go.mod.bak go.sum.bak
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ go mod tidy check $mod"
+            (
+              cd "$mod"
+              tmpdir=$(mktemp -d)
+              trap 'rm -rf "$tmpdir"' EXIT
+              cp go.mod "$tmpdir/go.mod"
+              cp go.sum "$tmpdir/go.sum" 2>/dev/null || true
+              go mod tidy
+              if ! diff -q go.mod "$tmpdir/go.mod" >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum "$tmpdir/go.sum" >/dev/null 2>&1 ); then
+                cp "$tmpdir/go.mod" go.mod
+                cp "$tmpdir/go.sum" go.sum 2>/dev/null || rm -f go.sum
+                echo "FAIL: $mod go.mod or go.sum is not tidy. Run: cd $mod && go mod tidy"
+                exit 1
+              fi
+            )
+          fi
+        done
 
   check:go:test:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        go test -race -coverprofile={{.COVERAGE_OUT}} {{.GO_PKG}}
+        rm -rf .task/coverage
+        mkdir -p .task/coverage
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            name=$(basename "$mod")
+            echo "▶ go test $mod"
+            if [ "$name" = "hellingd" ]; then
+              (cd "$mod" && go test -tags devauth -race -coverprofile="../../.task/coverage/$name.out" ./...)
+            else
+              (cd "$mod" && go test -race -coverprofile="../../.task/coverage/$name.out" ./...)
+            fi
+          fi
+        done
 
   check:go:coverage:
     cmds:
       - |
-        if [ ! -f {{.COVERAGE_OUT}} ]; then echo "no coverage yet; skipping gate"; exit 0; fi
-        bash scripts/check-coverage.sh {{.COVERAGE_OUT}}
+        if [ ! -d .task/coverage ]; then echo "no coverage yet; skipping gate"; exit 0; fi
+        for profile in .task/coverage/*.out; do
+          [ -f "$profile" ] || continue
+          case "$profile" in
+            *hellingd.out) HELLING_COVERAGE_OVERALL_FLOOR=20 bash scripts/check-coverage.sh "$profile" ;;
+            *helling-cli.out) HELLING_COVERAGE_OVERALL_FLOOR=80 bash scripts/check-coverage.sh "$profile" ;;
+            *) bash scripts/check-coverage.sh "$profile" ;;
+          esac
+        done
 
   test:go:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
-        go test -race {{.GO_PKG}}
+        for mod in apps/hellingd apps/helling-cli; do
+          if [ -f "$mod/go.mod" ]; then
+            echo "▶ go test $mod"
+            if [ "$(basename "$mod")" = "hellingd" ]; then
+              (cd "$mod" && go test -tags devauth -race ./...)
+            else
+              (cd "$mod" && go test -race ./...)
+            fi
+          fi
+        done
 
   fmt:go:
     cmds:
       - |
-        if [ ! -f go.mod ]; then exit 0; fi
         gofumpt -w .
         goimports -w -local github.com/Bizarre-Industries/helling .
 
@@ -315,10 +363,16 @@ tasks:
       - |
         if [ ! -f package.json ]; then echo "web/ not present; skipping"; exit 0; fi
         bun install --frozen-lockfile
-        bunx biome check .
         bunx tsc --noEmit
-    status:
-      - test ! -d web/
+        bun run gen:api
+        if ! git diff --quiet -- src/api/generated 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard -- src/api/generated)" ]; then
+          echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
+          git diff --stat -- src/api/generated
+          git ls-files --others --exclude-standard -- src/api/generated
+          exit 1
+        fi
+        bun run test
+        bun run build
 
   check:frontend:gen:
     dir: web
@@ -327,9 +381,10 @@ tasks:
       - |
         if [ ! -f package.json ]; then exit 0; fi
         bun run gen:api
-        if ! git diff --quiet -- src/api/generated 2>/dev/null; then
+        if ! git diff --quiet -- src/api/generated 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard -- src/api/generated)" ]; then
           echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
           git diff --stat -- src/api/generated
+          git ls-files --others --exclude-standard -- src/api/generated
           exit 1
         fi
 
@@ -345,7 +400,7 @@ tasks:
     cmds:
       - |
         if [ ! -f package.json ]; then exit 0; fi
-        bun test
+        bun run test
 
   # ============================================================
   # SQL

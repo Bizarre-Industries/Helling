@@ -1,7 +1,7 @@
 # .golangci.yaml
 #
 # Go linter configuration for Helling.
-# golangci-lint version: v1.61+ (pin in install script).
+# golangci-lint version: v1.64.8 (pin in install script and CI).
 # Run: golangci-lint run --timeout 5m
 
 run:

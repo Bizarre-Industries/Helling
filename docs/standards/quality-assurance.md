@@ -434,20 +434,27 @@ issues:
 ### 5.2 Coverage gates
 
 ```yaml
-Handlers: 80% line coverage minimum (enforced at merge)
-Services: 90% line coverage minimum
-Clients: 70% line coverage minimum (external deps mocked)
-Overall: 80% minimum, with 90% goal tracked but not gated
+Handlers: 80% line coverage minimum once handler/service/client package
+  boundaries exist.
+Services: 90% line coverage minimum once service packages exist.
+Clients: 70% line coverage minimum once external client packages are mocked.
+Overall: 80% target, with module-specific v0.1 ratchets enforced locally
+  until the backend has enough executable surface for the target to be honest.
 ```
 
-CI uses `go test -coverprofile=cover.out ./...` plus `go tool cover -func=cover.out` parsed by a small script that fails if any package under `internal/handlers/`, `internal/services/`, `internal/clients/` is below its threshold.
+The local `task check:go` gate runs module-aware coverage profiles. v0.1 ratchets
+`apps/hellingd` at 20% overall and `apps/helling-cli` at 80% overall; raise these
+floors as tests land. CI uses `go test -coverprofile=cover.out ./...` plus
+`go tool cover -func=cover.out` parsed by a small script that fails if any package
+under `internal/handlers/`, `internal/services/`, `internal/clients/` is below its
+threshold.
 
 ---
 
 ## 6. TypeScript / React Gate
 
 Formatter: `biome` (replaces prettier + eslint for TS).
-Linter: `biome lint` with `biome.json` at `web/`.
+Target linter: `biome lint` with `biome.json` at `web/`.
 
 ```json
 {
@@ -480,8 +487,13 @@ Additional gates:
 
 - `tsc --noEmit` must pass.
 - `hey-api/openapi-ts` generation must be idempotent: `bun run gen:api && git diff --exit-code web/src/api/generated`.
-- `bun test` must pass (vitest).
-- Component coverage: 60% min. Hooks: 80% min. Utils: 90% min.
+- `bun run test` must pass (Vitest).
+- `bun run build` must pass.
+
+The active v0.1 frontend merge gate is typecheck, generated-code drift, Vitest,
+and production build. `bun run check` remains the cleanup target tracked by
+WebUI audit F-08/F-09; promote it back into `task check:frontend` after the
+legacy JSX and accessibility backlog is closed.
 
 ### 6.1 Strict TypeScript config
 

@@ -54,7 +54,9 @@ else
 fi
 
 DEB="$(find "$REPO_ROOT/dist" -maxdepth 3 -name 'helling*.deb' -print -quit 2>/dev/null || true)"
-[ -n "$DEB" ] && [ -f "$DEB" ] || fail "No helling*.deb produced in dist/. Check scripts/build-deb.sh output."
+if [ -z "$DEB" ] || [ ! -f "$DEB" ]; then
+  fail "No helling*.deb produced in dist/. Check scripts/build-deb.sh output."
+fi
 log "Built: $DEB"
 
 # ---- ship + install ----

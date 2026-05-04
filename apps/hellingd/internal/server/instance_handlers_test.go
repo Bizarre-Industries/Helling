@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	incusapi "github.com/lxc/incus/v6/shared/api"
-
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
@@ -22,7 +20,7 @@ import (
 // fakeIncusClient is a minimal incus.Client used to drive instance handlers
 // from tests without needing a real Incus daemon.
 type fakeIncusClient struct {
-	instances   []incusapi.Instance
+	instances   []incus.Instance
 	createErr   error
 	deleteErr   error
 	stateErr    error
@@ -32,11 +30,11 @@ type fakeIncusClient struct {
 	nextOpID    string
 }
 
-func (f *fakeIncusClient) ListInstances(_ context.Context) ([]incusapi.Instance, error) {
+func (f *fakeIncusClient) ListInstances(_ context.Context) ([]incus.Instance, error) {
 	return f.instances, nil
 }
 
-func (f *fakeIncusClient) GetInstance(_ context.Context, name string) (*incusapi.Instance, error) {
+func (f *fakeIncusClient) GetInstance(_ context.Context, name string) (*incus.Instance, error) {
 	for i := range f.instances {
 		if f.instances[i].Name == name {
 			return &f.instances[i], nil
@@ -45,8 +43,7 @@ func (f *fakeIncusClient) GetInstance(_ context.Context, name string) (*incusapi
 	return nil, errors.New("not found")
 }
 
-//nolint:gocritic // interface method; struct passed by value upstream
-func (f *fakeIncusClient) CreateInstance(_ context.Context, req incusapi.InstancesPost) (incus.OperationHandle, error) {
+func (f *fakeIncusClient) CreateInstance(_ context.Context, req incus.InstanceCreate) (incus.OperationHandle, error) {
 	if f.createErr != nil {
 		return nil, f.createErr
 	}
@@ -113,8 +110,8 @@ func newServerWithIncus(t *testing.T, fake incus.Client) (*Server, *store.Store)
 func TestListInstancesShapesAndFilters(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIncusClient{
-		instances: []incusapi.Instance{
-			{Name: "web-1", Type: "container", Status: "Running", InstancePut: incusapi.InstancePut{Config: map[string]string{"image.alias": "images:debian/13"}}},
+		instances: []incus.Instance{
+			{Name: "web-1", Type: "container", Status: "Running", Config: map[string]string{"image.alias": "images:debian/13"}},
 			{Name: "db-1", Type: "container", Status: "Stopped"},
 		},
 	}

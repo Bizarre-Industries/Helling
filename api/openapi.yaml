@@ -68,14 +68,16 @@ paths:
 
   /auth/login:
     post:
-      operationId: login
+      operationId: authLogin
       tags:
         - auth
       security: []
-      summary: Exchange username + password for a session cookie
+      summary: Exchange username + password for a session
       description: |
         Validates credentials and, on success, issues a session via the
-        `helling_session` cookie. Subject to login rate limiting.
+        `helling_session` cookie. CLI and web clients use the JSON envelope's
+        Ed25519-signed access token. Accounts with enabled TOTP receive a
+        pre-session MFA challenge instead of a session.
       requestBody:
         required: true
         description: User credentials
@@ -84,8 +86,37 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginRequest'
       responses:
+        '200':
+          description: Login successful. Sets `helling_session` cookie and returns an access token for API clients.
+          headers:
+            Set-Cookie:
+              description: Session cookie set on successful login.
+              schema:
+                type: string
+                description: Standard Set-Cookie header value.
+                example: helling_session=...; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenEnvelope'
+              example:
+                data:
+                  access_token: eyJhbGciOiJFZERTQSJ9...
+                  token_type: Bearer
+                  expires_in: 900
+                  mfa_required: false
+        '202':
+          description: Password accepted, but MFA must be completed before a session is issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenEnvelope'
+              example:
+                data:
+                  mfa_required: true
+                  mfa_token: c08f4a7281b54d9abef67c210d3e49a2
         '204':
-          description: Login successful. Sets `helling_session` cookie.
+          description: Browser-compatible login successful response for cookie-only clients.
           headers:
             Set-Cookie:
               description: Session cookie set on successful login.
@@ -97,6 +128,56 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/mfa/complete:
+    post:
+      operationId: authMfaComplete
+      tags:
+        - auth
+      security: []
+      summary: Complete a pre-session MFA challenge
+      description: |
+        Validates a TOTP code or one-time recovery code against the pre-session
+        challenge returned by `/auth/login`. A successful request issues the
+        same session cookie and access-token envelope as password-only login.
+      requestBody:
+        required: true
+        description: MFA challenge token and TOTP or recovery code.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MFACompleteRequest'
+            example:
+              mfa_token: c08f4a7281b54d9abef67c210d3e49a2
+              totp_code: '123456'
+      responses:
+        '200':
+          description: MFA successful. Sets `helling_session` cookie and returns an access token for API clients.
+          headers:
+            Set-Cookie:
+              description: Session cookie set on successful MFA completion.
+              schema:
+                type: string
+                description: Standard Set-Cookie header value.
+                example: helling_session=...; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenEnvelope'
+              example:
+                data:
+                  access_token: eyJhbGciOiJFZERTQSJ9...
+                  token_type: Bearer
+                  expires_in: 900
+                  mfa_required: false
+        '204':
+          description: MFA successful cookie-only response.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
 
@@ -457,6 +538,67 @@ components:
           maxLength: 256
           format: password
           example: correct horse battery staple
+
+    MFACompleteRequest:
+      type: object
+      description: TOTP or recovery-code proof for a pre-session MFA challenge.
+      required: [mfa_token]
+      properties:
+        mfa_token:
+          type: string
+          description: Opaque pre-session challenge token returned by `/auth/login`.
+          minLength: 16
+          maxLength: 256
+          example: c08f4a7281b54d9abef67c210d3e49a2
+        totp_code:
+          type: string
+          description: Six-digit TOTP code from the user's authenticator app.
+          minLength: 6
+          maxLength: 6
+          pattern: '^[0-9]{6}$'
+          example: '123456'
+        recovery_code:
+          type: string
+          description: One-time recovery code shown during TOTP enrollment.
+          minLength: 16
+          maxLength: 64
+          example: ABCD-EFGH-IJKL-MNOP
+
+    AuthTokenEnvelope:
+      type: object
+      description: JSON envelope returned by auth flows that issue or continue a session.
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthTokenResponse'
+
+    AuthTokenResponse:
+      type: object
+      description: Auth response data for password and MFA flows.
+      required: [mfa_required]
+      properties:
+        access_token:
+          type: string
+          description: Ed25519-signed JWT access token. Present when MFA is not required or after MFA completion.
+          example: eyJhbGciOiJFZERTQSJ9...
+        token_type:
+          type: string
+          description: Bearer token type for the access token.
+          enum: [Bearer]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Access-token lifetime in seconds.
+          minimum: 1
+          example: 900
+        mfa_required:
+          type: boolean
+          description: True when the password was accepted but TOTP or a recovery code is still required.
+          example: false
+        mfa_token:
+          type: string
+          description: Opaque pre-session MFA token. Present only when `mfa_required` is true.
+          example: c08f4a7281b54d9abef67c210d3e49a2
 
     User:
       type: object

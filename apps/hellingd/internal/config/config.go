@@ -41,11 +41,13 @@ type LogConfig struct {
 
 // AuthConfig controls session and password parameters.
 type AuthConfig struct {
-	SessionTTLHours   int `yaml:"session_ttl_hours"`
-	LoginRateLimit    int `yaml:"login_rate_limit_per_15m"`
-	Argon2TimeCost    int `yaml:"argon2_time_cost"`
-	Argon2MemoryKiB   int `yaml:"argon2_memory_kib"`
-	Argon2Parallelism int `yaml:"argon2_parallelism"`
+	SessionTTLHours   int    `yaml:"session_ttl_hours"`
+	AccessTTLMinutes  int    `yaml:"access_ttl_minutes"`
+	JWTSigningKeyPath string `yaml:"jwt_signing_key_path"`
+	LoginRateLimit    int    `yaml:"login_rate_limit_per_15m"`
+	Argon2TimeCost    int    `yaml:"argon2_time_cost"`
+	Argon2MemoryKiB   int    `yaml:"argon2_memory_kib"`
+	Argon2Parallelism int    `yaml:"argon2_parallelism"`
 }
 
 // IncusConfig points hellingd at the Incus daemon.
@@ -69,6 +71,8 @@ func Defaults() Config {
 		},
 		Auth: AuthConfig{
 			SessionTTLHours:   24 * 7,
+			AccessTTLMinutes:  15,
+			JWTSigningKeyPath: "/var/lib/helling/jwt/ed25519.key",
 			LoginRateLimit:    5,
 			Argon2TimeCost:    3,
 			Argon2MemoryKiB:   64 * 1024,
@@ -132,6 +136,14 @@ func applyEnv(cfg *Config) {
 			cfg.Auth.SessionTTLHours = h
 		}
 	}
+	if v := os.Getenv("HELLING_AUTH_ACCESS_TTL_MINUTES"); v != "" {
+		if m, err := strconv.Atoi(v); err == nil && m > 0 {
+			cfg.Auth.AccessTTLMinutes = m
+		}
+	}
+	if v := os.Getenv("HELLING_AUTH_JWT_SIGNING_KEY_PATH"); v != "" {
+		cfg.Auth.JWTSigningKeyPath = v
+	}
 }
 
 func (c *Config) validate() error {
@@ -143,6 +155,12 @@ func (c *Config) validate() error {
 	}
 	if c.Auth.SessionTTLHours <= 0 {
 		return errors.New("auth.session_ttl_hours must be > 0")
+	}
+	if c.Auth.AccessTTLMinutes <= 0 {
+		return errors.New("auth.access_ttl_minutes must be > 0")
+	}
+	if c.Auth.JWTSigningKeyPath == "" {
+		return errors.New("auth.jwt_signing_key_path must not be empty")
 	}
 	if c.Auth.Argon2MemoryKiB < 8*1024 {
 		return errors.New("auth.argon2_memory_kib must be >= 8192 (8 MiB)")

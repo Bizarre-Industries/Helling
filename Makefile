@@ -27,6 +27,7 @@ GO_TEST_FLAGS        := -race -count=1
 GO_BUILD_FLAGS       := -trimpath -ldflags '$(LDFLAGS)'
 
 OUT_DIR := ./bin
+GENERATED_PATHS := apps/hellingd/api apps/helling-cli/internal/client web/src/api/generated
 
 # ---- Help ----------------------------------------------------------------
 
@@ -64,10 +65,10 @@ generate: generate-go generate-web ## Regenerate all OpenAPI artifacts
 .PHONY: generate-go
 generate-go: ## Regenerate Go server and client code from OpenAPI
 	@echo "→ generating hellingd server"
-	$(GO) generate ./apps/hellingd/api/...
+	cd apps/hellingd && $(GO) generate ./api/...
 	@echo "→ generating helling-cli client"
 	@if [ -d apps/helling-cli/internal/client ]; then \
-		$(GO) generate ./apps/helling-cli/internal/client/...; \
+		cd apps/helling-cli && $(GO) generate ./internal/client/...; \
 	fi
 
 .PHONY: generate-web
@@ -80,9 +81,11 @@ generate-web: ## Regenerate the TypeScript client (Orval)
 
 .PHONY: check-generated
 check-generated: generate ## Fail if generated artifacts drift from spec
-	@if [ -n "$$(git status --porcelain)" ]; then \
+	@if ! git diff --quiet -- $(GENERATED_PATHS) || \
+		[ -n "$$(git ls-files --others --exclude-standard -- $(GENERATED_PATHS))" ]; then \
 		echo "✗ generated artifacts are out of date. Run 'make generate' and commit."; \
-		git --no-pager diff --stat; \
+		git --no-pager diff --stat -- $(GENERATED_PATHS); \
+		git ls-files --others --exclude-standard -- $(GENERATED_PATHS); \
 		exit 1; \
 	fi
 	@echo "✓ generated artifacts are clean"
@@ -125,7 +128,7 @@ test-cli:
 
 .PHONY: test-proxy
 test-proxy:
-	@if [ -d apps/helling-proxy ]; then \
+	@if [ -f apps/helling-proxy/go.mod ]; then \
 		$(GO) test $(GO_PKGS_HELLING_PROXY) $(GO_TEST_FLAGS); \
 	fi
 
@@ -141,18 +144,18 @@ build: build-hellingd build-cli build-proxy ## Build all binaries to $(OUT_DIR)
 
 .PHONY: build-hellingd
 build-hellingd: $(OUT_DIR)
-	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/hellingd ./apps/hellingd/cmd/hellingd
+	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/hellingd ./apps/hellingd
 
 .PHONY: build-cli
 build-cli: $(OUT_DIR)
 	@if [ -d apps/helling-cli ]; then \
-		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling ./apps/helling-cli/cmd/helling; \
+		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling ./apps/helling-cli; \
 	fi
 
 .PHONY: build-proxy
 build-proxy: $(OUT_DIR)
-	@if [ -d apps/helling-proxy ]; then \
-		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-proxy ./apps/helling-proxy/cmd/helling-proxy; \
+	@if [ -f apps/helling-proxy/go.mod ]; then \
+		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-proxy ./apps/helling-proxy; \
 	fi
 
 $(OUT_DIR):
@@ -179,11 +182,21 @@ docker: ## Build the helling Docker image
 .PHONY: security-fast
 security-fast: ## Quick security checks (gitleaks + govulncheck)
 	@command -v gitleaks >/dev/null && gitleaks detect --no-banner || echo "→ gitleaks not installed, skipping"
-	@command -v govulncheck >/dev/null && govulncheck ./apps/... || echo "→ govulncheck not installed, skipping"
+	@if command -v govulncheck >/dev/null; then \
+		for mod in apps/hellingd apps/helling-cli; do \
+			if [ -f "$$mod/go.mod" ]; then \
+				echo "→ govulncheck $$mod"; \
+				(cd "$$mod" && govulncheck ./...); \
+			fi; \
+		done; \
+	else \
+		echo "→ govulncheck not installed, skipping"; \
+	fi
 
 .PHONY: security
 security: security-fast ## Full security scan (slower)
-	$(GOLANGCI_LINT) run --enable=gosec $(GO_PKGS_HELLINGD)
+	cd apps/hellingd && $(GOLANGCI_LINT) run --enable=gosec ./...
+	@if [ -f apps/helling-cli/go.mod ]; then cd apps/helling-cli && $(GOLANGCI_LINT) run --enable=gosec ./...; fi
 
 # ---- Aggregate gates -----------------------------------------------------
 

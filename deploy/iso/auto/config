@@ -4,16 +4,49 @@ set -eu
 ARCH="${HELLING_ISO_ARCH:-$(dpkg --print-architecture 2>/dev/null || echo amd64)}"
 VERSION="${HELLING_VERSION:-dev}"
 
+volume_label_from_version() {
+  suffix="$(
+    printf '%s' "$VERSION" \
+      | tr '[:lower:]' '[:upper:]' \
+      | tr -cs 'A-Z0-9' '_' \
+      | sed 's/^_//; s/_$//' \
+      | cut -c 1-8
+  )"
+  [ -n "$suffix" ] || suffix="DEV"
+  printf 'HELLING_%s' "$suffix" | cut -c 1-16
+}
+
+VOLUME_LABEL="${HELLING_ISO_VOLUME_LABEL:-$(volume_label_from_version)}"
+case "$VOLUME_LABEL" in
+  "" | *[!A-Z0-9_]*)
+    echo "HELLING_ISO_VOLUME_LABEL must contain only A-Z, 0-9, and underscore" >&2
+    exit 1
+    ;;
+esac
+if [ "${#VOLUME_LABEL}" -gt 16 ]; then
+  echo "HELLING_ISO_VOLUME_LABEL must be at most 16 characters" >&2
+  exit 1
+fi
+
+case "$ARCH" in
+  amd64) BOOTLOADERS="grub-pc grub-efi" ;;
+  arm64) BOOTLOADERS="grub-efi" ;;
+  *)
+    echo "Unsupported Helling ISO architecture: $ARCH" >&2
+    exit 1
+    ;;
+esac
+
 lb config noauto \
   --distribution trixie \
   --architectures "$ARCH" \
   --archive-areas "main contrib non-free-firmware" \
   --binary-image iso-hybrid \
-  --bootloaders "grub-pc grub-efi" \
+  --bootloaders "$BOOTLOADERS" \
   --debian-installer live \
   --debian-installer-distribution trixie \
   --bootappend-install "auto=true priority=critical preseed/file=/cdrom/preseed/helling.cfg" \
   --bootappend-live "boot=live components quiet" \
   --iso-application "Helling" \
-  --iso-volume "HELLING ${VERSION}" \
-  "${@}"
+  --iso-volume "$VOLUME_LABEL" \
+  "$@"

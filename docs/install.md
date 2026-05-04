@@ -6,7 +6,7 @@ Helling v0.1 installs through the Debian-first installer ISO. The ISO installs D
 
 - A target machine or VM with a blank boot disk
 - Network access during install
-- Debian-compatible amd64 hardware
+- Debian-compatible amd64 hardware, or arm64 hardware with UEFI firmware
 - The Helling installer ISO built from this repository
 
 ## Build The ISO

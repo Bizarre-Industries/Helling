@@ -10,6 +10,8 @@ extend-exclude = [
   ".task/**",
   "dist/**",
   "bin/**",
+  "apps/hellingd/api/*.gen.go",
+  "apps/helling-cli/internal/client/*.gen.go",
   "web/src/api/generated/**",
   "*.min.js",
   "*.min.css",

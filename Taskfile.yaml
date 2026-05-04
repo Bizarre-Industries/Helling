@@ -140,9 +140,10 @@ tasks:
         cd apps/hellingd
         go generate ./api/...
         cd ../..
-        if ! git diff --quiet -- apps/hellingd/api/server.gen.go; then
+        if ! git diff --quiet -- apps/hellingd/api/server.gen.go || [ -n "$(git ls-files --others --exclude-standard -- apps/hellingd/api/server.gen.go)" ]; then
           echo "FAIL: generated Go server code is out of sync. Run: cd apps/hellingd && go generate ./api/..."
           git diff --stat -- apps/hellingd/api/server.gen.go
+          git ls-files --others --exclude-standard -- apps/hellingd/api/server.gen.go
           exit 1
         fi
 
@@ -287,16 +288,17 @@ tasks:
             echo "▶ go mod tidy check $mod"
             (
               cd "$mod"
-              cp go.mod go.mod.bak
-              cp go.sum go.sum.bak 2>/dev/null || true
+              tmpdir=$(mktemp -d)
+              trap 'rm -rf "$tmpdir"' EXIT
+              cp go.mod "$tmpdir/go.mod"
+              cp go.sum "$tmpdir/go.sum" 2>/dev/null || true
               go mod tidy
-              if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum go.sum.bak >/dev/null 2>&1 ); then
-                mv go.mod.bak go.mod
-                mv go.sum.bak go.sum 2>/dev/null || true
+              if ! diff -q go.mod "$tmpdir/go.mod" >/dev/null 2>&1 || ( [ -f go.sum ] && ! diff -q go.sum "$tmpdir/go.sum" >/dev/null 2>&1 ); then
+                cp "$tmpdir/go.mod" go.mod
+                cp "$tmpdir/go.sum" go.sum 2>/dev/null || rm -f go.sum
                 echo "FAIL: $mod go.mod or go.sum is not tidy. Run: cd $mod && go mod tidy"
                 exit 1
               fi
-              rm -f go.mod.bak go.sum.bak
             )
           fi
         done
@@ -363,9 +365,10 @@ tasks:
         bun install --frozen-lockfile
         bunx tsc --noEmit
         bun run gen:api
-        if ! git diff --quiet -- src/api/generated 2>/dev/null; then
+        if ! git diff --quiet -- src/api/generated 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard -- src/api/generated)" ]; then
           echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
           git diff --stat -- src/api/generated
+          git ls-files --others --exclude-standard -- src/api/generated
           exit 1
         fi
         bun run test
@@ -378,9 +381,10 @@ tasks:
       - |
         if [ ! -f package.json ]; then exit 0; fi
         bun run gen:api
-        if ! git diff --quiet -- src/api/generated 2>/dev/null; then
+        if ! git diff --quiet -- src/api/generated 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard -- src/api/generated)" ]; then
           echo "FAIL: frontend generated code out of sync. Run: (cd web && bun run gen:api)"
           git diff --stat -- src/api/generated
+          git ls-files --others --exclude-standard -- src/api/generated
           exit 1
         fi
 

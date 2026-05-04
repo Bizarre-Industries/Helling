@@ -36,10 +36,7 @@ LESSONS.md
 vendor/
 go.work.sum
 
-# Generated API code
-apps/hellingd/api/*.gen.go
-apps/helling-cli/internal/client/*.gen.go
-web/src/api/generated/
+# Generated API code is committed; drift checks fail when these outputs change.
 
 # Stray binaries at root
 /hellingd

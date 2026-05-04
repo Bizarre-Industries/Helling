@@ -20,6 +20,19 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type authTokenResponse struct {
+	AccessToken string `json:"access_token,omitempty"`
+	TokenType   string `json:"token_type,omitempty"`
+	ExpiresIn   int64  `json:"expires_in,omitempty"`
+	MFARequired bool   `json:"mfa_required"`
+	MFAToken    string `json:"mfa_token,omitempty"`
+}
+
+type mfaChallenge struct {
+	UserID    int64
+	ExpiresAt time.Time
+}
+
 type userResponse struct {
 	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
@@ -27,6 +40,7 @@ type userResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+//nolint:gocyclo // Login intentionally spells out rate-limit, password, TOTP, and session branches.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -61,14 +75,26 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	raw, hash, err := auth.NewToken()
-	if err != nil {
-		s.cfg.Logger.Error("login: token mint", slog.Any("err", err))
-		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+	totpSecret, err := s.cfg.Store.GetTOTPSecret(r.Context(), u.ID)
+	switch {
+	case err == nil && totpSecret.Enabled:
+		raw, hash, err := auth.NewToken()
+		if err != nil {
+			s.cfg.Logger.Error("login: mfa token mint", slog.Any("err", err))
+			writeError(w, http.StatusInternalServerError, "internal", "internal error")
+			return
+		}
+		s.storeMFAChallenge(hash, mfaChallenge{
+			UserID:    u.ID,
+			ExpiresAt: time.Now().UTC().Add(5 * time.Minute),
+		})
+		writeAuthData(w, http.StatusAccepted, authTokenResponse{
+			MFARequired: true,
+			MFAToken:    raw,
+		})
 		return
-	}
-	if _, err := s.cfg.Store.CreateSession(r.Context(), hash, u.ID, s.cfg.Auth.SessionTTL); err != nil {
-		s.cfg.Logger.Error("login: create session", slog.Any("err", err))
+	case err != nil && !errors.Is(err, store.ErrNotFound):
+		s.cfg.Logger.Error("login: get totp", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
@@ -76,6 +102,32 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Login succeeded: clear failure counters for this username.
 	s.userLimiter.Reset(req.Username)
 
+	accessToken, expiresIn, err := s.issueSession(w, r, u)
+	if err != nil {
+		s.cfg.Logger.Error("login: issue session", slog.Any("err", err))
+		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+		return
+	}
+	if wantsAuthJSON(r) {
+		writeAuthData(w, http.StatusOK, authTokenResponse{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   expiresIn,
+			MFARequired: false,
+		})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) issueSession(w http.ResponseWriter, r *http.Request, u store.User) (accessToken string, expiresIn int64, err error) {
+	raw, hash, err := auth.NewToken()
+	if err != nil {
+		return "", 0, err
+	}
+	if _, err := s.cfg.Store.CreateSession(r.Context(), hash, u.ID, s.cfg.Auth.SessionTTL); err != nil {
+		return "", 0, err
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    raw,
@@ -85,7 +137,18 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	w.WriteHeader(http.StatusNoContent)
+	if s.cfg.Auth.JWTSigner == nil {
+		return "", 0, nil
+	}
+	ttl := s.cfg.Auth.AccessTTL
+	if ttl <= 0 {
+		ttl = 15 * time.Minute
+	}
+	accessToken, err = s.cfg.Auth.JWTSigner.NewAccessToken(u.ID, u.Username, u.IsAdmin, auth.ScopeWrite, ttl)
+	if err != nil {
+		return "", 0, err
+	}
+	return accessToken, int64(ttl.Seconds()), nil
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +187,46 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		IsAdmin:   u.IsAdmin,
 		CreatedAt: u.CreatedAt,
 	})
+}
+
+func writeAuthData(w http.ResponseWriter, status int, data authTokenResponse) {
+	writeJSON(w, status, map[string]any{"data": data})
+}
+
+func wantsAuthJSON(r *http.Request) bool {
+	return strings.HasPrefix(r.URL.Path, "/api/v1/")
+}
+
+func (s *Server) storeMFAChallenge(tokenHash string, challenge mfaChallenge) {
+	s.mfaMu.Lock()
+	defer s.mfaMu.Unlock()
+	now := time.Now().UTC()
+	for hash, existing := range s.mfaTokens {
+		if now.After(existing.ExpiresAt) {
+			delete(s.mfaTokens, hash)
+		}
+	}
+	s.mfaTokens[tokenHash] = challenge
+}
+
+func (s *Server) getMFAChallenge(tokenHash string) (mfaChallenge, bool) {
+	s.mfaMu.Lock()
+	defer s.mfaMu.Unlock()
+	challenge, ok := s.mfaTokens[tokenHash]
+	if !ok {
+		return mfaChallenge{}, false
+	}
+	if time.Now().UTC().After(challenge.ExpiresAt) {
+		delete(s.mfaTokens, tokenHash)
+		return mfaChallenge{}, false
+	}
+	return challenge, true
+}
+
+func (s *Server) deleteMFAChallenge(tokenHash string) {
+	s.mfaMu.Lock()
+	defer s.mfaMu.Unlock()
+	delete(s.mfaTokens, tokenHash)
 }
 
 // clientIP returns a best-effort source IP. Strips port; honors no proxy

@@ -69,12 +69,7 @@ func (s *Server) handleSystemConfigUpdate(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleSystemUpgrade(w http.ResponseWriter, r *http.Request) {
-	// v0.1: upgrade check not yet implemented.
-	writeJSON(w, http.StatusOK, map[string]any{
-		"current_version":  s.cfg.Version.Version,
-		"latest_version":   nil,
-		"update_available": false,
-	})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "system upgrades are deferred")
 }
 
 func (s *Server) handleSystemDiagnostics(w http.ResponseWriter, r *http.Request) {

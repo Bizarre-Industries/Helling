@@ -1,13 +1,14 @@
 // Package proxy implements httputil.ReverseProxy handlers that forward
 // authenticated requests to Incus and Podman Unix sockets per ADR-014.
 //
-// The proxy validates the JWT/session, maps the Helling user to an Incus
-// project, and forwards the request with the native upstream response
-// format (no re-enveloping).
+// Auth and role checks are enforced by the server route that mounts these
+// handlers. The proxy strips Helling-specific headers and forwards native
+// upstream responses without re-enveloping.
 package proxy
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
@@ -77,7 +78,32 @@ func newUnixReverseProxy(socketPath, prefix, upstreamHost, errorCode string, log
 
 // ServeHTTP implements http.Handler.
 func (p *PodmanProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !podmanRequestAllowed(r) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"code":    "podman_proxy_forbidden",
+			"message": "podman proxy path or method is not allowed",
+		})
+		return
+	}
 	p.proxy.ServeHTTP(w, r)
+}
+
+func podmanRequestAllowed(r *http.Request) bool {
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
+	default:
+		return false
+	}
+	path := strings.TrimPrefix(r.URL.Path, "/api/podman")
+	if path == "" {
+		path = "/"
+	}
+	if path == "/_ping" || path == "/version" || path == "/libpod/info" || path == "/libpod/containers/json" {
+		return true
+	}
+	return strings.HasPrefix(path, "/libpod/containers/") && strings.HasSuffix(path, "/json")
 }
 
 // UnixTransport returns an http.RoundTripper that dials a Unix socket.

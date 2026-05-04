@@ -23,7 +23,7 @@ Any key may be overridden by env var:
 
 - Pattern: `HELLING_<UPPER_SNAKE_PATH>`
 - Dot path to env conversion example:
-  - `auth.jwt.access_ttl` -> `HELLING_AUTH_JWT_ACCESS_TTL`
+  - `auth.access_ttl_minutes` -> `HELLING_AUTH_ACCESS_TTL_MINUTES`
   - `listen.socket` -> `HELLING_LISTEN_SOCKET`
 
 Precedence:
@@ -43,10 +43,9 @@ Precedence:
 | `incus.admin_key_path`            | string   | yes      | `/etc/helling/certs/incus-admin.key` | Admin client key                                                                                                                                                                                                                                     |
 | `podman.socket`                   | string   | yes      | `/run/podman/podman.sock`            | Local Podman Unix socket                                                                                                                                                                                                                             |
 | `secrets.identity_path`           | string   | yes      | `/etc/helling/age/identity.txt`      | age identity file for secret encryption                                                                                                                                                                                                              |
-| `auth.jwt.signing_key_path`       | string   | yes      | `/etc/helling/jwt/ed25519.key`       | Ed25519 signing key                                                                                                                                                                                                                                  |
-| `auth.jwt.access_ttl`             | duration | yes      | `15m`                                | Access token TTL                                                                                                                                                                                                                                     |
-| `auth.jwt.refresh_ttl`            | duration | yes      | `168h`                               | Refresh token TTL (7d)                                                                                                                                                                                                                               |
-| `auth.pam_service`                | string   | yes      | `helling`                            | PAM service name                                                                                                                                                                                                                                     |
+| `auth.jwt_signing_key_path`       | string   | yes      | `/var/lib/helling/jwt/ed25519.key`   | Ed25519 signing key seed, created `0600` on first boot when absent                                                                                                                                                                                   |
+| `auth.access_ttl_minutes`         | int      | yes      | `15`                                 | Access token TTL in minutes                                                                                                                                                                                                                          |
+| `auth.session_ttl_hours`          | int      | yes      | `168`                                | Session cookie TTL in hours                                                                                                                                                                                                                          |
 | `auth.rate_limit.login_attempts`  | int      | yes      | `5`                                  | Failed attempts before lockout                                                                                                                                                                                                                       |
 | `auth.rate_limit.login_window`    | duration | yes      | `15m`                                | Lock window for failed auth                                                                                                                                                                                                                          |
 | `auth.session_inactivity_timeout` | duration | yes      | `30m`                                | Session inactivity window. Sessions with no refresh or access activity within this window require re-authentication even if the refresh TTL has not expired. Set to `0` to disable inactivity tracking (refresh TTL alone governs session lifetime). |
@@ -67,7 +66,8 @@ Precedence:
 - Duration fields MUST use Go duration format (`15m`, `24h`, `168h`).
 - `incus.https_address` MUST be loopback-scoped in v0.1.
 - `listen.socket` and `podman.socket` MUST be absolute paths.
-- `auth.rate_limit.login_attempts` MUST be > 0.
+- `auth.login_rate_limit_per_15m` MUST be > 0.
+- `auth.access_ttl_minutes` MUST be > 0.
 - `warnings.pool_full_pct` MUST be in range `[1,100]`.
 
 ## Change Management

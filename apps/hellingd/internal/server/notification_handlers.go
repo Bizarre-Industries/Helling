@@ -14,8 +14,7 @@ type createNotificationChannelRequest struct {
 }
 
 func (s *Server) handleListNotificationChannels(w http.ResponseWriter, r *http.Request) {
-	// v0.1: notifications are not yet implemented. Return empty list.
-	writeJSON(w, http.StatusOK, []map[string]any{})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "notifications are deferred")
 }
 
 func (s *Server) handleCreateNotificationChannel(w http.ResponseWriter, r *http.Request) {
@@ -28,13 +27,7 @@ func (s *Server) handleCreateNotificationChannel(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "bad_request", "name and type are required")
 		return
 	}
-	// v0.1: notification delivery lands in v0.3.
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"id":     "nc-placeholder",
-		"name":   req.Name,
-		"type":   req.Type,
-		"status": "created",
-	})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "notifications are deferred")
 }
 
 func (s *Server) handleDeleteNotificationChannel(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +36,7 @@ func (s *Server) handleDeleteNotificationChannel(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "bad_request", "channel id required")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeError(w, http.StatusNotImplemented, "not_implemented", "notifications are deferred")
 }
 
 func (s *Server) handleTestNotificationChannel(w http.ResponseWriter, r *http.Request) {
@@ -52,9 +45,5 @@ func (s *Server) handleTestNotificationChannel(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "bad_request", "channel id required")
 		return
 	}
-	// v0.1: test delivery is a no-op.
-	writeJSON(w, http.StatusAccepted, map[string]any{
-		"channel_id": id,
-		"status":     "queued",
-	})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "notifications are deferred")
 }

@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // TOTPSecretBytes is the entropy size of a TOTP secret. 20 bytes = 160 bits,
@@ -44,10 +42,16 @@ func TOTPKeyURI(issuer, account, secret string) string {
 	return "otpauth://totp/" + label + "?" + params.Encode()
 }
 
-// NewRecoveryCodes generates count recovery codes, each 16 hex chars.
-// Returns the raw codes (to show the user once) and their bcrypt hashes
+// NewRecoveryCodes generates count recovery codes, each 128 bits.
+// Returns the raw codes (to show the user once) and their Argon2id hashes
 // (to store in the database).
 func NewRecoveryCodes(count int) (raw []string, hashes []string, err error) {
+	return NewRecoveryCodesWithParams(count, DefaultArgon2Params())
+}
+
+// NewRecoveryCodesWithParams generates recovery codes using caller-supplied
+// Argon2id parameters. Tests pass reduced parameters; production uses defaults.
+func NewRecoveryCodesWithParams(count int, params Argon2Params) (raw []string, hashes []string, err error) {
 	if count <= 0 {
 		count = RecoveryCodeCount
 	}
@@ -58,20 +62,21 @@ func NewRecoveryCodes(count int) (raw []string, hashes []string, err error) {
 		if _, randErr := rand.Read(buf); randErr != nil {
 			return nil, nil, fmt.Errorf("auth.NewRecoveryCodes: rand: %w", randErr)
 		}
-		// Format as 4 groups of 4 hex chars: XXXX-XXXX-XXXX-XXXX
+		// Format as 4 groups of 8 hex chars for the full 128-bit value.
 		hexStr := hex.EncodeToString(buf)
-		raw[i] = strings.ToUpper(hexStr[0:4] + "-" + hexStr[4:8] + "-" + hexStr[8:12] + "-" + hexStr[12:16])
+		raw[i] = strings.ToUpper(hexStr[0:8] + "-" + hexStr[8:16] + "-" + hexStr[16:24] + "-" + hexStr[24:32])
 
-		hash, bcryptErr := bcrypt.GenerateFromPassword([]byte(raw[i]), bcrypt.DefaultCost)
-		if bcryptErr != nil {
-			return nil, nil, fmt.Errorf("auth.NewRecoveryCodes: bcrypt: %w", bcryptErr)
+		hash, hashErr := Hash(raw[i], params)
+		if hashErr != nil {
+			return nil, nil, fmt.Errorf("auth.NewRecoveryCodes: argon2id: %w", hashErr)
 		}
-		hashes[i] = string(hash)
+		hashes[i] = hash
 	}
 	return raw, hashes, nil
 }
 
-// VerifyRecoveryCode checks a raw recovery code against a bcrypt hash.
+// VerifyRecoveryCode checks a raw recovery code against an Argon2id hash.
 func VerifyRecoveryCode(raw, hash string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(raw)) == nil
+	ok, err := Verify(hash, raw)
+	return err == nil && ok
 }

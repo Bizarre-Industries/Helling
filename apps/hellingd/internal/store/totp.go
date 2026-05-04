@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/auth"
 )
 
 // TOTPSecret mirrors a row in the totp_secrets table.
@@ -68,7 +70,7 @@ func (s *Store) DeleteTOTPSecret(ctx context.Context, userID int64) error {
 	return nil
 }
 
-// SaveRecoveryCodes inserts bcrypt-hashed recovery codes for a user.
+// SaveRecoveryCodes inserts Argon2id-hashed recovery codes for a user.
 // Caller should delete existing codes first.
 func (s *Store) SaveRecoveryCodes(ctx context.Context, userID int64, codeHashes []string) error {
 	for _, h := range codeHashes {
@@ -83,22 +85,53 @@ func (s *Store) SaveRecoveryCodes(ctx context.Context, userID int64, codeHashes 
 	return nil
 }
 
-// ConsumeRecoveryCode marks a recovery code as used and returns true if it
-// existed and was unused. Returns false if the code doesn't exist or was
-// already consumed.
-func (s *Store) ConsumeRecoveryCode(ctx context.Context, userID int64, codeHash string) (bool, error) {
-	res, err := s.db.ExecContext(ctx,
-		`UPDATE totp_recovery_codes SET used = 1 WHERE user_id = ? AND code_hash = ? AND used = 0`,
-		userID, codeHash,
+// ConsumeRecoveryCode verifies a raw recovery code against unused code hashes,
+// marks the matching row as used, and returns true when a code was consumed.
+func (s *Store) ConsumeRecoveryCode(ctx context.Context, userID int64, rawCode string) (bool, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, code_hash FROM totp_recovery_codes WHERE user_id = ? AND used = 0`,
+		userID,
 	)
 	if err != nil {
-		return false, fmt.Errorf("consuming recovery code: %w", err)
+		return false, fmt.Errorf("listing recovery codes: %w", err)
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return false, fmt.Errorf("checking recovery code rows: %w", err)
+	defer func() { _ = rows.Close() }()
+
+	type recoveryCodeRow struct {
+		id       int64
+		codeHash string
 	}
-	return n > 0, nil
+	var candidates []recoveryCodeRow
+	for rows.Next() {
+		var candidate recoveryCodeRow
+		if err := rows.Scan(&candidate.id, &candidate.codeHash); err != nil {
+			return false, fmt.Errorf("scanning recovery code: %w", err)
+		}
+		candidates = append(candidates, candidate)
+	}
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("iterating recovery codes: %w", err)
+	}
+	_ = rows.Close()
+
+	for _, candidate := range candidates {
+		if !auth.VerifyRecoveryCode(rawCode, candidate.codeHash) {
+			continue
+		}
+		res, err := s.db.ExecContext(ctx,
+			`UPDATE totp_recovery_codes SET used = 1 WHERE id = ? AND user_id = ? AND used = 0`,
+			candidate.id, userID,
+		)
+		if err != nil {
+			return false, fmt.Errorf("consuming recovery code: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return false, fmt.Errorf("checking recovery code rows: %w", err)
+		}
+		return n > 0, nil
+	}
+	return false, nil
 }
 
 // DeleteRecoveryCodes removes all recovery codes for a user.

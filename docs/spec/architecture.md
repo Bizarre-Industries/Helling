@@ -73,7 +73,7 @@ A typical authenticated request:
 2. `helling-proxy` strips TLS, forwards to `hellingd` over `/run/helling/api.sock`. Adds `X-Forwarded-For` and a request ID header.
 3. `hellingd`'s chi router matches the path against the generated OpenAPI server.
 4. Middleware chain: request ID → structured logger → recoverer → CORS (if enabled) → OpenAPI request validator (`oapi-codegen/nethttp-middleware`) → auth.
-5. Auth middleware extracts the session cookie (HTTP-only, `Secure`, `SameSite=Lax`), looks it up in the `sessions` table, attaches the user to the request context. 401 if invalid/expired.
+5. Auth middleware accepts either the session cookie (HTTP-only, `Secure`, `SameSite=Lax`) or a bearer token. Session cookies are looked up by hashed token in `sessions`; API tokens are looked up by hashed token in `api_tokens`; access JWTs are verified with the persisted Ed25519 signing key. 401 if invalid/expired.
 6. Generated handler invokes the service layer.
 7. Service layer reads/writes the SQLite store and/or calls the Incus client over its own Unix socket.
 8. Response shaped per OpenAPI spec, JSON-encoded, returned.
@@ -117,6 +117,32 @@ CREATE TABLE operations (
 );
 CREATE INDEX idx_operations_user ON operations(user_id);
 CREATE INDEX idx_operations_status ON operations(status);
+
+CREATE TABLE api_tokens (
+    id           TEXT PRIMARY KEY,  -- uuid v7
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    token_hash   TEXT NOT NULL UNIQUE,
+    scopes       TEXT NOT NULL,     -- read|write|admin
+    created_at   INTEGER NOT NULL,
+    expires_at   INTEGER,
+    last_used_at INTEGER
+);
+
+CREATE TABLE totp_secrets (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret     TEXT NOT NULL,
+    enabled    INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE totp_recovery_codes (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash TEXT NOT NULL,        -- argon2id
+    used      INTEGER NOT NULL DEFAULT 0
+);
 ```
 
 Migrations: numbered SQL files in `apps/hellingd/internal/store/migrations/`, applied at boot via `golang-migrate` or hand-rolled (decision in §10).
@@ -125,7 +151,7 @@ We do **not** persist instance state in SQLite. Incus is the source of truth for
 
 ## 5. Incus integration
 
-`hellingd` connects via `incus.ConnectIncusUnix("", nil)` from `github.com/lxc/incus/v6/client`. The default empty path resolves to `$INCUS_SOCKET` or `/var/lib/incus/unix.socket`.
+`hellingd` talks to Incus through a narrow internal client built on Go's standard `net/http` transport over the Incus Unix socket. The default empty socket path resolves to `$INCUS_SOCKET` or `/var/lib/incus/unix.socket`. The direct Incus module dependency is intentionally avoided until the upstream vulnerability set is clear for our import graph.
 
 Service account: the `hellingd` systemd unit runs as the `helling` user, added to the `incus` group (not `incus-admin` until VM/storage management is needed in a later milestone). `incus-admin` is escalation, not default.
 
@@ -144,14 +170,19 @@ Helling owns the operation lifecycle visible to its API consumers. It does not s
 ### v0.1
 
 - **Local users only.** Stored in `users` table. Passwords hashed with argon2id (`golang.org/x/crypto/argon2`), parameters: `t=3, m=64MiB, p=4, saltLen=16, keyLen=32`. These match current OWASP guidance for argon2id. Tune up if benchmarks allow.
-- **Session-based auth.** On `POST /v1/auth/login`, generate a 32-byte random session ID (`crypto/rand`), store hash in `sessions` (so DB compromise doesn't grant active sessions), set as HTTP-only `Secure` `SameSite=Lax` cookie, 7-day expiry, sliding window via `last_seen_at`.
+- **Session + JWT auth.** On `POST /v1/auth/login`, generate a 32-byte random session ID (`crypto/rand`), store hash in `sessions` (so DB compromise doesn't grant active sessions), set as HTTP-only `Secure` `SameSite=Lax` cookie, 7-day expiry, sliding window via `last_seen_at`. API and CLI flows also receive short-lived Ed25519-signed access JWTs per ADR-031.
+- **Persistent JWT signing key.** The Ed25519 seed is loaded from the configured key path or generated on first boot with `0600` permissions.
+- **TOTP MFA.** Users can enroll TOTP. Once enabled, password login returns a pre-session MFA challenge; no session or JWT is issued until a valid TOTP code or one-time recovery code is presented. Recovery codes are hashed with argon2id.
+- **API tokens.** Users can create scoped API tokens (`read`, `write`, `admin`). Only token hashes are stored. Expired tokens and insufficient scopes are rejected by middleware.
 - **No PAM.** Removed from earlier scope. Reasons: pulls CGO into the build, ties auth to local OS users (which is a poor fit for a multi-user web tool), expands attack surface, and offers nothing v0.1 actually needs.
-- **Two roles only:** `user` and `admin`. Admin checks are explicit at the handler level. RBAC matrix is post-v0.1.
+- **Two roles only:** `user` and `admin`. Admin checks are explicit at the route/handler boundary. User management, config/upgrade, audit, notifications, schedules, webhooks, firewall, BMC, Kubernetes, and raw native proxy surfaces are admin-only in v0.1. Fine-grained RBAC matrix is post-v0.1.
+- **Deferred privileged endpoints.** Post-v0.1 surfaces mounted for UI parity return explicit `501 Not Implemented`; they must not persist secrets, create placeholder resources, or return fake queued/staged success.
+- **Raw proxy boundary.** Non-admin raw Incus/Podman proxy requests are rejected in v0.1. Non-admin Incus proxy access must wait for ADR-024 per-user mTLS over loopback HTTPS; raw Unix-socket forwarding is never used for non-admin requests.
 
 ### Future (post-v0.1, non-binding)
 
 - OIDC SSO via `coreos/go-oidc` for SaaS-style deployments.
-- Mutual TLS for inter-service / CLI auth as an alternative to cookies.
+- Mutual TLS for inter-service auth as an alternative to cookies/JWTs.
 - Fine-grained permissions tied to Incus projects.
 
 ## 7. API contract

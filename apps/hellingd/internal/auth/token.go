@@ -15,6 +15,15 @@ const APITokenPrefix = "helling_"
 // token. 40 bytes = 320 bits, matching docs/standards/security.md.
 const APITokenRandomBytes = 40
 
+const (
+	// ScopeRead allows read-only API token access.
+	ScopeRead = "read"
+	// ScopeWrite allows read and write API token access.
+	ScopeWrite = "write"
+	// ScopeAdmin allows admin API token access when the user is also admin.
+	ScopeAdmin = "admin"
+)
+
 const apiTokenCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // NewAPIToken returns (rawToken, sha256HexHash). The raw token has the form
@@ -43,7 +52,7 @@ func HashAPIToken(raw string) string {
 // ValidScopes returns true if the scopes string is one of the allowed values.
 func ValidScopes(scopes string) bool {
 	switch scopes {
-	case "read", "write", "admin":
+	case ScopeRead, ScopeWrite, ScopeAdmin:
 		return true
 	default:
 		return false

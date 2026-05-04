@@ -19,8 +19,7 @@ type createFirewallRuleRequest struct {
 }
 
 func (s *Server) handleListFirewallRules(w http.ResponseWriter, r *http.Request) {
-	// v0.1: firewall rules are not yet implemented. Return empty list.
-	writeJSON(w, http.StatusOK, []map[string]any{})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "firewall management is deferred")
 }
 
 func (s *Server) handleCreateFirewallRule(w http.ResponseWriter, r *http.Request) {
@@ -33,12 +32,7 @@ func (s *Server) handleCreateFirewallRule(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "bad_request", "name and action are required")
 		return
 	}
-	// v0.1: nftables integration lands in v0.2.
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"id":     "fw-placeholder",
-		"name":   req.Name,
-		"status": "staged",
-	})
+	writeError(w, http.StatusNotImplemented, "not_implemented", "firewall management is deferred")
 }
 
 func (s *Server) handleDeleteFirewallRule(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +41,5 @@ func (s *Server) handleDeleteFirewallRule(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "bad_request", "rule id required")
 		return
 	}
-	// v0.1: nftables integration lands in v0.2.
-	w.WriteHeader(http.StatusNoContent)
+	writeError(w, http.StatusNotImplemented, "not_implemented", "firewall management is deferred")
 }

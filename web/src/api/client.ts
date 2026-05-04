@@ -10,7 +10,7 @@ import { clearAccessToken, getAccessToken } from './auth-store';
 import { client } from './generated/client.gen';
 
 client.setConfig({
-  baseUrl: '',
+  baseUrl: '/api/v1',
 });
 
 client.interceptors.request.use((request) => {

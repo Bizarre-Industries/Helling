@@ -128,7 +128,7 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Scopes == "" {
-		req.Scopes = "read"
+		req.Scopes = auth.ScopeRead
 	}
 	if !auth.ValidScopes(req.Scopes) {
 		writeError(w, http.StatusBadRequest, "bad_request", "scopes must be read, write, or admin")
@@ -235,7 +235,7 @@ func (s *Server) handleTOTPSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawCodes, codeHashes, err := auth.NewRecoveryCodes(auth.RecoveryCodeCount)
+	rawCodes, codeHashes, err := auth.NewRecoveryCodesWithParams(auth.RecoveryCodeCount, s.cfg.Auth.Argon2)
 	if err != nil {
 		s.cfg.Logger.Error("totp setup: recovery codes", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
@@ -319,28 +319,98 @@ func (s *Server) handleTOTPDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 type mfaCompleteRequest struct {
+	MFAToken     string `json:"mfa_token"`
 	Code         string `json:"code"`
+	TOTPCode     string `json:"totp_code"`
 	RecoveryCode string `json:"recovery_code"`
 }
 
+//nolint:gocyclo // This handler is a single auth state transition with explicit failure branches.
 func (s *Server) handleMFAComplete(w http.ResponseWriter, r *http.Request) {
-	// MFA completion happens during login flow. The user has already provided
-	// valid credentials; we have a partial session. For v0.1, MFA is checked
-	// inline during login. This endpoint exists for the API contract.
 	var req mfaCompleteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	if req.Code == "" && req.RecoveryCode == "" {
+	if req.MFAToken == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "mfa_token required")
+		return
+	}
+	code := req.Code
+	if code == "" {
+		code = req.TOTPCode
+	}
+	if code == "" && req.RecoveryCode == "" {
 		writeError(w, http.StatusBadRequest, "bad_request", "code or recovery_code required")
 		return
 	}
-	// In v0.1, MFA is validated during login. This endpoint is a no-op
-	// that returns success if the caller has a valid session.
-	_, ok := UserFromContext(r.Context())
+	tokenHash := auth.HashToken(req.MFAToken)
+	challenge, ok := s.getMFAChallenge(tokenHash)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "no_session", "no session")
+		writeError(w, http.StatusUnauthorized, "invalid_mfa_token", "MFA challenge expired or unknown")
+		return
+	}
+	u, err := s.cfg.Store.GetUserByID(r.Context(), challenge.UserID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			s.deleteMFAChallenge(tokenHash)
+			writeError(w, http.StatusUnauthorized, "invalid_mfa_token", "user no longer exists")
+			return
+		}
+		s.cfg.Logger.Error("mfa complete: get user", slog.Any("err", err))
+		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+		return
+	}
+	ts, err := s.cfg.Store.GetTOTPSecret(r.Context(), u.ID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			s.deleteMFAChallenge(tokenHash)
+			writeError(w, http.StatusUnauthorized, "mfa_not_configured", "MFA is not configured")
+			return
+		}
+		s.cfg.Logger.Error("mfa complete: get totp", slog.Any("err", err))
+		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+		return
+	}
+	if !ts.Enabled {
+		s.deleteMFAChallenge(tokenHash)
+		writeError(w, http.StatusUnauthorized, "mfa_not_enabled", "MFA is not enabled")
+		return
+	}
+
+	valid := false
+	if code != "" {
+		valid = auth.ValidateTOTP(ts.Secret, code)
+	}
+	if !valid && req.RecoveryCode != "" {
+		consumed, err := s.cfg.Store.ConsumeRecoveryCode(r.Context(), u.ID, strings.TrimSpace(req.RecoveryCode))
+		if err != nil {
+			s.cfg.Logger.Error("mfa complete: consume recovery code", slog.Any("err", err))
+			writeError(w, http.StatusInternalServerError, "internal", "internal error")
+			return
+		}
+		valid = consumed
+	}
+	if !valid {
+		s.deleteMFAChallenge(tokenHash)
+		writeError(w, http.StatusUnauthorized, "invalid_mfa_code", "invalid MFA code")
+		return
+	}
+
+	s.deleteMFAChallenge(tokenHash)
+	accessToken, expiresIn, err := s.issueSession(w, r, u)
+	if err != nil {
+		s.cfg.Logger.Error("mfa complete: issue session", slog.Any("err", err))
+		writeError(w, http.StatusInternalServerError, "internal", "internal error")
+		return
+	}
+	if wantsAuthJSON(r) {
+		writeAuthData(w, http.StatusOK, authTokenResponse{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   expiresIn,
+			MFARequired: false,
+		})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

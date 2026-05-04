@@ -60,7 +60,7 @@ type OperationHandle interface {
 // Connect dials the Incus Unix socket and returns a Client.
 func Connect(socketPath string) (Client, error) {
 	if socketPath == "" {
-		socketPath = "/var/lib/incus/user.socket"
+		socketPath = "/var/lib/incus/unix.socket.user"
 	}
 	return &realClient{
 		http: &http.Client{Transport: UnixTransport(socketPath)},

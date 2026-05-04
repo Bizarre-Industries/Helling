@@ -196,12 +196,12 @@ Helling/
 
 Helling integrates with Incus, Podman, and a local SQLite database. For development:
 
-| Service | Local bringup                                                | Port / Socket                                                                |
-| ------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Incus   | `sudo incus admin init` (once), `sudo systemctl start incus` | `/var/lib/incus/user.socket` in v0.1; HTTPS loopback is deferred for ADR-024 |
-| Podman  | `systemctl --user start podman.socket`                       | `/run/user/$UID/podman/podman.sock`                                          |
-| SQLite  | Auto-created by goose                                        | `/var/lib/helling/helling.db` (prod) or `./dev.db` (local)                   |
-| Caddy   | Skip for dev; `hellingd` listens directly                    | N/A in dev                                                                   |
+| Service | Local bringup                                                | Port / Socket                                                                     |
+| ------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Incus   | `sudo incus admin init` (once), `sudo systemctl start incus` | `/var/lib/incus/unix.socket.user` in v0.1; HTTPS loopback is deferred for ADR-024 |
+| Podman  | `systemctl --user start podman.socket`                       | `/run/user/$UID/podman/podman.sock`                                               |
+| SQLite  | Auto-created by goose                                        | `/var/lib/helling/helling.db` (prod) or `./dev.db` (local)                        |
+| Caddy   | Skip for dev; `hellingd` listens directly                    | N/A in dev                                                                        |
 
 Bootstrap a local database:
 

@@ -151,7 +151,7 @@ We do **not** persist instance state in SQLite. Incus is the source of truth for
 
 ## 5. Incus integration
 
-`hellingd` talks to Incus through a narrow internal client built on Go's standard `net/http` transport over the Incus restricted user socket at `/var/lib/incus/user.socket`. The direct Incus module dependency is intentionally avoided until the upstream vulnerability set is clear for our import graph.
+`hellingd` talks to Incus through a narrow internal client built on Go's standard `net/http` transport over the Incus restricted user socket at `/var/lib/incus/unix.socket.user`. The direct Incus module dependency is intentionally avoided until the upstream vulnerability set is clear for our import graph.
 
 Service account: the `hellingd` systemd unit runs as the `helling` user, added to the `incus` group. `incus-admin` is escalation, not default; if a future feature needs that authority it must move into a separate privileged helper rather than promoting `hellingd`.
 

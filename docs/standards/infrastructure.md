@@ -15,7 +15,7 @@ Deferred ADR-024 rule: delegated-user Incus operations must use the local HTTPS 
 
 Requirements:
   - v0.1 `/api/incus/*` rejects non-admin users.
-  - v0.1 hellingd connects to `/var/lib/incus/user.socket` as the `helling` user.
+  - v0.1 hellingd connects to `/var/lib/incus/unix.socket.user` as the `helling` user.
   - Do not use the Incus admin socket or `incus-admin` group from hellingd.
   - Do not use query-parameter project scoping as an authorization boundary.
 

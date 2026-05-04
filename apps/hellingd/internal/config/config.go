@@ -82,7 +82,7 @@ func Defaults() Config {
 			Argon2Parallelism: 4,
 		},
 		Incus: IncusConfig{
-			SocketPath: "/var/lib/incus/user.socket",
+			SocketPath: "/var/lib/incus/unix.socket.user",
 			Project:    "default",
 		},
 	}

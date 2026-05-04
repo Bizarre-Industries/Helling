@@ -27,7 +27,7 @@ Network (public)
 Caddy           ← runs as user `caddy`, supplementary group `helling-proxy`
   ↓ Unix socket /run/helling/api.sock (mode 0660, group helling-proxy)
 hellingd        ← runs as user `helling`, supplementary groups `helling-proxy`, `incus`
-  ↓ Unix socket /var/lib/incus/user.socket
+  ↓ Unix socket /var/lib/incus/unix.socket.user
 incusd          ← root daemon
 ```
 

@@ -40,7 +40,7 @@ Precedence:
 | `server.socket_path`            | string | yes      | `/run/helling/api.sock`            | Unix socket for edge proxy -> daemon traffic.                        |
 | `server.socket_group`           | string | yes      | `helling-proxy`                    | Socket group Caddy is added to during ISO first boot.                |
 | `server.socket_mode`            | int    | yes      | `432`                              | Decimal form of `0660`; YAML octal parsing is intentionally avoided. |
-| `incus.socket_path`             | string | no       | `/var/lib/incus/user.socket`       | Restricted Incus user socket for the `incus` group.                  |
+| `incus.socket_path`             | string | no       | `/var/lib/incus/unix.socket.user`  | Restricted Incus user socket for the `incus` group.                  |
 | `incus.project`                 | string | yes      | `default`                          | Incus project used by v0.1 operations.                               |
 | `auth.jwt_signing_key_path`     | string | yes      | `/var/lib/helling/jwt/ed25519.key` | Ed25519 signing key seed, created `0600` on first boot when absent.  |
 | `auth.setup_token_path`         | string | yes      | `/etc/helling/setup-token`         | One-time first-admin setup token path, created by ISO first boot.    |

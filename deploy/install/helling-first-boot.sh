@@ -161,7 +161,7 @@ auth:
   argon2_memory_kib: 65536
   argon2_parallelism: 4
 incus:
-  socket_path: /var/lib/incus/user.socket
+  socket_path: /var/lib/incus/unix.socket.user
   project: default
 YAML
   chown root:helling /etc/helling/helling.yaml

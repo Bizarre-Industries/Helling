@@ -15,7 +15,7 @@ Incus already supports trust-scoped client certificates and project restrictions
 
 For delegated non-admin Incus proxy access, Helling uses per-user Incus client
 certificates. v0.1 keeps raw `/api/incus/*` proxy routes admin-only and uses the
-restricted Incus `user.socket` for daemon-owned container operations until this
+restricted Incus user socket for daemon-owned container operations until this
 certificate transport is implemented end to end.
 
 Prerequisite transport requirement:

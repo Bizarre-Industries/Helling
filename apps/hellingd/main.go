@@ -207,7 +207,7 @@ func argon2ParamsFromConfig(cfg *config.AuthConfig) auth.Argon2Params {
 func incusProber(socketPath string) server.IncusProber {
 	return func(ctx context.Context) bool {
 		if socketPath == "" {
-			socketPath = "/var/lib/incus/user.socket"
+			socketPath = "/var/lib/incus/unix.socket.user"
 		}
 		var d net.Dialer
 		conn, err := d.DialContext(ctx, "unix", socketPath)

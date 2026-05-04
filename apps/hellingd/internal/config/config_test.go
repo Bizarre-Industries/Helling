@@ -131,6 +131,9 @@ func TestLoadAcceptsDefaultConfig(t *testing.T) {
 	if got := cfg.Server.SocketMode; got != 0o660 {
 		t.Fatalf("Server.SocketMode = %o, want 0660", got)
 	}
+	if got := cfg.Incus.SocketPath; got != "/var/lib/incus/unix.socket.user" {
+		t.Fatalf("Incus.SocketPath = %q, want Debian restricted user socket", got)
+	}
 }
 
 func writeConfig(t *testing.T, body string) string {

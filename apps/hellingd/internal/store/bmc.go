@@ -45,7 +45,8 @@ func (s *Store) CreateBMCEndpoint(ctx context.Context, userID int64, name, addre
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO bmc_endpoints (id, user_id, name, address, port, username, password, protocol, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		b.ID, b.UserID, b.Name, b.Address, b.Port, b.Username, b.Password, b.Protocol, now.Unix(), now.Unix(),
@@ -60,7 +61,8 @@ func (s *Store) CreateBMCEndpoint(ctx context.Context, userID int64, name, addre
 func (s *Store) GetBMCEndpoint(ctx context.Context, id string) (BMCEndpoint, error) {
 	var b BMCEndpoint
 	var createdAt, updatedAt int64
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, name, address, port, username, password, protocol, created_at, updated_at
 		 FROM bmc_endpoints WHERE id = ?`, id,
 	).Scan(&b.ID, &b.UserID, &b.Name, &b.Address, &b.Port, &b.Username, &b.Password, &b.Protocol, &createdAt, &updatedAt)

@@ -60,7 +60,8 @@ func run() error {
 	logger := newLogger(cfg.Log)
 	slog.SetDefault(logger)
 
-	logger.Info("starting hellingd",
+	logger.Info(
+		"starting hellingd",
 		slog.String("version", version),
 		slog.String("commit", commit),
 		slog.String("socket", cfg.Server.SocketPath),
@@ -91,7 +92,8 @@ func run() error {
 	// endpoints will return 503 until Incus is reachable.
 	incusClient, err := incus.Connect(cfg.Incus.SocketPath)
 	if err != nil {
-		logger.Warn("incus client unavailable; instance endpoints will return 503",
+		logger.Warn(
+			"incus client unavailable; instance endpoints will return 503",
 			slog.String("socket", cfg.Incus.SocketPath),
 			slog.Any("err", err),
 		)

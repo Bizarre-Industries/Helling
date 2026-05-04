@@ -82,7 +82,8 @@ func TestAuthLogin_StoresTokensAndPrintsConfirmation(t *testing.T) {
 		},
 	})
 
-	out, err := runCmd(t,
+	out, err := runCmd(
+		t,
 		[]string{"login", "--username", "admin", "--password", "fixture", "--api", srv.URL},
 		"",
 	)
@@ -119,7 +120,8 @@ func TestAuthSetup_PostsFirstAdminPayload(t *testing.T) {
 
 	passwordFile := writeSecretFile(t, "secret-password-123\n")
 	setupTokenFile := writeSecretFile(t, "0123456789abcdef0123456789abcdef\n")
-	out, err := runCmd(t,
+	out, err := runCmd(
+		t,
 		[]string{
 			"setup",
 			"--username", "admin",
@@ -180,7 +182,8 @@ func TestAuthLogin_MFAFlow(t *testing.T) {
 		},
 	})
 
-	out, err := runCmd(t,
+	out, err := runCmd(
+		t,
 		[]string{"login", "--username", "admin", "--password", "fixture", "--api", srv.URL},
 		"123456\n",
 	)
@@ -260,7 +263,8 @@ func TestAuthLogin_PromptsForMissingUsername(t *testing.T) {
 		},
 	})
 
-	_, err := runCmd(t,
+	_, err := runCmd(
+		t,
 		[]string{"login", "--password", "promptpw1234", "--api", srv.URL},
 		"admin\n",
 	)
@@ -287,7 +291,8 @@ func TestAuthLogin_MissingPasswordFailsNonInteractive(t *testing.T) {
 
 func TestAuthSetup_MissingSecretFilesFailNonInteractive(t *testing.T) {
 	useTempConfigDir(t)
-	_, err := runCmd(t,
+	_, err := runCmd(
+		t,
 		[]string{"setup", "--username", "admin", "--api", "http://127.0.0.1:8080"},
 		"",
 	)
@@ -299,7 +304,8 @@ func TestAuthSetup_MissingSecretFilesFailNonInteractive(t *testing.T) {
 	}
 
 	passwordFile := writeSecretFile(t, "secret-password-123\n")
-	_, err = runCmd(t,
+	_, err = runCmd(
+		t,
 		[]string{"setup", "--username", "admin", "--password-file", passwordFile, "--api", "http://127.0.0.1:8080"},
 		"",
 	)

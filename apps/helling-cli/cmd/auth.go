@@ -351,7 +351,8 @@ func newAuthWhoamiCmd() *cobra.Command {
 				return err
 			}
 			exp := time.Unix(expUnix, 0).UTC().Format(time.RFC3339)
-			_, err = fmt.Fprintf(cmd.OutOrStdout(),
+			_, err = fmt.Fprintf(
+				cmd.OutOrStdout(),
 				"user:    %s\nrole:    %s\nexpires: %s\napi:     %s\n",
 				username, role, exp, prof.API,
 			)

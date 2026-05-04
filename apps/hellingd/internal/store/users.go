@@ -34,7 +34,8 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash string, i
 	if isAdmin {
 		admin = 1
 	}
-	res, err := s.db.ExecContext(ctx,
+	res, err := s.db.ExecContext(
+		ctx,
 		`INSERT INTO users (username, password_hash, created_at, is_admin) VALUES (?, ?, ?, ?)`,
 		username, passwordHash, now, admin,
 	)
@@ -73,7 +74,8 @@ func (s *Store) CreateFirstAdmin(ctx context.Context, username, passwordHash str
 	}
 
 	now := time.Now().Unix()
-	res, err := tx.ExecContext(ctx,
+	res, err := tx.ExecContext(
+		ctx,
 		`INSERT INTO users (username, password_hash, created_at, is_admin) VALUES (?, ?, ?, 1)`,
 		username, passwordHash, now,
 	)
@@ -102,7 +104,8 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, e
 	var u User
 	var createdAt int64
 	var isAdmin int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, username, password_hash, created_at, is_admin FROM users WHERE username = ?`,
 		username,
 	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin)
@@ -122,7 +125,8 @@ func (s *Store) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var u User
 	var createdAt int64
 	var isAdmin int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, username, password_hash, created_at, is_admin FROM users WHERE id = ?`,
 		id,
 	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin)
@@ -177,7 +181,8 @@ func (s *Store) UpdateUser(ctx context.Context, id int64, passwordHash string, i
 	if isAdmin {
 		admin = 1
 	}
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE users SET password_hash = ?, is_admin = ? WHERE id = ?`,
 		passwordHash, admin, id,
 	)

@@ -177,7 +177,8 @@ func (s *Server) handleInstanceStateChange(w http.ResponseWriter, r *http.Reques
 
 	op, err := s.cfg.Incus.UpdateInstanceState(r.Context(), name, action, force, timeoutSec)
 	if err != nil {
-		s.cfg.Logger.Error("incus update state",
+		s.cfg.Logger.Error(
+			"incus update state",
 			slog.String("name", name),
 			slog.String("action", action),
 			slog.Any("err", err),

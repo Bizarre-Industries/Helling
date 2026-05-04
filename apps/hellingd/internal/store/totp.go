@@ -26,7 +26,8 @@ func (s *Store) GetTOTPSecret(ctx context.Context, userID int64) (TOTPSecret, er
 	var ts TOTPSecret
 	var createdAt, updatedAt int64
 	var enabled int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT user_id, secret, enabled, created_at, updated_at FROM totp_secrets WHERE user_id = ?`,
 		userID,
 	).Scan(&ts.UserID, &ts.Secret, &enabled, &createdAt, &updatedAt)
@@ -49,7 +50,8 @@ func (s *Store) SetTOTPSecret(ctx context.Context, userID int64, secret string, 
 	if enabled {
 		en = 1
 	}
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`INSERT INTO totp_secrets (user_id, secret, enabled, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET secret = excluded.secret, enabled = excluded.enabled, updated_at = excluded.updated_at`,
@@ -74,7 +76,8 @@ func (s *Store) DeleteTOTPSecret(ctx context.Context, userID int64) error {
 // Caller should delete existing codes first.
 func (s *Store) SaveRecoveryCodes(ctx context.Context, userID int64, codeHashes []string) error {
 	for _, h := range codeHashes {
-		_, err := s.db.ExecContext(ctx,
+		_, err := s.db.ExecContext(
+			ctx,
 			`INSERT INTO totp_recovery_codes (user_id, code_hash) VALUES (?, ?)`,
 			userID, h,
 		)
@@ -88,7 +91,8 @@ func (s *Store) SaveRecoveryCodes(ctx context.Context, userID int64, codeHashes 
 // ConsumeRecoveryCode verifies a raw recovery code against unused code hashes,
 // marks the matching row as used, and returns true when a code was consumed.
 func (s *Store) ConsumeRecoveryCode(ctx context.Context, userID int64, rawCode string) (bool, error) {
-	rows, err := s.db.QueryContext(ctx,
+	rows, err := s.db.QueryContext(
+		ctx,
 		`SELECT id, code_hash FROM totp_recovery_codes WHERE user_id = ? AND used = 0`,
 		userID,
 	)
@@ -118,7 +122,8 @@ func (s *Store) ConsumeRecoveryCode(ctx context.Context, userID int64, rawCode s
 		if !auth.VerifyRecoveryCode(rawCode, candidate.codeHash) {
 			continue
 		}
-		res, err := s.db.ExecContext(ctx,
+		res, err := s.db.ExecContext(
+			ctx,
 			`UPDATE totp_recovery_codes SET used = 1 WHERE id = ? AND user_id = ? AND used = 0`,
 			candidate.id, userID,
 		)
@@ -146,7 +151,8 @@ func (s *Store) DeleteRecoveryCodes(ctx context.Context, userID int64) error {
 // CountUnusedRecoveryCodes returns the number of unused recovery codes.
 func (s *Store) CountUnusedRecoveryCodes(ctx context.Context, userID int64) (int, error) {
 	var n int
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT COUNT(*) FROM totp_recovery_codes WHERE user_id = ? AND used = 0`,
 		userID,
 	).Scan(&n)

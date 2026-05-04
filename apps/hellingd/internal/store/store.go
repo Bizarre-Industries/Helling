@@ -100,7 +100,8 @@ func (s *Store) Migrate(ctx context.Context) error {
 		}
 
 		var alreadyApplied int
-		if err := s.db.QueryRowContext(ctx,
+		if err := s.db.QueryRowContext(
+			ctx,
 			`SELECT COUNT(*) FROM schema_migrations WHERE version = ?`, version,
 		).Scan(&alreadyApplied); err != nil {
 			return fmt.Errorf("checking migration %d: %w", version, err)
@@ -122,7 +123,8 @@ func (s *Store) Migrate(ctx context.Context) error {
 			_ = tx.Rollback()
 			return fmt.Errorf("running migration %d (%s): %w", version, f.Name(), err)
 		}
-		if _, err := tx.ExecContext(ctx,
+		if _, err := tx.ExecContext(
+			ctx,
 			`INSERT INTO schema_migrations (version, applied_at) VALUES (?, strftime('%s', 'now'))`,
 			version,
 		); err != nil {

@@ -322,7 +322,8 @@ func loggerMiddleware(base *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 			next.ServeHTTP(ww, r)
-			base.LogAttrs(r.Context(), slog.LevelInfo, "http_request",
+			base.LogAttrs(
+				r.Context(), slog.LevelInfo, "http_request",
 				slog.String("request_id", RequestIDFromContext(r.Context())),
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),

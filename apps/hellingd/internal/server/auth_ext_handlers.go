@@ -65,7 +65,8 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cfg.Logger.LogAttrs(r.Context(), slog.LevelInfo, "setup_admin_created",
+	s.cfg.Logger.LogAttrs(
+		r.Context(), slog.LevelInfo, "setup_admin_created",
 		slog.Int64("user_id", u.ID),
 		slog.String("username", u.Username),
 		slog.String("source_ip", clientIP(r)),

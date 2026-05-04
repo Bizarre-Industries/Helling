@@ -46,7 +46,8 @@ func (s *Store) CreateAPIToken(ctx context.Context, userID int64, name, tokenHas
 		unix := expiresAt.Unix()
 		exp = &unix
 	}
-	_, err = s.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(
+		ctx,
 		`INSERT INTO api_tokens (id, user_id, name, token_hash, scopes, created_at, expires_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		t.ID, t.UserID, t.Name, t.TokenHash, t.Scopes, now.Unix(), exp,
@@ -62,7 +63,8 @@ func (s *Store) GetAPITokenByHash(ctx context.Context, tokenHash string) (APITok
 	var t APIToken
 	var createdAt int64
 	var expiresAt, lastUsedAt sql.NullInt64
-	err := s.db.QueryRowContext(ctx,
+	err := s.db.QueryRowContext(
+		ctx,
 		`SELECT id, user_id, name, token_hash, scopes, created_at, expires_at, last_used_at
 		 FROM api_tokens WHERE token_hash = ?`,
 		tokenHash,
@@ -87,7 +89,8 @@ func (s *Store) GetAPITokenByHash(ctx context.Context, tokenHash string) (APITok
 
 // ListAPITokensByUser returns all non-expired tokens for a user.
 func (s *Store) ListAPITokensByUser(ctx context.Context, userID int64) ([]APIToken, error) {
-	rows, err := s.db.QueryContext(ctx,
+	rows, err := s.db.QueryContext(
+		ctx,
 		`SELECT id, user_id, name, token_hash, scopes, created_at, expires_at, last_used_at
 		 FROM api_tokens WHERE user_id = ? ORDER BY created_at DESC`,
 		userID,
@@ -130,7 +133,8 @@ func (s *Store) DeleteAPIToken(ctx context.Context, id string) error {
 
 // TouchAPIToken bumps last_used_at to now.
 func (s *Store) TouchAPIToken(ctx context.Context, tokenHash string) error {
-	_, err := s.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(
+		ctx,
 		`UPDATE api_tokens SET last_used_at = ? WHERE token_hash = ?`,
 		time.Now().Unix(), tokenHash,
 	)

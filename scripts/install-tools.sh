@@ -74,7 +74,7 @@ install_go_tools() {
   GOTOOLS=(
     "github.com/go-task/task/v3/cmd/task@latest"
     "github.com/evilmartians/lefthook@latest"
-    "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+    "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8"
     "golang.org/x/vuln/cmd/govulncheck@latest"
     "mvdan.cc/gofumpt@latest"
     "golang.org/x/tools/cmd/goimports@latest"

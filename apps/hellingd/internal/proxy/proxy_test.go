@@ -6,6 +6,26 @@ import (
 	"testing"
 )
 
+func TestProxyDirectorStripsHellingCredentials(t *testing.T) {
+	t.Parallel()
+	proxy := newUnixReverseProxy("/tmp/missing.sock", "/api/incus", "incus", "incus_error", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://helling.local/api/incus/1.0", http.NoBody)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer secret")
+	req.Header.Set("Cookie", "helling_session=secret")
+	req.Header.Set("X-Request-ID", "client-controlled")
+	req.Header.Set("X-Helling-User", "alice")
+	req.Header.Set("X-Helling-Project", "alice")
+	proxy.Director(req)
+	for _, name := range []string{"Authorization", "Cookie", "X-Request-ID", "X-Helling-User", "X-Helling-Project"} {
+		if got := req.Header.Get(name); got != "" {
+			t.Fatalf("%s header survived proxy director: %q", name, got)
+		}
+	}
+}
+
 func TestPodmanRequestAllowed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

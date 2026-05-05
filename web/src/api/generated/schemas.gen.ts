@@ -242,6 +242,11 @@ export const UserSchema = {
             description: 'True for the bootstrap admin user.',
             example: false
         },
+        incus_project: {
+            type: 'string',
+            description: 'Incus project assigned to this user for delegated proxy calls.',
+            example: 'alice'
+        },
         created_at: {
             type: 'string',
             description: 'Account creation time (RFC 3339).',
@@ -455,6 +460,1037 @@ export const OperationSchema = {
     }
 } as const;
 
+export const UserEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one user.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/User'
+        }
+    }
+} as const;
+
+export const UserListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing users.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'User payload list.',
+            example: [
+                {
+                    id: 1,
+                    username: 'admin',
+                    is_admin: true,
+                    incus_project: 'default',
+                    created_at: '2026-05-03T12:00:00Z'
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/User'
+            }
+        }
+    }
+} as const;
+
+export const UserCreateRequestSchema = {
+    type: 'object',
+    description: 'Request body for creating a local user.',
+    required: [
+        'username'
+    ],
+    properties: {
+        username: {
+            type: 'string',
+            description: 'Account username.',
+            minLength: 1,
+            maxLength: 32,
+            example: 'alice'
+        },
+        is_admin: {
+            type: 'boolean',
+            description: 'True when the created user should receive admin role.',
+            default: false,
+            example: false
+        },
+        incus_project: {
+            type: 'string',
+            description: 'Incus project assigned to the user\'s restricted certificate.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'alice'
+        }
+    }
+} as const;
+
+export const UserUpdateRequestSchema = {
+    type: 'object',
+    description: 'Partial request body for updating a local user.',
+    properties: {
+        is_admin: {
+            type: 'boolean',
+            description: 'Replacement admin-role flag.',
+            example: false
+        }
+    }
+} as const;
+
+export const UserScopeRequestSchema = {
+    type: 'object',
+    description: 'Request body for assigning a delegated Incus project scope.',
+    required: [
+        'scope'
+    ],
+    properties: {
+        scope: {
+            type: 'string',
+            description: 'Incus scope label in `incus:project:<name>` form.',
+            minLength: 1,
+            maxLength: 128,
+            example: 'incus:project:alice'
+        }
+    }
+} as const;
+
+export const UserScopeEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing the assigned user scope.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/UserScope'
+        }
+    }
+} as const;
+
+export const UserScopeSchema = {
+    type: 'object',
+    description: 'Delegated Incus scope assigned to a user.',
+    required: [
+        'scope'
+    ],
+    properties: {
+        scope: {
+            type: 'string',
+            description: 'Incus scope label in `incus:project:<name>` form.',
+            example: 'incus:project:alice'
+        }
+    }
+} as const;
+
+export const ScheduleSchema = {
+    type: 'object',
+    description: 'systemd timer-backed Helling schedule.',
+    required: [
+        'id',
+        'name',
+        'kind',
+        'target',
+        'on_calendar',
+        'enabled',
+        'created_at',
+        'updated_at'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Schedule UUID.',
+            format: 'uuid',
+            example: '018f3a40-0000-7000-8000-000000000000'
+        },
+        name: {
+            type: 'string',
+            description: 'Human label for the schedule.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'nightly-backup'
+        },
+        kind: {
+            type: 'string',
+            description: 'Scheduled operation kind.',
+            enum: [
+                'backup',
+                'snapshot'
+            ],
+            example: 'backup'
+        },
+        target: {
+            type: 'string',
+            description: 'Target instance, project, or Helling selector for the schedule.',
+            minLength: 1,
+            maxLength: 128,
+            example: 'vm-web-1'
+        },
+        on_calendar: {
+            type: 'string',
+            description: 'systemd OnCalendar expression.',
+            minLength: 1,
+            maxLength: 256,
+            example: 'daily'
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'True when the timer should be enabled.',
+            example: true
+        },
+        unit_name: {
+            type: 'string',
+            description: 'Base unit name without extension.',
+            example: 'helling-schedule-018f3a40-0000-7000-8000-000000000000'
+        },
+        last_run_at: {
+            type: 'string',
+            description: 'Last observed run timestamp.',
+            format: 'date-time',
+            nullable: true,
+            example: '2026-05-05T10:00:00Z'
+        },
+        next_run_at: {
+            type: 'string',
+            description: 'Next scheduled run timestamp when known.',
+            format: 'date-time',
+            nullable: true,
+            example: '2026-05-06T00:00:00Z'
+        },
+        last_status: {
+            type: 'string',
+            description: 'Last run status.',
+            enum: [
+                'success',
+                'failed',
+                'skipped',
+                'never'
+            ],
+            example: 'never'
+        },
+        last_error: {
+            type: 'string',
+            description: 'Last run error summary.',
+            nullable: true,
+            example: 'backup failed'
+        },
+        created_at: {
+            type: 'string',
+            description: 'Schedule creation time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        },
+        updated_at: {
+            type: 'string',
+            description: 'Schedule update time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        }
+    }
+} as const;
+
+export const ScheduleCreateRequestSchema = {
+    type: 'object',
+    description: 'Request body for creating a schedule.',
+    required: [
+        'name',
+        'kind',
+        'target',
+        'on_calendar'
+    ],
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Human label for the schedule.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'nightly-backup'
+        },
+        kind: {
+            type: 'string',
+            description: 'Scheduled operation kind.',
+            enum: [
+                'backup',
+                'snapshot'
+            ],
+            example: 'backup'
+        },
+        target: {
+            type: 'string',
+            description: 'Target instance, project, or Helling selector for the schedule.',
+            minLength: 1,
+            maxLength: 128,
+            example: 'vm-web-1'
+        },
+        on_calendar: {
+            type: 'string',
+            description: 'systemd OnCalendar expression.',
+            minLength: 1,
+            maxLength: 256,
+            example: 'daily'
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Initial timer enabled state.',
+            default: true,
+            example: true
+        }
+    }
+} as const;
+
+export const ScheduleUpdateRequestSchema = {
+    type: 'object',
+    description: 'Partial request body for updating a schedule.',
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Replacement human label.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'nightly-backup'
+        },
+        on_calendar: {
+            type: 'string',
+            description: 'Replacement systemd OnCalendar expression.',
+            minLength: 1,
+            maxLength: 256,
+            example: 'Mon *-*-* 03:00:00'
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Replacement enabled state.',
+            example: true
+        }
+    }
+} as const;
+
+export const ScheduleEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one schedule.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/Schedule'
+        }
+    }
+} as const;
+
+export const ScheduleListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing schedules.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'Schedule payload list.',
+            example: [
+                {
+                    id: '018f3a40-0000-7000-8000-000000000000',
+                    name: 'nightly-backup',
+                    kind: 'backup',
+                    target: 'vm-web-1',
+                    on_calendar: 'daily',
+                    enabled: true,
+                    created_at: '2026-05-05T09:00:00Z',
+                    updated_at: '2026-05-05T09:00:00Z'
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/Schedule'
+            }
+        }
+    }
+} as const;
+
+export const WebhookSchema = {
+    type: 'object',
+    description: 'Outbound webhook definition without secret material.',
+    required: [
+        'id',
+        'name',
+        'url',
+        'events',
+        'enabled',
+        'created_at',
+        'updated_at'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Webhook UUID.',
+            format: 'uuid',
+            example: '018f3a50-0000-7000-8000-000000000000'
+        },
+        name: {
+            type: 'string',
+            description: 'Human label for the webhook.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'ops'
+        },
+        url: {
+            type: 'string',
+            description: 'HTTPS webhook destination.',
+            format: 'uri',
+            example: 'https://hooks.example.com/helling'
+        },
+        events: {
+            type: 'array',
+            description: 'Event types delivered to this webhook.',
+            items: {
+                type: 'string',
+                description: 'Helling event type.',
+                example: 'instance.started'
+            }
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'True when delivery is enabled.',
+            example: true
+        },
+        created_at: {
+            type: 'string',
+            description: 'Webhook creation time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        },
+        updated_at: {
+            type: 'string',
+            description: 'Webhook update time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        }
+    }
+} as const;
+
+export const WebhookCreateRequestSchema = {
+    type: 'object',
+    description: 'Request body for creating a webhook.',
+    required: [
+        'name',
+        'url',
+        'events'
+    ],
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Human label for the webhook.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'ops'
+        },
+        url: {
+            type: 'string',
+            description: 'HTTPS webhook destination.',
+            format: 'uri',
+            example: 'https://hooks.example.com/helling'
+        },
+        events: {
+            type: 'array',
+            description: 'Event types delivered to this webhook.',
+            minItems: 1,
+            example: [
+                'instance.started'
+            ],
+            items: {
+                type: 'string',
+                description: 'Helling event type.',
+                example: 'instance.started'
+            }
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Initial delivery enabled state.',
+            default: true,
+            example: true
+        }
+    }
+} as const;
+
+export const WebhookUpdateRequestSchema = {
+    type: 'object',
+    description: 'Partial request body for updating a webhook.',
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Replacement human label.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'ops'
+        },
+        url: {
+            type: 'string',
+            description: 'Replacement HTTPS webhook destination.',
+            format: 'uri',
+            example: 'https://hooks.example.com/helling'
+        },
+        events: {
+            type: 'array',
+            description: 'Replacement event type list.',
+            example: [
+                'instance.started'
+            ],
+            items: {
+                type: 'string',
+                description: 'Helling event type.',
+                example: 'instance.started'
+            }
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Replacement delivery enabled state.',
+            example: true
+        }
+    }
+} as const;
+
+export const WebhookEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one webhook.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/Webhook'
+        }
+    }
+} as const;
+
+export const WebhookListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing webhooks.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'Webhook payload list.',
+            example: [
+                {
+                    id: '018f3a50-0000-7000-8000-000000000000',
+                    name: 'ops',
+                    url: 'https://hooks.example.com/helling',
+                    events: [
+                        'instance.started'
+                    ],
+                    enabled: true,
+                    created_at: '2026-05-05T09:00:00Z',
+                    updated_at: '2026-05-05T09:00:00Z'
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/Webhook'
+            }
+        }
+    }
+} as const;
+
+export const WebhookDeliverySchema = {
+    type: 'object',
+    description: 'Webhook delivery attempt record.',
+    required: [
+        'id',
+        'webhook_id',
+        'event_id',
+        'event_type',
+        'status',
+        'attempt',
+        'created_at'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Delivery UUID.',
+            format: 'uuid',
+            example: '018f3a51-0000-7000-8000-000000000000'
+        },
+        webhook_id: {
+            type: 'string',
+            description: 'Webhook UUID.',
+            format: 'uuid',
+            example: '018f3a50-0000-7000-8000-000000000000'
+        },
+        event_id: {
+            type: 'string',
+            description: 'Event UUID.',
+            format: 'uuid',
+            example: '018f3a52-0000-7000-8000-000000000000'
+        },
+        event_type: {
+            type: 'string',
+            description: 'Helling event type.',
+            example: 'webhook.test'
+        },
+        status: {
+            type: 'string',
+            description: 'Delivery status.',
+            enum: [
+                'pending',
+                'success',
+                'failed'
+            ],
+            example: 'pending'
+        },
+        attempt: {
+            type: 'integer',
+            description: 'Attempt number starting at 1.',
+            minimum: 1,
+            example: 1
+        },
+        http_status: {
+            type: 'integer',
+            description: 'HTTP response status when available.',
+            nullable: true,
+            example: 200
+        },
+        error: {
+            type: 'string',
+            description: 'Delivery error summary.',
+            nullable: true,
+            example: 'request timed out'
+        },
+        created_at: {
+            type: 'string',
+            description: 'Delivery creation time.',
+            format: 'date-time',
+            example: '2026-05-05T10:00:00Z'
+        }
+    }
+} as const;
+
+export const WebhookDeliveryEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one webhook delivery.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/WebhookDelivery'
+        }
+    }
+} as const;
+
+export const FirewallRuleSchema = {
+    type: 'object',
+    description: 'Helling-managed host firewall rule.',
+    required: [
+        'id',
+        'direction',
+        'action',
+        'protocol',
+        'enabled',
+        'nft_comment',
+        'created_at',
+        'updated_at'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Firewall rule UUID.',
+            format: 'uuid',
+            example: '018f3a60-0000-7000-8000-000000000000'
+        },
+        direction: {
+            type: 'string',
+            description: 'nftables base chain direction.',
+            enum: [
+                'input',
+                'output',
+                'forward'
+            ],
+            example: 'input'
+        },
+        action: {
+            type: 'string',
+            description: 'Firewall verdict.',
+            enum: [
+                'accept',
+                'drop',
+                'reject'
+            ],
+            example: 'accept'
+        },
+        protocol: {
+            type: 'string',
+            description: 'Layer-4 protocol.',
+            enum: [
+                'tcp',
+                'udp',
+                'icmp',
+                'any'
+            ],
+            example: 'tcp'
+        },
+        source_cidr: {
+            type: 'string',
+            description: 'Optional source CIDR.',
+            nullable: true,
+            example: '203.0.113.10/32'
+        },
+        destination_cidr: {
+            type: 'string',
+            description: 'Optional destination CIDR.',
+            nullable: true,
+            example: '10.0.0.5/32'
+        },
+        destination_port: {
+            type: 'integer',
+            description: 'Optional destination port.',
+            minimum: 1,
+            maximum: 65535,
+            nullable: true,
+            example: 22
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'True when the rule is active.',
+            example: true
+        },
+        comment: {
+            type: 'string',
+            description: 'Operator-facing comment.',
+            nullable: true,
+            example: 'ssh from admin'
+        },
+        nft_comment: {
+            type: 'string',
+            description: 'nftables comment used to identify Helling-managed rules.',
+            example: 'helling:018f3a60-0000-7000-8000-000000000000'
+        },
+        nft_handle: {
+            type: 'integer',
+            description: 'nftables handle when known.',
+            nullable: true,
+            example: 42
+        },
+        created_at: {
+            type: 'string',
+            description: 'Rule creation time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        },
+        updated_at: {
+            type: 'string',
+            description: 'Rule update time.',
+            format: 'date-time',
+            example: '2026-05-05T09:00:00Z'
+        }
+    }
+} as const;
+
+export const FirewallRuleCreateRequestSchema = {
+    type: 'object',
+    description: 'Request body for creating a host firewall rule.',
+    required: [
+        'direction',
+        'action',
+        'protocol'
+    ],
+    properties: {
+        direction: {
+            type: 'string',
+            description: 'nftables base chain direction.',
+            enum: [
+                'input',
+                'output',
+                'forward'
+            ],
+            example: 'input'
+        },
+        action: {
+            type: 'string',
+            description: 'Firewall verdict.',
+            enum: [
+                'accept',
+                'drop',
+                'reject'
+            ],
+            example: 'accept'
+        },
+        protocol: {
+            type: 'string',
+            description: 'Layer-4 protocol.',
+            enum: [
+                'tcp',
+                'udp',
+                'icmp',
+                'any'
+            ],
+            example: 'tcp'
+        },
+        source_cidr: {
+            type: 'string',
+            description: 'Optional source CIDR.',
+            example: '203.0.113.10/32'
+        },
+        destination_cidr: {
+            type: 'string',
+            description: 'Optional destination CIDR.',
+            example: '10.0.0.5/32'
+        },
+        destination_port: {
+            type: 'integer',
+            description: 'Optional destination port.',
+            minimum: 1,
+            maximum: 65535,
+            example: 22
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Initial active state.',
+            default: true,
+            example: true
+        },
+        comment: {
+            type: 'string',
+            description: 'Operator-facing comment.',
+            maxLength: 256,
+            example: 'ssh from admin'
+        }
+    }
+} as const;
+
+export const FirewallRuleEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one host firewall rule.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/FirewallRule'
+        }
+    }
+} as const;
+
+export const FirewallRuleListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing host firewall rules.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'Host firewall rule payload list.',
+            example: [
+                {
+                    id: '018f3a60-0000-7000-8000-000000000000',
+                    direction: 'input',
+                    action: 'accept',
+                    protocol: 'tcp',
+                    source_cidr: '203.0.113.10/32',
+                    destination_port: 22,
+                    enabled: true,
+                    nft_comment: 'helling:018f3a60-0000-7000-8000-000000000000',
+                    created_at: '2026-05-05T09:00:00Z',
+                    updated_at: '2026-05-05T09:00:00Z'
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/FirewallRule'
+            }
+        }
+    }
+} as const;
+
+export const EventSchema = {
+    type: 'object',
+    description: 'Helling event payload shared by SSE and webhooks.',
+    required: [
+        'id',
+        'type',
+        'time',
+        'source',
+        'subject',
+        'data'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Event UUID.',
+            format: 'uuid',
+            example: '018f3a41-0000-7000-8000-000000000000'
+        },
+        type: {
+            type: 'string',
+            description: 'Helling event type.',
+            example: 'instance.started'
+        },
+        time: {
+            type: 'string',
+            description: 'Event timestamp.',
+            format: 'date-time',
+            example: '2026-05-05T10:00:00Z'
+        },
+        source: {
+            type: 'string',
+            description: 'Source subsystem.',
+            enum: [
+                'incus',
+                'podman',
+                'helling'
+            ],
+            example: 'incus'
+        },
+        subject: {
+            type: 'string',
+            description: 'Resource affected by the event.',
+            example: 'vm-web-1'
+        },
+        data: {
+            type: 'object',
+            description: 'Event-specific metadata.',
+            additionalProperties: true,
+            example: {}
+        }
+    }
+} as const;
+
+export const EventEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing one event.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            $ref: '#/components/schemas/Event'
+        }
+    }
+} as const;
+
+export const EventListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing events.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'Event payload list.',
+            example: [
+                {
+                    id: '018f3a41-0000-7000-8000-000000000000',
+                    type: 'instance.started',
+                    time: '2026-05-05T10:00:00Z',
+                    source: 'incus',
+                    subject: 'vm-web-1',
+                    data: {}
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/Event'
+            }
+        }
+    }
+} as const;
+
+export const AuditEventSchema = {
+    type: 'object',
+    description: 'Journal-backed Helling audit event.',
+    required: [
+        'time',
+        'action',
+        'outcome',
+        'message'
+    ],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Event id derived from journal cursor or generated fallback.',
+            example: '018f3a70-0000-7000-8000-000000000000'
+        },
+        time: {
+            type: 'string',
+            description: 'Audit timestamp.',
+            format: 'date-time',
+            example: '2026-05-05T10:00:00Z'
+        },
+        actor: {
+            type: 'string',
+            description: 'Actor username when known.',
+            example: 'admin'
+        },
+        action: {
+            type: 'string',
+            description: 'Helling audit action.',
+            example: 'schedule.create'
+        },
+        outcome: {
+            type: 'string',
+            description: 'Audit outcome.',
+            enum: [
+                'success',
+                'failure',
+                'denied'
+            ],
+            example: 'success'
+        },
+        target_type: {
+            type: 'string',
+            description: 'Target resource type.',
+            example: 'schedule'
+        },
+        target_id: {
+            type: 'string',
+            description: 'Target resource identifier.',
+            example: '018f3a40-0000-7000-8000-000000000000'
+        },
+        message: {
+            type: 'string',
+            description: 'Human-readable audit summary.',
+            example: 'schedule created'
+        },
+        metadata: {
+            type: 'object',
+            description: 'Additional journal fields after redaction.',
+            additionalProperties: true,
+            example: {}
+        }
+    }
+} as const;
+
+export const AuditEventListEnvelopeSchema = {
+    type: 'object',
+    description: 'Envelope containing audit events.',
+    required: [
+        'data'
+    ],
+    properties: {
+        data: {
+            type: 'array',
+            description: 'Audit event payload list.',
+            example: [
+                {
+                    id: '018f3a70-0000-7000-8000-000000000000',
+                    time: '2026-05-05T10:00:00Z',
+                    actor: 'admin',
+                    action: 'schedule.create',
+                    outcome: 'success',
+                    target_type: 'schedule',
+                    target_id: '018f3a40-0000-7000-8000-000000000000',
+                    message: 'schedule created'
+                }
+            ],
+            items: {
+                $ref: '#/components/schemas/AuditEvent'
+            }
+        }
+    }
+} as const;
+
 export const ErrorSchema = {
     type: 'object',
     description: 'Standard error envelope returned by 4xx and 5xx responses.',
@@ -480,6 +1516,167 @@ export const ErrorSchema = {
             example: {
                 field: 'name'
             }
+        }
+    }
+} as const;
+
+export const UserCreateRequestWritableSchema = {
+    type: 'object',
+    description: 'Request body for creating a local user.',
+    required: [
+        'username',
+        'password'
+    ],
+    properties: {
+        username: {
+            type: 'string',
+            description: 'Account username.',
+            minLength: 1,
+            maxLength: 32,
+            example: 'alice'
+        },
+        password: {
+            type: 'string',
+            description: 'Initial account password.',
+            minLength: 8,
+            maxLength: 1024,
+            format: 'password',
+            writeOnly: true,
+            example: 'correct horse battery staple'
+        },
+        is_admin: {
+            type: 'boolean',
+            description: 'True when the created user should receive admin role.',
+            default: false,
+            example: false
+        },
+        incus_project: {
+            type: 'string',
+            description: 'Incus project assigned to the user\'s restricted certificate.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'alice'
+        }
+    }
+} as const;
+
+export const UserUpdateRequestWritableSchema = {
+    type: 'object',
+    description: 'Partial request body for updating a local user.',
+    properties: {
+        password: {
+            type: 'string',
+            description: 'Replacement account password.',
+            minLength: 8,
+            maxLength: 1024,
+            format: 'password',
+            writeOnly: true,
+            example: 'correct horse battery staple'
+        },
+        is_admin: {
+            type: 'boolean',
+            description: 'Replacement admin-role flag.',
+            example: false
+        }
+    }
+} as const;
+
+export const WebhookCreateRequestWritableSchema = {
+    type: 'object',
+    description: 'Request body for creating a webhook.',
+    required: [
+        'name',
+        'url',
+        'events',
+        'secret'
+    ],
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Human label for the webhook.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'ops'
+        },
+        url: {
+            type: 'string',
+            description: 'HTTPS webhook destination.',
+            format: 'uri',
+            example: 'https://hooks.example.com/helling'
+        },
+        events: {
+            type: 'array',
+            description: 'Event types delivered to this webhook.',
+            minItems: 1,
+            example: [
+                'instance.started'
+            ],
+            items: {
+                type: 'string',
+                description: 'Helling event type.',
+                example: 'instance.started'
+            }
+        },
+        secret: {
+            type: 'string',
+            description: 'HMAC secret. Stored encrypted and never returned.',
+            minLength: 16,
+            maxLength: 512,
+            format: 'password',
+            writeOnly: true,
+            example: 'redacted-example'
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Initial delivery enabled state.',
+            default: true,
+            example: true
+        }
+    }
+} as const;
+
+export const WebhookUpdateRequestWritableSchema = {
+    type: 'object',
+    description: 'Partial request body for updating a webhook.',
+    properties: {
+        name: {
+            type: 'string',
+            description: 'Replacement human label.',
+            minLength: 1,
+            maxLength: 63,
+            example: 'ops'
+        },
+        url: {
+            type: 'string',
+            description: 'Replacement HTTPS webhook destination.',
+            format: 'uri',
+            example: 'https://hooks.example.com/helling'
+        },
+        events: {
+            type: 'array',
+            description: 'Replacement event type list.',
+            example: [
+                'instance.started'
+            ],
+            items: {
+                type: 'string',
+                description: 'Helling event type.',
+                example: 'instance.started'
+            }
+        },
+        secret: {
+            type: 'string',
+            description: 'Replacement HMAC secret. Stored encrypted and never returned.',
+            minLength: 16,
+            maxLength: 512,
+            format: 'password',
+            writeOnly: true,
+            example: 'redacted-example'
+        },
+        enabled: {
+            type: 'boolean',
+            description: 'Replacement delivery enabled state.',
+            example: true
         }
     }
 } as const;

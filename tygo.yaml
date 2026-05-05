@@ -1,0 +1,10 @@
+type_mappings:
+  time.Time: string
+packages:
+  - path: github.com/Bizarre-Industries/helling/apps/hellingd/internal/events
+    output_path: web/src/api/events.gen.ts
+    indent: "  "
+    enum_style: union
+    preserve_comments: none
+    frontmatter: |
+      export type EventData = Record<string, unknown>;

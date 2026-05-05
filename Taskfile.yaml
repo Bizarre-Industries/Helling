@@ -78,6 +78,7 @@ tasks:
       - task: gen:openapi
       - task: gen:go:cli
       - task: gen:frontend
+      - task: gen:events
       - task: gen:sqlc
 
   install:
@@ -417,17 +418,19 @@ tasks:
   check:sql:lint:
     cmds:
       - |
-        if [ ! -d db/ ]; then exit 0; fi
-        sqlfluff lint db/
+        mig=apps/hellingd/internal/store/migrations
+        if [ ! -d "$mig" ]; then exit 0; fi
+        sqlfluff lint --dialect sqlite --exclude-rules LT01,LT02,RF04 "$mig"
 
   check:sql:sqlc:
     cmds:
       - |
         if [ ! -f sqlc.yaml ]; then exit 0; fi
         sqlc generate
-        if ! git diff --quiet -- internal/db/queries 2>/dev/null; then
+        if ! git diff --quiet -- apps/hellingd/internal/store/sqlc 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard -- apps/hellingd/internal/store/sqlc)" ]; then
           echo "FAIL: sqlc-generated code out of sync. Run: sqlc generate"
-          git diff --stat -- internal/db/queries
+          git diff --stat -- apps/hellingd/internal/store/sqlc
+          git ls-files --others --exclude-standard -- apps/hellingd/internal/store/sqlc
           exit 1
         fi
 
@@ -435,7 +438,7 @@ tasks:
     desc: Apply and roll back hellingd goose migrations against a throwaway DB.
     cmds:
       - |
-        mig=apps/hellingd/internal/db/migrations
+        mig=apps/hellingd/internal/store/migrations
         if [ ! -d "$mig" ]; then exit 0; fi
         tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
         export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="$tmp/test.db"
@@ -449,7 +452,7 @@ tasks:
       DB: '{{.HELLING_DB | default "helling-dev.db"}}'
     cmds:
       - |
-        mig=apps/hellingd/internal/db/migrations
+        mig=apps/hellingd/internal/store/migrations
         export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
         goose -dir "$mig" up
 
@@ -459,7 +462,7 @@ tasks:
       DB: '{{.HELLING_DB | default "helling-dev.db"}}'
     cmds:
       - |
-        mig=apps/hellingd/internal/db/migrations
+        mig=apps/hellingd/internal/store/migrations
         export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
         goose -dir "$mig" down-to 0
         goose -dir "$mig" up
@@ -470,7 +473,7 @@ tasks:
       DB: '{{.HELLING_DB | default "helling-dev.db"}}'
     cmds:
       - |
-        mig=apps/hellingd/internal/db/migrations
+        mig=apps/hellingd/internal/store/migrations
         export GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING="{{.DB}}"
         goose -dir "$mig" status
 
@@ -547,9 +550,10 @@ tasks:
       - |
         if [ ! -f go.mod ]; then echo "no go.mod yet; nothing to build"; exit 0; fi
         mkdir -p bin
-        for cmd in apps/hellingd apps/helling-cli; do
+        for cmd in apps/hellingd apps/helling-cli apps/hellingd/cmd/helling-unit-link apps/hellingd/cmd/helling-incus-trust apps/hellingd/cmd/helling-firewall; do
           if [ -d "$cmd" ]; then
             name=$(basename "$cmd")
+            if [ "$cmd" = "apps/helling-cli" ]; then name=helling; fi
             go build -trimpath -ldflags='-s -w' -o "bin/$name" "./$cmd"
           fi
         done
@@ -562,9 +566,10 @@ tasks:
       - |
         if [ ! -f go.mod ]; then echo "no go.mod yet; nothing to build"; exit 0; fi
         mkdir -p "bin/linux-{{.ARCH}}"
-        for cmd in apps/hellingd apps/helling-cli; do
+        for cmd in apps/hellingd apps/helling-cli apps/hellingd/cmd/helling-unit-link apps/hellingd/cmd/helling-incus-trust apps/hellingd/cmd/helling-firewall; do
           if [ -d "$cmd" ]; then
             name=$(basename "$cmd")
+            if [ "$cmd" = "apps/helling-cli" ]; then name=helling; fi
             GOOS=linux GOARCH={{.ARCH}} CGO_ENABLED=0 \
               go build -trimpath -ldflags='-s -w' -o "bin/linux-{{.ARCH}}/$name" "./$cmd" \
               || echo "warn: pure cross-compile of $name failed (CGO needed); deploy-rsync.sh falls back to in-VM build"
@@ -586,7 +591,7 @@ tasks:
       - bash scripts/build-iso.sh --prepare-only
 
   iso:build:
-    desc: Build the Helling Debian installer ISO with live-build. Requires Debian + root/sudo.
+    desc: Build the release-gate Helling Debian installer ISO with live-build. Requires HELLING_ISO_RELEASE_GATE=1 unless HEAD is a v* tag.
     cmds:
       - bash scripts/build-iso.sh
 
@@ -594,8 +599,23 @@ tasks:
   # VM (Parallels primary, Lima fallback) — ADR-052
   # ============================================================
 
+  vm:parallels:packer:init:
+    desc: Install/resolve the Packer Parallels plugin for the Debian dev image.
+    cmds:
+      - bash scripts/parallels-vm-build-dev.sh --init-only
+
+  vm:parallels:packer:validate:
+    desc: Validate the Packer Parallels Debian dev image template without building it.
+    cmds:
+      - bash scripts/parallels-vm-build-dev.sh --validate-only
+
+  vm:parallels:build-image:
+    desc: Build and register the Packer-managed Debian Parallels dev VM image.
+    cmds:
+      - bash scripts/parallels-vm-build-dev.sh
+
   vm:parallels:up:
-    desc: Bootstrap VM if missing, then start it.
+    desc: Start the registered Parallels dev VM; point missing VMs at the explicit Packer build.
     cmds:
       - |
         if ! command -v prlctl >/dev/null 2>&1; then
@@ -604,11 +624,19 @@ tasks:
         fi
         VM="${HELLING_VM_NAME:-helling-dev}"
         if ! prlctl list -a 2>/dev/null | awk '{print $NF}' | grep -qx "$VM"; then
-          bash scripts/parallels-vm-bootstrap.sh
-        else
-          state=$(prlctl list -a 2>/dev/null | awk -v n="$VM" '$NF==n {print $2}')
-          [ "$state" = "running" ] || prlctl start "$VM"
+          if [ -d "${HELLING_PACKER_OUTPUT_DIR:-dist/packer/$VM}/$VM.pvm" ]; then
+            bash scripts/parallels-vm-build-dev.sh --register-only
+          elif [ "${HELLING_VM_CREATE:-}" = "manual" ]; then
+            bash scripts/parallels-vm-bootstrap.sh
+          else
+            echo "Parallels VM '$VM' is not registered."
+            echo "Run: task vm:parallels:build-image"
+            echo "Legacy manual install path: HELLING_VM_CREATE=manual task vm:parallels:up"
+            exit 1
+          fi
         fi
+        state=$(prlctl list -a 2>/dev/null | awk -v n="$VM" '$NF==n {print $2}')
+        [ "$state" = "running" ] || prlctl start "$VM"
 
   vm:parallels:down:
     desc: Stop the Parallels dev VM.
@@ -651,17 +679,199 @@ tasks:
       - task: vm:parallels:sync
 
   vm:parallels:smoke:
-    desc: Probe /healthz on hellingd's Unix socket in the VM.
+    desc: Run bounded v0.2 VM smoke checks over the Parallels VM.
     cmds:
       - |
         : "${HELLING_VM_HOST:?set HELLING_VM_HOST=<vm-ip>}"
-        ssh -o BatchMode=yes -p "${HELLING_VM_SSH_PORT:-22}" "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" \
-          "curl -fsS --unix-socket /run/helling/api.sock http://helling/healthz" || {
-          echo "FAIL: hellingd health probe non-200 on /run/helling/api.sock"
+        VM_USER="${HELLING_VM_USER:-helling}"
+        VM_SSH_PORT="${HELLING_VM_SSH_PORT:-22}"
+        TOKEN="${HELLING_VM_TOKEN:-}"
+        TARGET="${HELLING_VM_SMOKE_TARGET:-}"
+        WEBHOOK_URL="${HELLING_VM_WEBHOOK_URL:-}"
+        NONADMIN_TOKEN="${HELLING_VM_NONADMIN_TOKEN:-}"
+        WEB_URL="${HELLING_VM_WEB_URL:-https://127.0.0.1:8006}"
+        ALLOW_SKIPS="${HELLING_VM_SMOKE_ALLOW_SKIPS:-}"
+        encode_b64() {
+          printf '%s' "$1" | base64 | tr -d '\n'
+        }
+        {
+          printf 'set -u\n\n'
+          printf 'token_b64=%s\n' "$(encode_b64 "$TOKEN")"
+          printf 'target_b64=%s\n' "$(encode_b64 "$TARGET")"
+          printf 'webhook_url_b64=%s\n' "$(encode_b64 "$WEBHOOK_URL")"
+          printf 'nonadmin_token_b64=%s\n' "$(encode_b64 "$NONADMIN_TOKEN")"
+          printf 'web_url_b64=%s\n' "$(encode_b64 "$WEB_URL")"
+          printf 'allow_skips_b64=%s\n\n' "$(encode_b64 "$ALLOW_SKIPS")"
+          cat <<'REMOTE'
+        set -u
+
+        decode_b64() {
+          if [ -z "$1" ]; then
+            return 0
+          fi
+          printf '%s' "$1" | base64 -d
+        }
+
+        token="$(decode_b64 "$token_b64")"
+        target="$(decode_b64 "$target_b64")"
+        webhook_url="$(decode_b64 "$webhook_url_b64")"
+        nonadmin_token="$(decode_b64 "$nonadmin_token_b64")"
+        web_url="$(decode_b64 "$web_url_b64")"
+        allow_skips="$(decode_b64 "$allow_skips_b64")"
+
+        if [ -z "$web_url" ]; then
+          web_url="https://127.0.0.1:8006"
+        fi
+        socket="/run/helling/api.sock"
+        passed=0
+        skipped=0
+
+        pass() {
+          passed=$((passed + 1))
+          printf 'PASS: %s\n' "$*"
+        }
+        skip() {
+          skipped=$((skipped + 1))
+          printf 'SKIP: %s\n' "$*"
+        }
+        fail() {
+          printf 'FAIL: %s\n' "$*" >&2
           exit 1
         }
-        echo
-        echo "✓ hellingd health probe green"
+        skip_or_fail() {
+          if [ "$allow_skips" = "1" ]; then
+            skip "$*"
+          else
+            fail "$* (set HELLING_VM_SMOKE_ALLOW_SKIPS=1 for health-only dev smoke)"
+          fi
+        }
+        api() {
+          method="$1"
+          path="$2"
+          body="${3:-}"
+          if [ -n "$body" ]; then
+            curl -fsS --unix-socket "$socket" \
+              -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' \
+              -X "$method" --data "$body" "http://helling$path"
+          else
+            curl -fsS --unix-socket "$socket" \
+              -H "Authorization: Bearer $token" \
+              -X "$method" "http://helling$path"
+          fi
+        }
+        json_id() {
+          sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+        }
+
+        curl -fsS --unix-socket "$socket" http://helling/healthz >/dev/null ||
+          fail "hellingd health probe non-200 on $socket"
+        pass "hellingd health probe green"
+
+        [ -x /usr/bin/helling ] ||
+          fail "schedule unit CLI path /usr/bin/helling is missing or not executable"
+        pass "schedule unit CLI path exists at /usr/bin/helling"
+
+        if sudo -n test -r /etc/helling/schedule-runner.token; then
+          pass "schedule runner token is provisioned and root-readable"
+        else
+          fail "schedule runner token is missing or unreadable at /etc/helling/schedule-runner.token"
+        fi
+
+        docs_html="$(curl -kfsS "$web_url/api-docs")" ||
+          fail "dashboard API docs route did not render from $web_url/api-docs"
+        if printf '%s\n' "$docs_html" | grep -qi 'helling'; then
+          pass "dashboard API docs route returns the WebUI shell"
+        else
+          fail "dashboard API docs route did not render from $web_url/api-docs"
+        fi
+        app_asset="$(printf '%s\n' "$docs_html" | sed -n 's/.*src="\([^"]*assets\/index[^"]*\.js\)".*/\1/p' | head -n 1)"
+        [ -n "$app_asset" ] ||
+          fail "dashboard API docs route did not expose the app bundle asset"
+        app_js="$(curl -kfsS "$web_url$app_asset")" ||
+          fail "dashboard app bundle asset could not be fetched"
+        if printf '%s\n' "$app_js" | grep -q 'api-docs'; then
+          pass "dashboard app bundle contains the api-docs route"
+        else
+          fail "dashboard app bundle is missing the api-docs route"
+        fi
+
+        if [ -z "$token" ]; then
+          skip_or_fail "authenticated v0.2 checks require HELLING_VM_TOKEN"
+          printf 'v0.2 smoke summary: %d passed, %d skipped\n' "$passed" "$skipped"
+          exit 0
+        fi
+
+        api GET /v1/schedules >/dev/null ||
+          fail "authenticated schedules list failed"
+        pass "authenticated schedules list"
+
+        if [ -n "$target" ]; then
+          schedule_body="{\"name\":\"helling-v02-smoke-backup\",\"kind\":\"backup\",\"target\":\"$target\",\"on_calendar\":\"*-*-* 03:00:00 UTC\",\"enabled\":false}"
+          schedule_id="$(api POST /v1/schedules "$schedule_body" | json_id)"
+          [ -n "$schedule_id" ] || fail "schedule create did not return an id"
+          cleanup_schedule() {
+            api DELETE "/v1/schedules/$schedule_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup_schedule EXIT
+          pass "backup schedule create wrote systemd units"
+          api POST "/v1/schedules/$schedule_id/run" '{}' >/dev/null ||
+            fail "backup schedule run failed for target $target"
+          pass "backup schedule run submitted Incus backup operation"
+          cleanup_schedule
+          trap - EXIT
+        else
+          skip_or_fail "backup schedule run requires HELLING_VM_SMOKE_TARGET"
+        fi
+
+        firewall_body='{"direction":"input","action":"drop","protocol":"tcp","source_cidr":"203.0.113.254/32","destination_port":9,"comment":"helling-v02-smoke"}'
+        firewall_id="$(api POST /v1/firewall/host "$firewall_body" | json_id)"
+        [ -n "$firewall_id" ] || fail "firewall rule create did not return an id"
+        cleanup_firewall() {
+          api DELETE "/v1/firewall/host/$firewall_id" >/dev/null 2>&1 || true
+        }
+        trap cleanup_firewall EXIT
+        if sudo -n nft list ruleset | grep -Fq "helling:$firewall_id"; then
+          pass "host firewall block rule is visible in nft ruleset"
+        else
+          fail "host firewall rule helling:$firewall_id not visible in nft ruleset"
+        fi
+        cleanup_firewall
+        trap - EXIT
+
+        if [ -n "$webhook_url" ]; then
+          secret="helling-v02-smoke-secret-$(date +%s)"
+          webhook_body="{\"name\":\"helling-v02-smoke\",\"url\":\"$webhook_url\",\"secret\":\"$secret\",\"events\":[\"webhook.test\"],\"enabled\":false}"
+          webhook_id="$(api POST /v1/webhooks "$webhook_body" | json_id)"
+          [ -n "$webhook_id" ] || fail "webhook create did not return an id"
+          cleanup_webhook() {
+            api DELETE "/v1/webhooks/$webhook_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup_webhook EXIT
+          delivery="$(api POST "/v1/webhooks/$webhook_id/test" '{}')"
+          printf '%s\n' "$delivery" | grep -q '"status"[[:space:]]*:[[:space:]]*"success"' ||
+            fail "webhook HMAC test delivery did not succeed"
+          pass "webhook test delivered with HMAC signing"
+          cleanup_webhook
+          trap - EXIT
+        else
+          skip_or_fail "webhook HMAC delivery requires HELLING_VM_WEBHOOK_URL"
+        fi
+
+        if [ -n "$nonadmin_token" ]; then
+          status="$(curl -sS -o /tmp/helling-nonadmin-projects.out -w '%{http_code}' --unix-socket "$socket" \
+            -H "Authorization: Bearer $nonadmin_token" \
+            http://helling/api/incus/1.0/projects || true)"
+          [ "$status" = "403" ] ||
+            fail "non-admin Incus projects request returned HTTP $status, want 403"
+          pass "non-admin token is restricted from broad Incus project listing"
+        else
+          skip_or_fail "non-admin mTLS restriction check requires HELLING_VM_NONADMIN_TOKEN"
+        fi
+
+        printf 'v0.2 smoke summary: %d passed, %d skipped\n' "$passed" "$skipped"
+        REMOTE
+        } | ssh -o BatchMode=yes -p "$VM_SSH_PORT" "$VM_USER@$HELLING_VM_HOST" bash -s
 
   vm:parallels:logs:
     desc: Tail hellingd journal on the VM.
@@ -671,7 +881,7 @@ tasks:
         ssh -p "${HELLING_VM_SSH_PORT:-22}" "${HELLING_VM_USER:-helling}@$HELLING_VM_HOST" sudo journalctl -fu hellingd
 
   vm:parallels:release-test:
-    desc: Build .deb (ADR-045), install in VM, smoke. Skips cleanly if reprepro tooling absent.
+    desc: Build .deb (ADR-045), install in VM, smoke. Fails on packaging skips unless HELLING_VM_RELEASE_ALLOW_SKIPS=1.
     cmds:
       - bash scripts/parallels-vm-deploy-deb.sh
       - task: vm:parallels:smoke
@@ -742,6 +952,8 @@ tasks:
       - |
         if [ -f apps/helling-cli/internal/client/oapi-codegen.yaml ]; then
           oapi-codegen --config apps/helling-cli/internal/client/oapi-codegen.yaml {{.OPENAPI_FILE}}
+        else
+          echo "→ skipping helling-cli generated client: apps/helling-cli/internal/client/oapi-codegen.yaml is not scaffolded"
         fi
 
   gen:frontend:
@@ -751,6 +963,20 @@ tasks:
         if [ -f package.json ]; then
           bun run gen:api
         fi
+
+  gen:events:
+    cmds:
+      - |
+        if command -v tygo >/dev/null 2>&1; then
+          tygo generate --config tygo.yaml
+        elif [ -x "$(go env GOPATH)/bin/tygo" ]; then
+          "$(go env GOPATH)/bin/tygo" generate --config tygo.yaml
+        else
+          echo "tygo is missing; install with: go install github.com/gzuidhof/tygo@v0.2.21"
+          exit 1
+        fi
+        cd web
+        bunx biome format --write src/api/events.gen.ts
 
   gen:sqlc:
     cmds:

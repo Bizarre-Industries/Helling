@@ -14,7 +14,9 @@ Use `age` (`filippo.io/age`) as the encryption format/library for Helling-manage
 
 - Encrypt/decrypt payloads using age recipients/identities
 - Store ciphertext in Helling persistence layer
-- Keep key material external to application data storage
+- Keep key material external to application data storage. The default host
+  identity path is `/etc/helling/age/identity.txt`; test/dev stores outside
+  `/var/lib/helling` may use a colocated temporary identity.
 
 Age replaces bespoke application-level AES envelope implementation for v0.1+ secret workflows.
 

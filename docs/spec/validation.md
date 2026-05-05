@@ -37,10 +37,12 @@ Validation failure response uses `VALIDATION_FAILED` envelope with field details
 - Go-style duration strings
 - Min 1s, max 720h
 
-### Cron
+### OnCalendar
 
-- Five-field cron expression
-- Timezone baseline is UTC
+- Public schedule field: `on_calendar`
+- Value must be a systemd-compatible `OnCalendar` expression accepted by the
+  schedule renderer
+- Timezone baseline is UTC unless the expression contains an explicit timezone
 
 ### Role/status enums
 
@@ -51,7 +53,7 @@ Validation failure response uses `VALIDATION_FAILED` envelope with field details
 ## Endpoint-Specific Examples
 
 - `POST /api/v1/users`: username + password required; `is_admin` defaults false.
-- `POST /api/v1/schedules`: type, target, cron required and validated.
+- `POST /api/v1/schedules`: kind, target, and `on_calendar` are required and validated.
 - `POST /api/v1/webhooks`: name, url, events required; each event must exist in docs/spec/events.md catalog.
 
 ## Error Response Shape

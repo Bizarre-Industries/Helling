@@ -54,6 +54,12 @@ Scope limits for this exception:
 
 **Deferred: systemd unit management.** v0.1 does not import a DBus client or install a polkit rule for hellingd. Future schedule CRUD must use the narrow helper path from ADR-050 and land with its own security review.
 
+**v0.2 host firewall helper.** Firewall mutation still uses `nft` shell-out,
+but `hellingd` does not receive `CAP_NET_ADMIN`. Instead it invokes the narrow
+`/usr/lib/helling/helling-firewall` helper, which accepts only Helling-owned
+`inet helling` table/chain/rule commands produced from validated DTOs and
+revalidates every argv token before executing `/usr/sbin/nft`.
+
 ### Still explicitly forbidden
 
 - `google/nftables` — use `nft --json` shell-out.

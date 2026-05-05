@@ -31,6 +31,25 @@ const initialForm: SetupForm = {
   setupToken: '',
 };
 
+type SetupFormValidation =
+  | { ok: true; username: string; setupToken: string }
+  | { ok: false; error: string };
+
+function validateSetupForm(form: SetupForm, passwordMismatch: boolean): SetupFormValidation {
+  const username = form.username.trim();
+  const setupToken = form.setupToken.trim();
+  if (!username || !form.password || !setupToken) {
+    return { ok: false, error: 'Admin username, password, and setup token are required.' };
+  }
+  if (form.password.length < 8) {
+    return { ok: false, error: 'Password must be at least 8 characters.' };
+  }
+  if (passwordMismatch) {
+    return { ok: false, error: 'Passwords do not match.' };
+  }
+  return { ok: true, username, setupToken };
+}
+
 export default function PageSetup({ onDone, onCancel }: PageSetupProps) {
   const formId = useId();
   const [form, setForm] = useState<SetupForm>(initialForm);
@@ -64,18 +83,9 @@ export default function PageSetup({ onDone, onCancel }: PageSetupProps) {
 
   const finish = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const username = form.username.trim();
-    const setupToken = form.setupToken.trim();
-    if (!username || !form.password || !setupToken) {
-      setError('Admin username, password, and setup token are required.');
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
-    if (passwordMismatch) {
-      setError('Passwords do not match.');
+    const validated = validateSetupForm(form, passwordMismatch);
+    if (!validated.ok) {
+      setError(validated.error);
       return;
     }
 
@@ -84,9 +94,9 @@ export default function PageSetup({ onDone, onCancel }: PageSetupProps) {
     try {
       const res = await authSetup({
         body: {
-          username,
+          username: validated.username,
           password: form.password,
-          setup_token: setupToken,
+          setup_token: validated.setupToken,
         },
       });
       if (res?.error) {

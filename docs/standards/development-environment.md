@@ -13,11 +13,13 @@ Applies to all contributors. Linux-native development is supported. macOS contri
 - make
 - git
 - optional: task (Taskfile workflow)
+- optional: Packer (Parallels dev image build only)
 
 ## Recommended Environments
 
 1. Linux host: develop directly on host.
-2. macOS with Parallels Desktop: Debian VM provisioned via `scripts/parallels-vm-bootstrap.sh` and `task vm:parallels:up` (per ADR-052). Primary macOS path.
+2. macOS with Parallels Desktop: Debian VM image built with Packer, then deployed with
+   `task vm:parallels:*` tasks (per ADR-052). Primary macOS path.
 3. macOS or Windows with Lima: Debian VM (per ADR-034). Fallback path; supported but secondary.
 
 ## Installer ISO Validation
@@ -27,10 +29,13 @@ The product install path is the live-build installer ISO from ADR-021 and ADR-04
 ```bash
 task iso:verify    # validate live-build/preseed/first-boot wiring
 task iso:prepare   # stage payload into dist/iso/live-build without running live-build
-task iso:build     # build the installer ISO on Debian with live-build + root/sudo
+task iso:build     # release-gate only: build the installer ISO with live-build + root/sudo
 ```
 
-`task iso:build` requires a Debian 13 host or VM with `live-build` installed. macOS contributors should build the ISO inside the Parallels Debian VM.
+`task iso:build` requires a Debian 13 host or VM with `live-build` installed
+and is blocked unless `HELLING_ISO_RELEASE_GATE=1` is set or `HEAD` is an
+exact `v*` release tag. macOS contributors should build the ISO inside the
+Parallels Debian VM only for version-gate validation.
 
 ## Parallels Baseline (macOS — primary)
 
@@ -39,15 +44,24 @@ task iso:build     # build the installer ISO on Debian with live-build + root/su
 - VM name: `helling-dev`.
 - Sizing defaults: 4 vCPU, 8 GB RAM, 40 GB disk. Override via `HELLING_VM_CPUS`, `HELLING_VM_MEM_MB`, `HELLING_VM_DISK_GB`.
 - Networking: Parallels bridged interface so the host can reach the VM by IP for `rsync` + `ssh`; NAT/port-forward setups use `HELLING_VM_HOST=127.0.0.1` plus `HELLING_VM_SSH_PORT`.
-- Auth: contributor's SSH public key (`HELLING_VM_SSHKEY`, default `~/.ssh/id_ed25519.pub`) injected via cloud-init.
+- Auth: contributor's SSH public key (`HELLING_VM_SSHKEY`, default `~/.ssh/id_ed25519.pub`) injected by the Packer preseed. The installer creates a generated one-time password only to satisfy Debian user creation, then locks the password and disables SSH password authentication before registration.
+- Image builder: Packer with the Parallels plugin. It starts from Debian
+  netinst media, not from the Helling product ISO.
 
 Bootstrap (one-time):
 
 ```bash
-bash scripts/parallels-vm-bootstrap.sh
+task vm:parallels:build-image
+task vm:parallels:up
 ```
 
-This installs `build-essential binutils-gold git curl make ca-certificates rsync unzip dbus systemd incus podman` plus Go and Bun inside the VM, and lays down a `hellingd` systemd unit drop-in so `systemctl restart hellingd` works after the first deploy.
+This uses `deploy/packer/parallels-dev/` to build and register a Debian 13
+`.pvm` with `build-essential binutils-gold git curl make ca-certificates rsync
+unzip dbus systemd incus podman` plus Go, Bun, Caddy, live-build, and the
+Helling service accounts. It is inner-loop evidence only; release evidence still
+comes from `.deb` release-test and release-gate ISO validation.
+`scripts/parallels-vm-bootstrap.sh` remains the idempotent repair path for an
+existing manually installed VM.
 
 Daily loop:
 

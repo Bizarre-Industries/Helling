@@ -193,8 +193,14 @@ Generation:
 
 - Server: `oapi-codegen` with `chi-server` output, generated into `apps/hellingd/api/server.gen.go`.
 - Models: same package, `apps/hellingd/api/types.gen.go`.
-- Go client: `oapi-codegen` with `client` output, into `apps/helling-cli/internal/client/client.gen.go`.
 - TS client: `@hey-api/openapi-ts` into `web/src/api/generated/`. React Query hooks output enabled.
+- Event DTOs: `tygo` from `apps/hellingd/internal/events` into `web/src/api/events.gen.ts`.
+- Store queries: `sqlc` from `apps/hellingd/internal/store/queries` into `apps/hellingd/internal/store/sqlc`.
+
+The CLI currently uses the small hand-authored Unix-socket client in
+`apps/helling-cli/internal/client/client.go`. A generated Go CLI client is
+deferred until that package has an `oapi-codegen` config and a deliberate
+migration plan.
 
 Generated files are committed. `make check-generated` confirms the working tree is clean after `make generate`. CI fails on drift.
 

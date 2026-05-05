@@ -2,6 +2,10 @@
 
 > Status: Accepted (2026-04-20); amended by ADR-054 for the default
 > `incus-admin` prohibition.
+>
+> Amended 2026-05-05 for v0.2. Schedule unit mutation and Incus trust mutation
+> are both narrow helper surfaces; neither changes the rule that `hellingd` is
+> not installed as `incus-admin`.
 
 ## Context
 
@@ -32,9 +36,6 @@ Group:  helling
 Filesystem (created by .deb postinst):
   /etc/helling/                   root:helling 0750
     helling.yaml                  root:helling 0640
-    ca/                           helling:helling 0700
-      ca.key                      helling:helling 0600
-      ca.crt                      helling:helling 0644
     jwt/                          helling:helling 0700
       signing.key                 helling:helling 0600
     age/                          helling:helling 0700
@@ -42,6 +43,8 @@ Filesystem (created by .deb postinst):
 
   /var/lib/helling/               helling:helling 0750
     helling.db                    helling:helling 0600
+    ca.key.age                    helling:helling 0600
+    ca.crt                        helling:helling 0644
     backups/                      helling:helling 0700
 
   /var/log/helling/               helling:helling 0750  (reserved; journal is primary)
@@ -84,18 +87,21 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 
-ReadWritePaths=/var/lib/helling /var/log/helling /run/helling /etc/helling
-# No ReadWritePaths for /etc/systemd/system/ — unit management is deferred.
+ReadWritePaths=/var/lib/helling /var/log/helling /run/helling /etc/helling /etc/systemd/system
+# /etc/systemd/system remains DAC-protected; only root:helling 0770
+# /etc/systemd/system/helling-managed is writable by hellingd.
 
 # Capabilities: none. We do not need CAP_DAC_OVERRIDE under this model.
-CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_NET_ADMIN
 AmbientCapabilities=
 
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 SystemCallFilter=@system-service @network-io @file-system
 SystemCallArchitectures=native
 MemoryDenyWriteExecute=true
-NoNewPrivileges=true
+NoNewPrivileges=false
+# Required for the v0.2 setuid helling-unit-link helper. hellingd still has
+# empty capabilities and no broad polkit/dbus unit-management grant.
 
 LimitNOFILE=65535
 LimitNPROC=4096
@@ -120,9 +126,63 @@ RestartSec=5
 Two options for getting unit bodies onto the filesystem without giving `helling` write access to `/etc/systemd/system/`:
 
 1. **Transient units** — no filesystem writes. Unit lives only as long as it is active, which is fine for `.service`-only use but breaks for `.timer` units because timers need to persist across reboots. Rejected.
-2. **Root-owned drop-in directory with group-writable staging** — `/etc/systemd/system/helling-managed/` created by the installer as `root:helling` `0750`, containing a generated `*.timer` and `*.service` per schedule. Symlinks into `/etc/systemd/system/` are created by a tiny helper shipped with Helling that takes a `helling-*.{timer,service}` filename argument. The helper is auditable (~40 LOC), the filename pattern prevents directory traversal, and the group-writable stash is the only filesystem surface `helling` needs for scheduling. **Selected for future implementation.**
+2. **Root-owned drop-in directory with group-writable staging** — `/etc/systemd/system/helling-managed/` created by the installer as `root:helling` `0770`, containing a generated `*.timer` and `*.service` per schedule. Symlinks into `/etc/systemd/system/` are created by a tiny helper shipped with Helling that accepts only `install <helling-schedule-uuid.{service,timer}>` and `remove <helling-schedule-uuid.{service,timer}>`. The helper is auditable, the filename pattern prevents directory traversal, and the group-writable stash is the only filesystem surface `helling` needs for scheduling. **Selected for v0.2 implementation.**
 
 Alternative (considered, rejected): a dedicated `hellingsched` privileged helper daemon. Splits the concern cleanly but adds another moving part. Not worth the complexity for v0.1.
+
+### Incus trust management
+
+Delegated-user Incus proxying requires trust registration and revocation, but
+that does not justify adding the web-facing daemon to `incus-admin`. v0.2 uses
+a narrow trust helper `/usr/lib/helling/helling-incus-trust` (mode `4750`,
+owner `root:helling`) that accepts exactly:
+
+- `register <fingerprint> <project> <helling-user-<id>-<fingerprint>.crt> <request.json>`
+- `revoke <fingerprint> <request.json>`
+
+The certificate file must be a basename under
+`/var/lib/helling/incus-trust/`. Each operation also requires a one-time
+request manifest basename under `/var/lib/helling/incus-trust/requests/` and a
+matching policy file under `/etc/helling/incus-trust.d/helling-user-<id>.json`.
+The policy directory and files are root-owned and must not be group/world
+writable. The request manifest must match the helper command action,
+fingerprint, project, and certificate basename; the root-owned policy must
+authorize the user id, project, and action. The helper consumes the request
+before invoking Incus. The helper invokes only:
+
+```json
+{ "user_id": 42, "project": "alice", "actions": ["register", "revoke"] }
+```
+
+Fresh installs also write a root-owned default policy:
+
+```json
+{ "user_id": 0, "projects": ["default"], "actions": ["register", "revoke"] }
+```
+
+`user_id: 0` means "any Helling user, but only for the listed projects".
+Non-default project delegation requires a root-provisioned per-user policy or
+an explicit extension of the root-owned default project allowlist.
+
+- `incus --force-local config trust add-certificate <cert> --name helling-user-<id>-<fingerprint-prefix> --restricted --projects <project>`
+- `incus --force-local config trust remove <fingerprint>`
+
+The helper never proxies arbitrary Incus commands. `hellingd` remains a member
+of `incus` for restricted runtime access and presents per-user certificates for
+non-admin proxy calls.
+
+### Host firewall management
+
+Host firewall rule changes need `CAP_NET_ADMIN`, but that capability is not
+granted to `hellingd`. v0.2 uses a narrow firewall helper
+`/usr/lib/helling/helling-firewall` (mode `4750`, owner `root:helling`, file
+capability `cap_net_admin+ep`) that accepts only validated Helling-owned
+`nft` argv shapes for the `inet helling` table. The helper rejects arbitrary
+tables, flush/delete-table operations, unscoped chains, invalid CIDRs, invalid
+ports, and non-Helling comments before executing `/usr/sbin/nft`.
+The service unit keeps `CAP_NET_ADMIN` in the bounding set so the helper can
+acquire its file capability; `AmbientCapabilities=` remains empty, so
+`hellingd` itself does not run with that capability.
 
 ### Journal emission under non-root
 

@@ -2,6 +2,7 @@
 -- Outbound webhooks with HMAC-SHA256 signing and delivery log.
 -- Per docs/spec/architecture.md §Webhooks.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS webhooks (
     id         TEXT    PRIMARY KEY,         -- uuid v7
     user_id    INTEGER NOT NULL REFERENCES users(id),
@@ -28,3 +29,7 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status);
+
+-- +goose Down
+DROP TABLE IF EXISTS webhook_deliveries;
+DROP TABLE IF EXISTS webhooks;

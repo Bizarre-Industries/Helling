@@ -281,6 +281,50 @@ func TestAPIV1LoginReturnsJWTBearer(t *testing.T) {
 	}
 }
 
+func TestAdminJWTBearerCanAccessAdminAPI(t *testing.T) {
+	t.Parallel()
+	signer, err := auth.NewJWTSigner()
+	if err != nil {
+		t.Fatalf("NewJWTSigner: %v", err)
+	}
+	srv, st := newTestServerWithConfig(t, func(cfg *Config) {
+		cfg.Auth.JWTSigner = signer
+		cfg.Auth.AccessTTL = 15 * time.Minute
+	})
+	seedAdminUser(t, st)
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	resp := postJSON(t, ts.Client(), ts.URL+"/api/v1/auth/login", loginRequest{
+		Username: "admin",
+		Password: testPassword,
+	}, nil)
+	var loginResp struct {
+		Data struct {
+			AccessToken string `json:"access_token"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
+		t.Fatalf("decode login: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || loginResp.Data.AccessToken == "" {
+		t.Fatalf("unexpected login response status=%d body=%+v", resp.StatusCode, loginResp.Data)
+	}
+
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"/api/v1/users", http.NoBody)
+	req.Header.Set("Authorization", "Bearer "+loginResp.Data.AccessToken)
+	resp, err = ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("GET /api/v1/users: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("admin bearer status: got %d want 200 body=%s", resp.StatusCode, string(body))
+	}
+}
+
 func TestNonAdminCannotManageUsersOrDeferredSurfaces(t *testing.T) {
 	t.Parallel()
 	srv, st := newTestServer(t)
@@ -377,6 +421,167 @@ func TestNonAdminCannotUseRawProxy(t *testing.T) {
 	resp, err := ts.Client().Do(req)
 	if err != nil {
 		t.Fatalf("GET /api/incus/1.0: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusForbidden {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("proxy status: got %d want 403 body=%s", resp.StatusCode, string(body))
+	}
+}
+
+func TestReadAPITokenCannotMutateIncusProxy(t *testing.T) {
+	t.Parallel()
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	if err := st.Migrate(t.Context()); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	admin := seedAdminUser(t, st)
+	raw, hash, err := auth.NewAPIToken()
+	if err != nil {
+		t.Fatalf("NewAPIToken: %v", err)
+	}
+	if _, err := st.CreateAPIToken(t.Context(), admin.ID, "read-only", hash, auth.ScopeRead, nil); err != nil {
+		t.Fatalf("CreateAPIToken: %v", err)
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv, err := New(&Config{
+		Store:   st,
+		Logger:  logger,
+		Version: VersionInfo{Version: "test"},
+		Auth: AuthSettings{
+			SessionTTL:     time.Hour,
+			UsernameLimit:  5,
+			UsernameWindow: time.Minute,
+			IPLimit:        20,
+			IPWindow:       time.Minute,
+			Argon2:         auth.Argon2Params{Time: 1, MemoryKiB: 8 * 1024, Parallelism: 1, SaltLen: 16, KeyLen: 32},
+		},
+		IncusProxy: proxy.NewIncusProxy("/tmp/helling-test-missing-incus.sock", logger),
+	})
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPut, ts.URL+"/api/incus/1.0/instances/demo/state", bytes.NewReader([]byte("{}")))
+	req.Header.Set("Authorization", "Bearer "+raw)
+	resp, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("PUT /api/incus with read token: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusForbidden {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("proxy status: got %d want 403 body=%s", resp.StatusCode, string(body))
+	}
+}
+
+func TestAdminNonAdminScopeAPITokenCannotReadRawIncusProxy(t *testing.T) {
+	t.Parallel()
+	for _, scope := range []string{auth.ScopeRead, auth.ScopeWrite} {
+		t.Run(scope, func(t *testing.T) {
+			t.Parallel()
+			st, err := store.Open(t.TempDir())
+			if err != nil {
+				t.Fatalf("store.Open: %v", err)
+			}
+			t.Cleanup(func() { _ = st.Close() })
+			if err := st.Migrate(t.Context()); err != nil {
+				t.Fatalf("Migrate: %v", err)
+			}
+			admin := seedAdminUser(t, st)
+			raw, hash, err := auth.NewAPIToken()
+			if err != nil {
+				t.Fatalf("NewAPIToken: %v", err)
+			}
+			if _, err := st.CreateAPIToken(t.Context(), admin.ID, scope+"-only", hash, scope, nil); err != nil {
+				t.Fatalf("CreateAPIToken: %v", err)
+			}
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			srv, err := New(&Config{
+				Store:   st,
+				Logger:  logger,
+				Version: VersionInfo{Version: "test"},
+				Auth: AuthSettings{
+					SessionTTL:     time.Hour,
+					UsernameLimit:  5,
+					UsernameWindow: time.Minute,
+					IPLimit:        20,
+					IPWindow:       time.Minute,
+					Argon2:         auth.Argon2Params{Time: 1, MemoryKiB: 8 * 1024, Parallelism: 1, SaltLen: 16, KeyLen: 32},
+				},
+				IncusProxy: proxy.NewIncusProxy("/tmp/helling-test-missing-incus.sock", logger),
+			})
+			if err != nil {
+				t.Fatalf("server.New: %v", err)
+			}
+			ts := httptest.NewServer(srv.Handler())
+			t.Cleanup(ts.Close)
+
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"/api/incus/1.0", http.NoBody)
+			req.Header.Set("Authorization", "Bearer "+raw)
+			resp, err := ts.Client().Do(req)
+			if err != nil {
+				t.Fatalf("GET /api/incus with %s token: %v", scope, err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+			if resp.StatusCode != http.StatusForbidden {
+				body, _ := io.ReadAll(resp.Body)
+				t.Fatalf("proxy status: got %d want 403 body=%s", resp.StatusCode, string(body))
+			}
+		})
+	}
+}
+
+func TestAdminWriteAPITokenCannotMutateAdminIncusProxy(t *testing.T) {
+	t.Parallel()
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	if err := st.Migrate(t.Context()); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	admin := seedAdminUser(t, st)
+	raw, hash, err := auth.NewAPIToken()
+	if err != nil {
+		t.Fatalf("NewAPIToken: %v", err)
+	}
+	if _, err := st.CreateAPIToken(t.Context(), admin.ID, "write-only", hash, auth.ScopeWrite, nil); err != nil {
+		t.Fatalf("CreateAPIToken: %v", err)
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv, err := New(&Config{
+		Store:   st,
+		Logger:  logger,
+		Version: VersionInfo{Version: "test"},
+		Auth: AuthSettings{
+			SessionTTL:     time.Hour,
+			UsernameLimit:  5,
+			UsernameWindow: time.Minute,
+			IPLimit:        20,
+			IPWindow:       time.Minute,
+			Argon2:         auth.Argon2Params{Time: 1, MemoryKiB: 8 * 1024, Parallelism: 1, SaltLen: 16, KeyLen: 32},
+		},
+		IncusProxy: proxy.NewIncusProxy("/tmp/helling-test-missing-incus.sock", logger),
+	})
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPut, ts.URL+"/api/incus/1.0/instances/demo/state", bytes.NewReader([]byte("{}")))
+	req.Header.Set("Authorization", "Bearer "+raw)
+	resp, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("PUT /api/incus with write token: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusForbidden {

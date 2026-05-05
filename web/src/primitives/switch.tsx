@@ -23,7 +23,7 @@ export function Switch({ on, onChange, label }: SwitchProps) {
   );
   if (!label) return sw;
   return (
-    <label
+    <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -34,6 +34,6 @@ export function Switch({ on, onChange, label }: SwitchProps) {
     >
       {sw}
       <span>{label}</span>
-    </label>
+    </span>
   );
 }

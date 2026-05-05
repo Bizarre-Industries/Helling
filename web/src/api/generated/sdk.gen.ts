@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthMfaCompleteData, AuthMfaCompleteErrors, AuthMfaCompleteResponses, AuthSetupData, AuthSetupErrors, AuthSetupResponses, AuthSetupStatusData, AuthSetupStatusErrors, AuthSetupStatusResponses, CreateInstanceData, CreateInstanceErrors, CreateInstanceResponses, DeleteInstanceData, DeleteInstanceErrors, DeleteInstanceResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetHealthData, GetHealthResponses, GetInstanceData, GetInstanceErrors, GetInstanceResponses, GetOperationData, GetOperationErrors, GetOperationResponses, GetVersionData, GetVersionResponses, ListInstancesData, ListInstancesErrors, ListInstancesResponses, ListOperationsData, ListOperationsErrors, ListOperationsResponses, LogoutData, LogoutErrors, LogoutResponses, StartInstanceData, StartInstanceErrors, StartInstanceResponses, StopInstanceData, StopInstanceErrors, StopInstanceResponses } from './types.gen';
+import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthMfaCompleteData, AuthMfaCompleteErrors, AuthMfaCompleteResponses, AuthSetupData, AuthSetupErrors, AuthSetupResponses, AuthSetupStatusData, AuthSetupStatusErrors, AuthSetupStatusResponses, CreateHostFirewallRuleData, CreateHostFirewallRuleErrors, CreateHostFirewallRuleResponses, CreateInstanceData, CreateInstanceErrors, CreateInstanceResponses, CreateScheduleData, CreateScheduleErrors, CreateScheduleResponses, CreateUserData, CreateUserErrors, CreateUserResponses, CreateWebhookData, CreateWebhookErrors, CreateWebhookResponses, DeleteHostFirewallRuleData, DeleteHostFirewallRuleErrors, DeleteHostFirewallRuleResponses, DeleteInstanceData, DeleteInstanceErrors, DeleteInstanceResponses, DeleteScheduleData, DeleteScheduleErrors, DeleteScheduleResponses, DeleteUserData, DeleteUserErrors, DeleteUserResponses, DeleteWebhookData, DeleteWebhookErrors, DeleteWebhookResponses, ExportAuditEventsData, ExportAuditEventsErrors, ExportAuditEventsResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetHealthData, GetHealthResponses, GetInstanceData, GetInstanceErrors, GetInstanceResponses, GetOperationData, GetOperationErrors, GetOperationResponses, GetScheduleData, GetScheduleErrors, GetScheduleResponses, GetUserData, GetUserErrors, GetUserResponses, GetVersionData, GetVersionResponses, GetWebhookData, GetWebhookErrors, GetWebhookResponses, ListAuditEventsData, ListAuditEventsErrors, ListAuditEventsResponses, ListEventsData, ListEventsErrors, ListEventsResponses, ListHostFirewallRulesData, ListHostFirewallRulesErrors, ListHostFirewallRulesResponses, ListInstancesData, ListInstancesErrors, ListInstancesResponses, ListOperationsData, ListOperationsErrors, ListOperationsResponses, ListSchedulesData, ListSchedulesErrors, ListSchedulesResponses, ListUsersData, ListUsersErrors, ListUsersResponses, ListWebhooksData, ListWebhooksErrors, ListWebhooksResponses, LogoutData, LogoutErrors, LogoutResponses, RunScheduleData, RunScheduleErrors, RunScheduleResponses, StartInstanceData, StartInstanceErrors, StartInstanceResponses, StopInstanceData, StopInstanceErrors, StopInstanceResponses, TestWebhookData, TestWebhookErrors, TestWebhookResponses, UpdateScheduleData, UpdateScheduleErrors, UpdateScheduleResponses, UpdateUserData, UpdateUserErrors, UpdateUserResponses, UpdateUserScopeData, UpdateUserScopeErrors, UpdateUserScopeResponses, UpdateWebhookData, UpdateWebhookErrors, UpdateWebhookResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -246,5 +246,400 @@ export const getOperation = <ThrowOnError extends boolean = false>(options: Opti
             type: 'apiKey'
         }],
     url: '/operations/{id}',
+    ...options
+});
+
+/**
+ * List local users
+ *
+ * Returns all local Helling users. Admin role required.
+ */
+export const listUsers = <ThrowOnError extends boolean = false>(options?: Options<ListUsersData, ThrowOnError>) => (options?.client ?? client).get<ListUsersResponses, ListUsersErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users',
+    ...options
+});
+
+/**
+ * Create a local user
+ *
+ * Creates a Helling user and provisions its delegated Incus scope. Admin role required.
+ */
+export const createUser = <ThrowOnError extends boolean = false>(options: Options<CreateUserData, ThrowOnError>) => (options.client ?? client).post<CreateUserResponses, CreateUserErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a local user
+ *
+ * Deletes a user and revokes its delegated Incus trust entry. Admin role required.
+ */
+export const deleteUser = <ThrowOnError extends boolean = false>(options: Options<DeleteUserData, ThrowOnError>) => (options.client ?? client).delete<DeleteUserResponses, DeleteUserErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users/{id}',
+    ...options
+});
+
+/**
+ * Get a local user
+ *
+ * Returns one Helling user. Admin role required.
+ */
+export const getUser = <ThrowOnError extends boolean = false>(options: Options<GetUserData, ThrowOnError>) => (options.client ?? client).get<GetUserResponses, GetUserErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users/{id}',
+    ...options
+});
+
+/**
+ * Update a local user
+ *
+ * Partially updates mutable user fields. Admin role required.
+ */
+export const updateUser = <ThrowOnError extends boolean = false>(options: Options<UpdateUserData, ThrowOnError>) => (options.client ?? client).patch<UpdateUserResponses, UpdateUserErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Assign a user to an Incus project
+ *
+ * Replaces the user's Incus project scope and rotates the restricted trust entry. Admin role required.
+ */
+export const updateUserScope = <ThrowOnError extends boolean = false>(options: Options<UpdateUserScopeData, ThrowOnError>) => (options.client ?? client).put<UpdateUserScopeResponses, UpdateUserScopeErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/users/{id}/scope',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List schedules
+ *
+ * Returns systemd timer-backed schedules tracked by Helling. Admin role required.
+ */
+export const listSchedules = <ThrowOnError extends boolean = false>(options?: Options<ListSchedulesData, ThrowOnError>) => (options?.client ?? client).get<ListSchedulesResponses, ListSchedulesErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules',
+    ...options
+});
+
+/**
+ * Create a schedule
+ *
+ * Writes validated schedule units, enables the timer, persists metadata, and emits audit/event records. Admin role required.
+ */
+export const createSchedule = <ThrowOnError extends boolean = false>(options: Options<CreateScheduleData, ThrowOnError>) => (options.client ?? client).post<CreateScheduleResponses, CreateScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a schedule
+ *
+ * Removes managed systemd units and deletes schedule metadata. Admin role required.
+ */
+export const deleteSchedule = <ThrowOnError extends boolean = false>(options: Options<DeleteScheduleData, ThrowOnError>) => (options.client ?? client).delete<DeleteScheduleResponses, DeleteScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules/{id}',
+    ...options
+});
+
+/**
+ * Get a schedule
+ *
+ * Returns one schedule. Admin role required.
+ */
+export const getSchedule = <ThrowOnError extends boolean = false>(options: Options<GetScheduleData, ThrowOnError>) => (options.client ?? client).get<GetScheduleResponses, GetScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules/{id}',
+    ...options
+});
+
+/**
+ * Update a schedule
+ *
+ * Partially updates a schedule, rewrites its units, and preserves unchanged fields. Admin role required.
+ */
+export const updateSchedule = <ThrowOnError extends boolean = false>(options: Options<UpdateScheduleData, ThrowOnError>) => (options.client ?? client).patch<UpdateScheduleResponses, UpdateScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Run a schedule now
+ *
+ * Triggers the schedule through the Helling API and Incus proxy path. Admin role required.
+ */
+export const runSchedule = <ThrowOnError extends boolean = false>(options: Options<RunScheduleData, ThrowOnError>) => (options.client ?? client).post<RunScheduleResponses, RunScheduleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/schedules/{id}/run',
+    ...options
+});
+
+/**
+ * List webhooks
+ *
+ * Returns webhook definitions without secrets. Admin role required.
+ */
+export const listWebhooks = <ThrowOnError extends boolean = false>(options?: Options<ListWebhooksData, ThrowOnError>) => (options?.client ?? client).get<ListWebhooksResponses, ListWebhooksErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks',
+    ...options
+});
+
+/**
+ * Create a webhook
+ *
+ * Stores an age-encrypted HMAC secret and validates the HTTPS destination. Admin role required.
+ */
+export const createWebhook = <ThrowOnError extends boolean = false>(options: Options<CreateWebhookData, ThrowOnError>) => (options.client ?? client).post<CreateWebhookResponses, CreateWebhookErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a webhook
+ *
+ * Deletes a webhook and delivery history. Admin role required.
+ */
+export const deleteWebhook = <ThrowOnError extends boolean = false>(options: Options<DeleteWebhookData, ThrowOnError>) => (options.client ?? client).delete<DeleteWebhookResponses, DeleteWebhookErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks/{id}',
+    ...options
+});
+
+/**
+ * Get a webhook
+ *
+ * Returns one webhook without its secret. Admin role required.
+ */
+export const getWebhook = <ThrowOnError extends boolean = false>(options: Options<GetWebhookData, ThrowOnError>) => (options.client ?? client).get<GetWebhookResponses, GetWebhookErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks/{id}',
+    ...options
+});
+
+/**
+ * Update a webhook
+ *
+ * Partially updates webhook metadata and optionally rotates the secret. Admin role required.
+ */
+export const updateWebhook = <ThrowOnError extends boolean = false>(options: Options<UpdateWebhookData, ThrowOnError>) => (options.client ?? client).patch<UpdateWebhookResponses, UpdateWebhookErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Send a webhook test event
+ *
+ * Sends a signed test event and records delivery attempts. Admin role required.
+ */
+export const testWebhook = <ThrowOnError extends boolean = false>(options: Options<TestWebhookData, ThrowOnError>) => (options.client ?? client).post<TestWebhookResponses, TestWebhookErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/webhooks/{id}/test',
+    ...options
+});
+
+/**
+ * List host firewall rules
+ *
+ * Returns Helling-managed nftables host firewall rules. Admin role required.
+ */
+export const listHostFirewallRules = <ThrowOnError extends boolean = false>(options?: Options<ListHostFirewallRulesData, ThrowOnError>) => (options?.client ?? client).get<ListHostFirewallRulesResponses, ListHostFirewallRulesErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/firewall/host',
+    ...options
+});
+
+/**
+ * Create a host firewall rule
+ *
+ * Persists metadata and applies an nft rule using structured argv. Admin role required.
+ */
+export const createHostFirewallRule = <ThrowOnError extends boolean = false>(options: Options<CreateHostFirewallRuleData, ThrowOnError>) => (options.client ?? client).post<CreateHostFirewallRuleResponses, CreateHostFirewallRuleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/firewall/host',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a host firewall rule
+ *
+ * Deletes a Helling-managed nftables rule by metadata id. Admin role required.
+ */
+export const deleteHostFirewallRule = <ThrowOnError extends boolean = false>(options: Options<DeleteHostFirewallRuleData, ThrowOnError>) => (options.client ?? client).delete<DeleteHostFirewallRuleResponses, DeleteHostFirewallRuleErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/firewall/host/{id}',
+    ...options
+});
+
+/**
+ * Stream or list events
+ *
+ * Streams Server-Sent Events when requested with
+ * `Accept: text/event-stream`; otherwise returns a JSON snapshot for CLI
+ * and dashboard hydration.
+ *
+ */
+export const listEvents = <ThrowOnError extends boolean = false>(options?: Options<ListEventsData, ThrowOnError>) => (options?.client ?? client).get<ListEventsResponses, ListEventsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/events',
+    ...options
+});
+
+/**
+ * Query audit events
+ *
+ * Reads bounded Helling audit entries from journald. Admin role required.
+ */
+export const listAuditEvents = <ThrowOnError extends boolean = false>(options?: Options<ListAuditEventsData, ThrowOnError>) => (options?.client ?? client).get<ListAuditEventsResponses, ListAuditEventsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/audit',
+    ...options
+});
+
+/**
+ * Export audit events
+ *
+ * Streams bounded journald audit records as JSON Lines. Admin role required.
+ */
+export const exportAuditEvents = <ThrowOnError extends boolean = false>(options?: Options<ExportAuditEventsData, ThrowOnError>) => (options?.client ?? client).get<ExportAuditEventsResponses, ExportAuditEventsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'helling_session',
+            type: 'apiKey'
+        }],
+    url: '/audit/export',
     ...options
 });

@@ -27,8 +27,8 @@ Recommended archive layout:
 - `metadata.json` (required)
 - `helling.db` (required)
 - `etc/helling/helling.yaml` (required)
-- `etc/helling/ca/ca.key.age` (required)
-- `etc/helling/ca/ca.crt.pem` (required)
+- `var/lib/helling/ca.key.age` (required)
+- `var/lib/helling/ca.crt` (required)
 - `etc/helling/jwt/ed25519.key` (required)
 - `checksums.txt` (required)
 

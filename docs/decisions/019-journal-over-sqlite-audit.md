@@ -31,6 +31,7 @@ Every Helling audit record emits a `MESSAGE=` plus the following indexed fields.
 | `MESSAGE`               | string | yes      | Human-readable action description (e.g. `"user.login succeeded"`, `"schedule.run_now"`)                                                                    |
 | `PRIORITY`              | int    | yes      | syslog 0-7 (typically 5 info / 3 err / 4 warn)                                                                                                             |
 | `SYSLOG_IDENTIFIER`     | string | yes      | `hellingd` (always; enables `journalctl -t hellingd`)                                                                                                      |
+| `HELLING_AUDIT`         | string | yes      | Fixed marker `1`; lets the API read path distinguish audit records from ordinary `hellingd` application logs                                               |
 | `HELLING_ACTION`        | string | yes      | Action type — dot-separated (e.g. `auth.login`, `user.create`, `instance.delete`, `schedule.run_now`, `policy.deny`)                                       |
 | `HELLING_ACTOR`         | string | yes      | Username (or `"system"` for machine-initiated events, or `"anonymous"` for pre-auth failures)                                                              |
 | `HELLING_ACTOR_ID`      | string | yes      | User ULID (or `"system"` / `"anonymous"`)                                                                                                                  |
@@ -72,6 +73,7 @@ fields := map[string]string{
     "HELLING_TARGET_ID":   newUser.ID,
     "HELLING_AFTER":       truncateJSON(mustJSON(newUser.PublicFields()), 4096),
     "SYSLOG_IDENTIFIER":   "hellingd",
+    "HELLING_AUDIT":       "1",
 }
 if err := journal.Send("user.create succeeded", journal.PriInfo, fields); err != nil {
     // Fall back to stderr; systemd captures stderr via StandardError=journal.
@@ -86,22 +88,26 @@ Read path is shell-out to `journalctl` (ADR-018):
 ```bash
 # All actions by a specific user in a time window
 journalctl -t hellingd \
+    HELLING_AUDIT=1 \
     HELLING_ACTOR=alice \
     --since "2026-04-01" --until "2026-04-15" \
     --output=json
 
 # All denials
 journalctl -t hellingd \
+    HELLING_AUDIT=1 \
     HELLING_OUTCOME=denied \
     --output=json
 
 # All mutations on a specific resource
 journalctl -t hellingd \
+    HELLING_AUDIT=1 \
     HELLING_TARGET_ID=01HABC... \
     --output=json
 
 # Correlate across the full request
 journalctl -t hellingd \
+    HELLING_AUDIT=1 \
     HELLING_REQUEST_ID=<uuid> \
     --output=json
 ```

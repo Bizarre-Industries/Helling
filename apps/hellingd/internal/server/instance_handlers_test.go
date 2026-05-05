@@ -20,14 +20,18 @@ import (
 // fakeIncusClient is a minimal incus.Client used to drive instance handlers
 // from tests without needing a real Incus daemon.
 type fakeIncusClient struct {
-	instances   []incus.Instance
-	createErr   error
-	deleteErr   error
-	stateErr    error
-	createdName string
-	stateCalls  []string
-	deletedName string
-	nextOpID    string
+	instances      []incus.Instance
+	createErr      error
+	deleteErr      error
+	stateErr       error
+	createdName    string
+	stateCalls     []string
+	deletedName    string
+	backupTarget   string
+	backupName     string
+	snapshotTarget string
+	snapshotName   string
+	nextOpID       string
 }
 
 func (f *fakeIncusClient) ListInstances(_ context.Context) ([]incus.Instance, error) {
@@ -64,6 +68,18 @@ func (f *fakeIncusClient) DeleteInstance(_ context.Context, name string) (incus.
 		return nil, f.deleteErr
 	}
 	f.deletedName = name
+	return &fakeOpHandle{id: f.nextOpID}, nil
+}
+
+func (f *fakeIncusClient) CreateInstanceBackup(_ context.Context, name, backupName string) (incus.OperationHandle, error) {
+	f.backupTarget = name
+	f.backupName = backupName
+	return &fakeOpHandle{id: f.nextOpID}, nil
+}
+
+func (f *fakeIncusClient) CreateInstanceSnapshot(_ context.Context, name, snapshotName string) (incus.OperationHandle, error) {
+	f.snapshotTarget = name
+	f.snapshotName = snapshotName
 	return &fakeOpHandle{id: f.nextOpID}, nil
 }
 
@@ -116,11 +132,11 @@ func TestListInstancesShapesAndFilters(t *testing.T) {
 		},
 	}
 	srv, st := newServerWithIncus(t, fake)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"/v1/instances", http.NoBody)
 	req.AddCookie(cookie)
@@ -163,11 +179,11 @@ func TestCreateInstanceCreatesOperationRow(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIncusClient{nextOpID: "incus-op-123"}
 	srv, st := newServerWithIncus(t, fake)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 
 	body, _ := json.Marshal(map[string]any{"name": "web-1", "image": "images:debian/13"})
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/instances", bytes.NewReader(body))
@@ -193,15 +209,70 @@ func TestCreateInstanceCreatesOperationRow(t *testing.T) {
 	}
 }
 
+func TestCreateInstanceValidatesNameAndType(t *testing.T) {
+	t.Parallel()
+	fake := &fakeIncusClient{nextOpID: "incus-op-123"}
+	srv, st := newServerWithIncus(t, fake)
+	seedAdminUser(t, st)
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	cookie := loginCookie(t, ts, "admin", testPassword)
+
+	for _, body := range []map[string]any{
+		{"name": "../escape", "image": "images:debian/13"},
+		{"name": "web-1", "type": "vm", "image": "images:debian/13"},
+	} {
+		req := newJSONRequest(t, http.MethodPost, ts.URL+"/v1/instances", body)
+		req.AddCookie(cookie)
+		resp, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatalf("POST /v1/instances: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status: got %d want 400 for body %#v", resp.StatusCode, body)
+		}
+	}
+}
+
+func TestNonAdminCannotUseTypedInstanceHandlers(t *testing.T) {
+	t.Parallel()
+	fake := &fakeIncusClient{nextOpID: "incus-op-123"}
+	srv, st := newServerWithIncus(t, fake)
+	seedRegularUser(t, st, "alice")
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	cookie := loginCookie(t, ts, "alice", testPassword)
+
+	checks := []*http.Request{
+		newJSONRequest(t, http.MethodPost, ts.URL+"/v1/instances", map[string]any{"name": "web-1", "image": "images:debian/13"}),
+		mustRequest(t, http.MethodGet, ts.URL+"/v1/instances"),
+		mustRequest(t, http.MethodGet, ts.URL+"/v1/instances/web-1"),
+		mustRequest(t, http.MethodPost, ts.URL+"/v1/instances/web-1/start"),
+		mustRequest(t, http.MethodDelete, ts.URL+"/v1/instances/web-1"),
+	}
+	for _, req := range checks {
+		req.AddCookie(cookie)
+		resp, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatalf("%s %s: %v", req.Method, req.URL.Path, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusForbidden {
+			t.Fatalf("%s %s status: got %d want 403", req.Method, req.URL.Path, resp.StatusCode)
+		}
+	}
+}
+
 func TestStartStopInstanceQueuesOps(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIncusClient{nextOpID: "incus-op-state"}
 	srv, st := newServerWithIncus(t, fake)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 
 	for _, action := range []string{"start", "stop"} {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/instances/web-1/"+action, http.NoBody)
@@ -228,11 +299,11 @@ func TestDeleteInstanceQueuesOp(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIncusClient{nextOpID: "incus-op-del"}
 	srv, st := newServerWithIncus(t, fake)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodDelete, ts.URL+"/v1/instances/web-1", http.NoBody)
 	req.AddCookie(cookie)
 	resp, err := ts.Client().Do(req)
@@ -252,10 +323,10 @@ func TestListAndGetOperationsThroughHandlers(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIncusClient{nextOpID: "incus-op-list"}
 	srv, st := newServerWithIncus(t, fake)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 
 	body, _ := json.Marshal(map[string]any{"name": "web-1", "image": "images:debian/13"})
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/instances", bytes.NewReader(body))
@@ -300,10 +371,10 @@ func TestListAndGetOperationsThroughHandlers(t *testing.T) {
 func TestListInstancesWithoutIncusReturns503(t *testing.T) {
 	t.Parallel()
 	srv, st := newServerWithIncus(t, nil)
-	seedUser(t, st, "alice", "secret-password-123")
+	seedAdminUser(t, st)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	cookie := loginCookie(t, ts, "alice", "secret-password-123")
+	cookie := loginCookie(t, ts, "admin", testPassword)
 
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"/v1/instances", http.NoBody)
 	req.AddCookie(cookie)
@@ -315,4 +386,13 @@ func TestListInstancesWithoutIncusReturns503(t *testing.T) {
 	if resp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status: got %d want 503", resp.StatusCode)
 	}
+}
+
+func mustRequest(t *testing.T, method, url string) *http.Request {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), method, url, http.NoBody)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	return req
 }

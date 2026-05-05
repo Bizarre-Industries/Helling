@@ -14,8 +14,12 @@ Helling v0.1 installs through the Debian-first installer ISO. The ISO installs D
 On a Debian build host with `live-build` installed:
 
 ```bash
+HELLING_ISO_RELEASE_GATE=1 \
 task iso:build
 ```
+
+Full ISO generation is release-gate only. Do not use it for routine Parallels
+development VM setup; use `task vm:parallels:build-image` for that path.
 
 For a source-only validation that does not require root or live-build:
 

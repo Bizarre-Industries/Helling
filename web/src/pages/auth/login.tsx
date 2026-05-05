@@ -24,6 +24,13 @@ interface PageLoginProps {
 
 type Stage = 'creds' | 'totp';
 
+type ApiErrorLike = { detail?: string; title?: string };
+
+function responseError(error: unknown, fallback: string) {
+  const apiError = error as ApiErrorLike | undefined;
+  return apiError?.detail || apiError?.title || fallback;
+}
+
 export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
   const formId = useId();
   const [stage, setStage] = useState<Stage>('creds');
@@ -50,11 +57,7 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
       const res = await authLogin({ body: { username, password } });
       const payload = res?.data?.data;
       if (res?.error || !payload) {
-        const detail =
-          (res?.error as { detail?: string; title?: string } | undefined)?.detail ||
-          (res?.error as { detail?: string; title?: string } | undefined)?.title ||
-          'Login failed.';
-        setError(detail);
+        setError(responseError(res?.error, 'Login failed.'));
         return;
       }
       if (payload.mfa_required && payload.mfa_token) {
@@ -93,11 +96,7 @@ export default function PageLogin({ onLogin, onEnterSetup }: PageLoginProps) {
       });
       const payload = res?.data?.data;
       if (res?.error || !payload?.access_token) {
-        const detail =
-          (res?.error as { detail?: string; title?: string } | undefined)?.detail ||
-          (res?.error as { detail?: string; title?: string } | undefined)?.title ||
-          'MFA verification failed.';
-        setError(detail);
+        setError(responseError(res?.error, 'MFA verification failed.'));
         return;
       }
       completeLogin(payload.access_token);

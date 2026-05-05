@@ -34,6 +34,7 @@ LESSONS.md
 # Go
 /bin/
 /dist/
+/packer_cache/
 *.exe
 *.dll
 *.so

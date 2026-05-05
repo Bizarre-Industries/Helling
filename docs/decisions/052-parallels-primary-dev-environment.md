@@ -26,14 +26,27 @@ Parallels Desktop on macOS becomes the primary documented Debian dev/test VM for
 - Two deploy paths are wired:
   1. `rsync` + `systemctl restart hellingd` for the inner dev loop (fast, used per save / per build).
   2. `.deb` install via the ADR-045 reprepro path for release-gate validation (slow, release-shaped).
-- Tooling lives in `scripts/parallels-vm-bootstrap.sh`, `scripts/parallels-vm-deploy-rsync.sh`, `scripts/parallels-vm-deploy-deb.sh`, and `Taskfile.yaml` `vm:parallels:*` + `build:linux` targets.
+- Packer owns first-time Debian dev VM image creation through
+  `deploy/packer/parallels-dev/` and `scripts/parallels-vm-build-dev.sh`.
+  `scripts/parallels-vm-bootstrap.sh` remains an idempotent repair/provisioning
+  path for existing manually installed VMs.
+- The Packer image is inner-loop evidence only. It must use key-only SSH after
+  provisioning and should consume the same service unit shape and package
+  assumptions as the ISO path, but it does not replace `.deb` release-test or
+  release-gate ISO validation.
+- Tooling lives in `deploy/packer/parallels-dev/`,
+  `scripts/parallels-vm-build-dev.sh`, `scripts/parallels-vm-bootstrap.sh`,
+  `scripts/parallels-vm-deploy-rsync.sh`, `scripts/parallels-vm-deploy-deb.sh`,
+  and `Taskfile.yaml` `vm:parallels:*` + `build:linux` targets.
 - CI continues to run on GitHub-hosted Linux runners. This ADR does not change CI.
 
 ## Consequences
 
 Easier:
 
-- A real Debian system with systemd, Incus, and Podman is one `task vm:parallels:up` away on every macOS contributor laptop that has Parallels Desktop installed.
+- A real Debian system with systemd, Incus, and Podman is a one-time
+  `task vm:parallels:build-image` plus `task vm:parallels:up` away on every
+  macOS contributor laptop that has Parallels Desktop and Packer installed.
 - Inner dev loop (`task vm:parallels:dev`) is a build + rsync + service restart that finishes in seconds.
 - Release-gate validation (`task vm:parallels:release-test`) drives the same `.deb` flow that ships to users via ADR-045 / ADR-046.
 - VM snapshots make destructive testing (Incus storage operations, installer edge cases) cheap to roll back.
@@ -43,6 +56,9 @@ Harder / costs:
 - Parallels Desktop is commercial software with a license cost. Contributors who cannot fund a license use the Lima fallback (ADR-034) instead.
 - Two VM tooling surfaces (Parallels primary, Lima fallback) must stay in sync. Mitigated by mirroring the task namespace (`vm:parallels:*` and `vm:lima:*`) so command shape is identical.
 - Cross-compile from macOS to Linux is supported by the pure-Go v0.1 stack; deploy scripts can still fall back to building inside the VM when host tooling is missing.
+- Packer is a local dev-image builder only. It does not replace the
+  live-build Helling installer ISO from ADR-046, and it must not make normal
+  local checks build the product ISO.
 
 ## References
 

@@ -1,8 +1,8 @@
 {
-	auto_https off
+	skip_install_trust
 }
 
-:8006 {
+https://localhost:8006, https://127.0.0.1:8006, https://:8006 {
 	encode zstd gzip
 	tls internal
 

@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { authLogin, authMfaComplete, authSetup, authSetupStatus, createInstance, deleteInstance, getCurrentUser, getHealth, getInstance, getOperation, getVersion, listInstances, listOperations, logout, type Options, startInstance, stopInstance } from '../sdk.gen';
-import type { AuthLoginData, AuthLoginError, AuthLoginResponse, AuthMfaCompleteData, AuthMfaCompleteError, AuthMfaCompleteResponse, AuthSetupData, AuthSetupError, AuthSetupResponse, AuthSetupStatusData, AuthSetupStatusError, AuthSetupStatusResponse, CreateInstanceData, CreateInstanceError, CreateInstanceResponse, DeleteInstanceData, DeleteInstanceError, DeleteInstanceResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetHealthData, GetHealthResponse, GetInstanceData, GetInstanceError, GetInstanceResponse, GetOperationData, GetOperationError, GetOperationResponse, GetVersionData, GetVersionResponse, ListInstancesData, ListInstancesError, ListInstancesResponse, ListOperationsData, ListOperationsError, ListOperationsResponse, LogoutData, LogoutError, LogoutResponse, StartInstanceData, StartInstanceError, StartInstanceResponse, StopInstanceData, StopInstanceError, StopInstanceResponse } from '../types.gen';
+import { authLogin, authMfaComplete, authSetup, authSetupStatus, createHostFirewallRule, createInstance, createSchedule, createUser, createWebhook, deleteHostFirewallRule, deleteInstance, deleteSchedule, deleteUser, deleteWebhook, exportAuditEvents, getCurrentUser, getHealth, getInstance, getOperation, getSchedule, getUser, getVersion, getWebhook, listAuditEvents, listEvents, listHostFirewallRules, listInstances, listOperations, listSchedules, listUsers, listWebhooks, logout, type Options, runSchedule, startInstance, stopInstance, testWebhook, updateSchedule, updateUser, updateUserScope, updateWebhook } from '../sdk.gen';
+import type { AuthLoginData, AuthLoginError, AuthLoginResponse, AuthMfaCompleteData, AuthMfaCompleteError, AuthMfaCompleteResponse, AuthSetupData, AuthSetupError, AuthSetupResponse, AuthSetupStatusData, AuthSetupStatusError, AuthSetupStatusResponse, CreateHostFirewallRuleData, CreateHostFirewallRuleError, CreateHostFirewallRuleResponse, CreateInstanceData, CreateInstanceError, CreateInstanceResponse, CreateScheduleData, CreateScheduleError, CreateScheduleResponse, CreateUserData, CreateUserError, CreateUserResponse, CreateWebhookData, CreateWebhookError, CreateWebhookResponse, DeleteHostFirewallRuleData, DeleteHostFirewallRuleError, DeleteHostFirewallRuleResponse, DeleteInstanceData, DeleteInstanceError, DeleteInstanceResponse, DeleteScheduleData, DeleteScheduleError, DeleteScheduleResponse, DeleteUserData, DeleteUserError, DeleteUserResponse, DeleteWebhookData, DeleteWebhookError, DeleteWebhookResponse, ExportAuditEventsData, ExportAuditEventsError, ExportAuditEventsResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetHealthData, GetHealthResponse, GetInstanceData, GetInstanceError, GetInstanceResponse, GetOperationData, GetOperationError, GetOperationResponse, GetScheduleData, GetScheduleError, GetScheduleResponse, GetUserData, GetUserError, GetUserResponse, GetVersionData, GetVersionResponse, GetWebhookData, GetWebhookError, GetWebhookResponse, ListAuditEventsData, ListAuditEventsError, ListAuditEventsResponse, ListEventsData, ListEventsError, ListEventsResponse, ListHostFirewallRulesData, ListHostFirewallRulesError, ListHostFirewallRulesResponse, ListInstancesData, ListInstancesError, ListInstancesResponse, ListOperationsData, ListOperationsError, ListOperationsResponse, ListSchedulesData, ListSchedulesError, ListSchedulesResponse, ListUsersData, ListUsersError, ListUsersResponse, ListWebhooksData, ListWebhooksError, ListWebhooksResponse, LogoutData, LogoutError, LogoutResponse, RunScheduleData, RunScheduleError, RunScheduleResponse, StartInstanceData, StartInstanceError, StartInstanceResponse, StopInstanceData, StopInstanceError, StopInstanceResponse, TestWebhookData, TestWebhookError, TestWebhookResponse, UpdateScheduleData, UpdateScheduleError, UpdateScheduleResponse, UpdateUserData, UpdateUserError, UpdateUserResponse, UpdateUserScopeData, UpdateUserScopeError, UpdateUserScopeResponse, UpdateWebhookData, UpdateWebhookError, UpdateWebhookResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -359,4 +359,473 @@ export const getOperationOptions = (options: Options<GetOperationData>) => query
         return data;
     },
     queryKey: getOperationQueryKey(options)
+});
+
+export const listUsersQueryKey = (options?: Options<ListUsersData>) => createQueryKey('listUsers', options);
+
+/**
+ * List local users
+ *
+ * Returns all local Helling users. Admin role required.
+ */
+export const listUsersOptions = (options?: Options<ListUsersData>) => queryOptions<ListUsersResponse, ListUsersError, ListUsersResponse, ReturnType<typeof listUsersQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listUsers({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listUsersQueryKey(options)
+});
+
+/**
+ * Create a local user
+ *
+ * Creates a Helling user and provisions its delegated Incus scope. Admin role required.
+ */
+export const createUserMutation = (options?: Partial<Options<CreateUserData>>): UseMutationOptions<CreateUserResponse, CreateUserError, Options<CreateUserData>> => {
+    const mutationOptions: UseMutationOptions<CreateUserResponse, CreateUserError, Options<CreateUserData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createUser({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete a local user
+ *
+ * Deletes a user and revokes its delegated Incus trust entry. Admin role required.
+ */
+export const deleteUserMutation = (options?: Partial<Options<DeleteUserData>>): UseMutationOptions<DeleteUserResponse, DeleteUserError, Options<DeleteUserData>> => {
+    const mutationOptions: UseMutationOptions<DeleteUserResponse, DeleteUserError, Options<DeleteUserData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteUser({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getUserQueryKey = (options: Options<GetUserData>) => createQueryKey('getUser', options);
+
+/**
+ * Get a local user
+ *
+ * Returns one Helling user. Admin role required.
+ */
+export const getUserOptions = (options: Options<GetUserData>) => queryOptions<GetUserResponse, GetUserError, GetUserResponse, ReturnType<typeof getUserQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getUser({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getUserQueryKey(options)
+});
+
+/**
+ * Update a local user
+ *
+ * Partially updates mutable user fields. Admin role required.
+ */
+export const updateUserMutation = (options?: Partial<Options<UpdateUserData>>): UseMutationOptions<UpdateUserResponse, UpdateUserError, Options<UpdateUserData>> => {
+    const mutationOptions: UseMutationOptions<UpdateUserResponse, UpdateUserError, Options<UpdateUserData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateUser({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Assign a user to an Incus project
+ *
+ * Replaces the user's Incus project scope and rotates the restricted trust entry. Admin role required.
+ */
+export const updateUserScopeMutation = (options?: Partial<Options<UpdateUserScopeData>>): UseMutationOptions<UpdateUserScopeResponse, UpdateUserScopeError, Options<UpdateUserScopeData>> => {
+    const mutationOptions: UseMutationOptions<UpdateUserScopeResponse, UpdateUserScopeError, Options<UpdateUserScopeData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateUserScope({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listSchedulesQueryKey = (options?: Options<ListSchedulesData>) => createQueryKey('listSchedules', options);
+
+/**
+ * List schedules
+ *
+ * Returns systemd timer-backed schedules tracked by Helling. Admin role required.
+ */
+export const listSchedulesOptions = (options?: Options<ListSchedulesData>) => queryOptions<ListSchedulesResponse, ListSchedulesError, ListSchedulesResponse, ReturnType<typeof listSchedulesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listSchedules({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listSchedulesQueryKey(options)
+});
+
+/**
+ * Create a schedule
+ *
+ * Writes validated schedule units, enables the timer, persists metadata, and emits audit/event records. Admin role required.
+ */
+export const createScheduleMutation = (options?: Partial<Options<CreateScheduleData>>): UseMutationOptions<CreateScheduleResponse, CreateScheduleError, Options<CreateScheduleData>> => {
+    const mutationOptions: UseMutationOptions<CreateScheduleResponse, CreateScheduleError, Options<CreateScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete a schedule
+ *
+ * Removes managed systemd units and deletes schedule metadata. Admin role required.
+ */
+export const deleteScheduleMutation = (options?: Partial<Options<DeleteScheduleData>>): UseMutationOptions<DeleteScheduleResponse, DeleteScheduleError, Options<DeleteScheduleData>> => {
+    const mutationOptions: UseMutationOptions<DeleteScheduleResponse, DeleteScheduleError, Options<DeleteScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getScheduleQueryKey = (options: Options<GetScheduleData>) => createQueryKey('getSchedule', options);
+
+/**
+ * Get a schedule
+ *
+ * Returns one schedule. Admin role required.
+ */
+export const getScheduleOptions = (options: Options<GetScheduleData>) => queryOptions<GetScheduleResponse, GetScheduleError, GetScheduleResponse, ReturnType<typeof getScheduleQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSchedule({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getScheduleQueryKey(options)
+});
+
+/**
+ * Update a schedule
+ *
+ * Partially updates a schedule, rewrites its units, and preserves unchanged fields. Admin role required.
+ */
+export const updateScheduleMutation = (options?: Partial<Options<UpdateScheduleData>>): UseMutationOptions<UpdateScheduleResponse, UpdateScheduleError, Options<UpdateScheduleData>> => {
+    const mutationOptions: UseMutationOptions<UpdateScheduleResponse, UpdateScheduleError, Options<UpdateScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Run a schedule now
+ *
+ * Triggers the schedule through the Helling API and Incus proxy path. Admin role required.
+ */
+export const runScheduleMutation = (options?: Partial<Options<RunScheduleData>>): UseMutationOptions<RunScheduleResponse, RunScheduleError, Options<RunScheduleData>> => {
+    const mutationOptions: UseMutationOptions<RunScheduleResponse, RunScheduleError, Options<RunScheduleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await runSchedule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listWebhooksQueryKey = (options?: Options<ListWebhooksData>) => createQueryKey('listWebhooks', options);
+
+/**
+ * List webhooks
+ *
+ * Returns webhook definitions without secrets. Admin role required.
+ */
+export const listWebhooksOptions = (options?: Options<ListWebhooksData>) => queryOptions<ListWebhooksResponse, ListWebhooksError, ListWebhooksResponse, ReturnType<typeof listWebhooksQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listWebhooks({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listWebhooksQueryKey(options)
+});
+
+/**
+ * Create a webhook
+ *
+ * Stores an age-encrypted HMAC secret and validates the HTTPS destination. Admin role required.
+ */
+export const createWebhookMutation = (options?: Partial<Options<CreateWebhookData>>): UseMutationOptions<CreateWebhookResponse, CreateWebhookError, Options<CreateWebhookData>> => {
+    const mutationOptions: UseMutationOptions<CreateWebhookResponse, CreateWebhookError, Options<CreateWebhookData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createWebhook({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete a webhook
+ *
+ * Deletes a webhook and delivery history. Admin role required.
+ */
+export const deleteWebhookMutation = (options?: Partial<Options<DeleteWebhookData>>): UseMutationOptions<DeleteWebhookResponse, DeleteWebhookError, Options<DeleteWebhookData>> => {
+    const mutationOptions: UseMutationOptions<DeleteWebhookResponse, DeleteWebhookError, Options<DeleteWebhookData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteWebhook({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getWebhookQueryKey = (options: Options<GetWebhookData>) => createQueryKey('getWebhook', options);
+
+/**
+ * Get a webhook
+ *
+ * Returns one webhook without its secret. Admin role required.
+ */
+export const getWebhookOptions = (options: Options<GetWebhookData>) => queryOptions<GetWebhookResponse, GetWebhookError, GetWebhookResponse, ReturnType<typeof getWebhookQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getWebhook({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getWebhookQueryKey(options)
+});
+
+/**
+ * Update a webhook
+ *
+ * Partially updates webhook metadata and optionally rotates the secret. Admin role required.
+ */
+export const updateWebhookMutation = (options?: Partial<Options<UpdateWebhookData>>): UseMutationOptions<UpdateWebhookResponse, UpdateWebhookError, Options<UpdateWebhookData>> => {
+    const mutationOptions: UseMutationOptions<UpdateWebhookResponse, UpdateWebhookError, Options<UpdateWebhookData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateWebhook({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Send a webhook test event
+ *
+ * Sends a signed test event and records delivery attempts. Admin role required.
+ */
+export const testWebhookMutation = (options?: Partial<Options<TestWebhookData>>): UseMutationOptions<TestWebhookResponse, TestWebhookError, Options<TestWebhookData>> => {
+    const mutationOptions: UseMutationOptions<TestWebhookResponse, TestWebhookError, Options<TestWebhookData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await testWebhook({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listHostFirewallRulesQueryKey = (options?: Options<ListHostFirewallRulesData>) => createQueryKey('listHostFirewallRules', options);
+
+/**
+ * List host firewall rules
+ *
+ * Returns Helling-managed nftables host firewall rules. Admin role required.
+ */
+export const listHostFirewallRulesOptions = (options?: Options<ListHostFirewallRulesData>) => queryOptions<ListHostFirewallRulesResponse, ListHostFirewallRulesError, ListHostFirewallRulesResponse, ReturnType<typeof listHostFirewallRulesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listHostFirewallRules({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listHostFirewallRulesQueryKey(options)
+});
+
+/**
+ * Create a host firewall rule
+ *
+ * Persists metadata and applies an nft rule using structured argv. Admin role required.
+ */
+export const createHostFirewallRuleMutation = (options?: Partial<Options<CreateHostFirewallRuleData>>): UseMutationOptions<CreateHostFirewallRuleResponse, CreateHostFirewallRuleError, Options<CreateHostFirewallRuleData>> => {
+    const mutationOptions: UseMutationOptions<CreateHostFirewallRuleResponse, CreateHostFirewallRuleError, Options<CreateHostFirewallRuleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createHostFirewallRule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete a host firewall rule
+ *
+ * Deletes a Helling-managed nftables rule by metadata id. Admin role required.
+ */
+export const deleteHostFirewallRuleMutation = (options?: Partial<Options<DeleteHostFirewallRuleData>>): UseMutationOptions<DeleteHostFirewallRuleResponse, DeleteHostFirewallRuleError, Options<DeleteHostFirewallRuleData>> => {
+    const mutationOptions: UseMutationOptions<DeleteHostFirewallRuleResponse, DeleteHostFirewallRuleError, Options<DeleteHostFirewallRuleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteHostFirewallRule({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listEventsQueryKey = (options?: Options<ListEventsData>) => createQueryKey('listEvents', options);
+
+/**
+ * Stream or list events
+ *
+ * Streams Server-Sent Events when requested with
+ * `Accept: text/event-stream`; otherwise returns a JSON snapshot for CLI
+ * and dashboard hydration.
+ *
+ */
+export const listEventsOptions = (options?: Options<ListEventsData>) => queryOptions<ListEventsResponse, ListEventsError, ListEventsResponse, ReturnType<typeof listEventsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listEvents({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listEventsQueryKey(options)
+});
+
+export const listAuditEventsQueryKey = (options?: Options<ListAuditEventsData>) => createQueryKey('listAuditEvents', options);
+
+/**
+ * Query audit events
+ *
+ * Reads bounded Helling audit entries from journald. Admin role required.
+ */
+export const listAuditEventsOptions = (options?: Options<ListAuditEventsData>) => queryOptions<ListAuditEventsResponse, ListAuditEventsError, ListAuditEventsResponse, ReturnType<typeof listAuditEventsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listAuditEvents({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listAuditEventsQueryKey(options)
+});
+
+export const exportAuditEventsQueryKey = (options?: Options<ExportAuditEventsData>) => createQueryKey('exportAuditEvents', options);
+
+/**
+ * Export audit events
+ *
+ * Streams bounded journald audit records as JSON Lines. Admin role required.
+ */
+export const exportAuditEventsOptions = (options?: Options<ExportAuditEventsData>) => queryOptions<ExportAuditEventsResponse, ExportAuditEventsError, ExportAuditEventsResponse, ReturnType<typeof exportAuditEventsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await exportAuditEvents({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: exportAuditEventsQueryKey(options)
 });

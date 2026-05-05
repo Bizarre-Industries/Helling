@@ -150,6 +150,10 @@ export type User = {
      */
     is_admin: boolean;
     /**
+     * Incus project assigned to this user for delegated proxy calls.
+     */
+    incus_project?: string;
+    /**
      * Account creation time (RFC 3339).
      */
     created_at: string;
@@ -270,6 +274,557 @@ export type Operation = {
 };
 
 /**
+ * Envelope containing one user.
+ */
+export type UserEnvelope = {
+    data: User;
+};
+
+/**
+ * Envelope containing users.
+ */
+export type UserListEnvelope = {
+    /**
+     * User payload list.
+     */
+    data: Array<User>;
+};
+
+/**
+ * Request body for creating a local user.
+ */
+export type UserCreateRequest = {
+    /**
+     * Account username.
+     */
+    username: string;
+    /**
+     * True when the created user should receive admin role.
+     */
+    is_admin?: boolean;
+    /**
+     * Incus project assigned to the user's restricted certificate.
+     */
+    incus_project?: string;
+};
+
+/**
+ * Partial request body for updating a local user.
+ */
+export type UserUpdateRequest = {
+    /**
+     * Replacement admin-role flag.
+     */
+    is_admin?: boolean;
+};
+
+/**
+ * Request body for assigning a delegated Incus project scope.
+ */
+export type UserScopeRequest = {
+    /**
+     * Incus scope label in `incus:project:<name>` form.
+     */
+    scope: string;
+};
+
+/**
+ * Envelope containing the assigned user scope.
+ */
+export type UserScopeEnvelope = {
+    data: UserScope;
+};
+
+/**
+ * Delegated Incus scope assigned to a user.
+ */
+export type UserScope = {
+    /**
+     * Incus scope label in `incus:project:<name>` form.
+     */
+    scope: string;
+};
+
+/**
+ * systemd timer-backed Helling schedule.
+ */
+export type Schedule = {
+    /**
+     * Schedule UUID.
+     */
+    id: string;
+    /**
+     * Human label for the schedule.
+     */
+    name: string;
+    /**
+     * Scheduled operation kind.
+     */
+    kind: 'backup' | 'snapshot';
+    /**
+     * Target instance, project, or Helling selector for the schedule.
+     */
+    target: string;
+    /**
+     * systemd OnCalendar expression.
+     */
+    on_calendar: string;
+    /**
+     * True when the timer should be enabled.
+     */
+    enabled: boolean;
+    /**
+     * Base unit name without extension.
+     */
+    unit_name?: string;
+    /**
+     * Last observed run timestamp.
+     */
+    last_run_at?: string | null;
+    /**
+     * Next scheduled run timestamp when known.
+     */
+    next_run_at?: string | null;
+    /**
+     * Last run status.
+     */
+    last_status?: 'success' | 'failed' | 'skipped' | 'never';
+    /**
+     * Last run error summary.
+     */
+    last_error?: string | null;
+    /**
+     * Schedule creation time.
+     */
+    created_at: string;
+    /**
+     * Schedule update time.
+     */
+    updated_at: string;
+};
+
+/**
+ * Request body for creating a schedule.
+ */
+export type ScheduleCreateRequest = {
+    /**
+     * Human label for the schedule.
+     */
+    name: string;
+    /**
+     * Scheduled operation kind.
+     */
+    kind: 'backup' | 'snapshot';
+    /**
+     * Target instance, project, or Helling selector for the schedule.
+     */
+    target: string;
+    /**
+     * systemd OnCalendar expression.
+     */
+    on_calendar: string;
+    /**
+     * Initial timer enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
+ * Partial request body for updating a schedule.
+ */
+export type ScheduleUpdateRequest = {
+    /**
+     * Replacement human label.
+     */
+    name?: string;
+    /**
+     * Replacement systemd OnCalendar expression.
+     */
+    on_calendar?: string;
+    /**
+     * Replacement enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
+ * Envelope containing one schedule.
+ */
+export type ScheduleEnvelope = {
+    data: Schedule;
+};
+
+/**
+ * Envelope containing schedules.
+ */
+export type ScheduleListEnvelope = {
+    /**
+     * Schedule payload list.
+     */
+    data: Array<Schedule>;
+};
+
+/**
+ * Outbound webhook definition without secret material.
+ */
+export type Webhook = {
+    /**
+     * Webhook UUID.
+     */
+    id: string;
+    /**
+     * Human label for the webhook.
+     */
+    name: string;
+    /**
+     * HTTPS webhook destination.
+     */
+    url: string;
+    /**
+     * Event types delivered to this webhook.
+     */
+    events: Array<string>;
+    /**
+     * True when delivery is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Webhook creation time.
+     */
+    created_at: string;
+    /**
+     * Webhook update time.
+     */
+    updated_at: string;
+};
+
+/**
+ * Request body for creating a webhook.
+ */
+export type WebhookCreateRequest = {
+    /**
+     * Human label for the webhook.
+     */
+    name: string;
+    /**
+     * HTTPS webhook destination.
+     */
+    url: string;
+    /**
+     * Event types delivered to this webhook.
+     */
+    events: Array<string>;
+    /**
+     * Initial delivery enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
+ * Partial request body for updating a webhook.
+ */
+export type WebhookUpdateRequest = {
+    /**
+     * Replacement human label.
+     */
+    name?: string;
+    /**
+     * Replacement HTTPS webhook destination.
+     */
+    url?: string;
+    /**
+     * Replacement event type list.
+     */
+    events?: Array<string>;
+    /**
+     * Replacement delivery enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
+ * Envelope containing one webhook.
+ */
+export type WebhookEnvelope = {
+    data: Webhook;
+};
+
+/**
+ * Envelope containing webhooks.
+ */
+export type WebhookListEnvelope = {
+    /**
+     * Webhook payload list.
+     */
+    data: Array<Webhook>;
+};
+
+/**
+ * Webhook delivery attempt record.
+ */
+export type WebhookDelivery = {
+    /**
+     * Delivery UUID.
+     */
+    id: string;
+    /**
+     * Webhook UUID.
+     */
+    webhook_id: string;
+    /**
+     * Event UUID.
+     */
+    event_id: string;
+    /**
+     * Helling event type.
+     */
+    event_type: string;
+    /**
+     * Delivery status.
+     */
+    status: 'pending' | 'success' | 'failed';
+    /**
+     * Attempt number starting at 1.
+     */
+    attempt: number;
+    /**
+     * HTTP response status when available.
+     */
+    http_status?: number | null;
+    /**
+     * Delivery error summary.
+     */
+    error?: string | null;
+    /**
+     * Delivery creation time.
+     */
+    created_at: string;
+};
+
+/**
+ * Envelope containing one webhook delivery.
+ */
+export type WebhookDeliveryEnvelope = {
+    data: WebhookDelivery;
+};
+
+/**
+ * Helling-managed host firewall rule.
+ */
+export type FirewallRule = {
+    /**
+     * Firewall rule UUID.
+     */
+    id: string;
+    /**
+     * nftables base chain direction.
+     */
+    direction: 'input' | 'output' | 'forward';
+    /**
+     * Firewall verdict.
+     */
+    action: 'accept' | 'drop' | 'reject';
+    /**
+     * Layer-4 protocol.
+     */
+    protocol: 'tcp' | 'udp' | 'icmp' | 'any';
+    /**
+     * Optional source CIDR.
+     */
+    source_cidr?: string | null;
+    /**
+     * Optional destination CIDR.
+     */
+    destination_cidr?: string | null;
+    /**
+     * Optional destination port.
+     */
+    destination_port?: number | null;
+    /**
+     * True when the rule is active.
+     */
+    enabled: boolean;
+    /**
+     * Operator-facing comment.
+     */
+    comment?: string | null;
+    /**
+     * nftables comment used to identify Helling-managed rules.
+     */
+    nft_comment: string;
+    /**
+     * nftables handle when known.
+     */
+    nft_handle?: number | null;
+    /**
+     * Rule creation time.
+     */
+    created_at: string;
+    /**
+     * Rule update time.
+     */
+    updated_at: string;
+};
+
+/**
+ * Request body for creating a host firewall rule.
+ */
+export type FirewallRuleCreateRequest = {
+    /**
+     * nftables base chain direction.
+     */
+    direction: 'input' | 'output' | 'forward';
+    /**
+     * Firewall verdict.
+     */
+    action: 'accept' | 'drop' | 'reject';
+    /**
+     * Layer-4 protocol.
+     */
+    protocol: 'tcp' | 'udp' | 'icmp' | 'any';
+    /**
+     * Optional source CIDR.
+     */
+    source_cidr?: string;
+    /**
+     * Optional destination CIDR.
+     */
+    destination_cidr?: string;
+    /**
+     * Optional destination port.
+     */
+    destination_port?: number;
+    /**
+     * Initial active state.
+     */
+    enabled?: boolean;
+    /**
+     * Operator-facing comment.
+     */
+    comment?: string;
+};
+
+/**
+ * Envelope containing one host firewall rule.
+ */
+export type FirewallRuleEnvelope = {
+    data: FirewallRule;
+};
+
+/**
+ * Envelope containing host firewall rules.
+ */
+export type FirewallRuleListEnvelope = {
+    /**
+     * Host firewall rule payload list.
+     */
+    data: Array<FirewallRule>;
+};
+
+/**
+ * Helling event payload shared by SSE and webhooks.
+ */
+export type Event = {
+    /**
+     * Event UUID.
+     */
+    id: string;
+    /**
+     * Helling event type.
+     */
+    type: string;
+    /**
+     * Event timestamp.
+     */
+    time: string;
+    /**
+     * Source subsystem.
+     */
+    source: 'incus' | 'podman' | 'helling';
+    /**
+     * Resource affected by the event.
+     */
+    subject: string;
+    /**
+     * Event-specific metadata.
+     */
+    data: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * Envelope containing one event.
+ */
+export type EventEnvelope = {
+    data: Event;
+};
+
+/**
+ * Envelope containing events.
+ */
+export type EventListEnvelope = {
+    /**
+     * Event payload list.
+     */
+    data: Array<Event>;
+};
+
+/**
+ * Journal-backed Helling audit event.
+ */
+export type AuditEvent = {
+    /**
+     * Event id derived from journal cursor or generated fallback.
+     */
+    id?: string;
+    /**
+     * Audit timestamp.
+     */
+    time: string;
+    /**
+     * Actor username when known.
+     */
+    actor?: string;
+    /**
+     * Helling audit action.
+     */
+    action: string;
+    /**
+     * Audit outcome.
+     */
+    outcome: 'success' | 'failure' | 'denied';
+    /**
+     * Target resource type.
+     */
+    target_type?: string;
+    /**
+     * Target resource identifier.
+     */
+    target_id?: string;
+    /**
+     * Human-readable audit summary.
+     */
+    message: string;
+    /**
+     * Additional journal fields after redaction.
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * Envelope containing audit events.
+ */
+export type AuditEventListEnvelope = {
+    /**
+     * Audit event payload list.
+     */
+    data: Array<AuditEvent>;
+};
+
+/**
  * Standard error envelope returned by 4xx and 5xx responses.
  */
 export type Error = {
@@ -290,11 +845,109 @@ export type Error = {
 };
 
 /**
+ * Request body for creating a local user.
+ */
+export type UserCreateRequestWritable = {
+    /**
+     * Account username.
+     */
+    username: string;
+    /**
+     * Initial account password.
+     */
+    password: string;
+    /**
+     * True when the created user should receive admin role.
+     */
+    is_admin?: boolean;
+    /**
+     * Incus project assigned to the user's restricted certificate.
+     */
+    incus_project?: string;
+};
+
+/**
+ * Partial request body for updating a local user.
+ */
+export type UserUpdateRequestWritable = {
+    /**
+     * Replacement account password.
+     */
+    password?: string;
+    /**
+     * Replacement admin-role flag.
+     */
+    is_admin?: boolean;
+};
+
+/**
+ * Request body for creating a webhook.
+ */
+export type WebhookCreateRequestWritable = {
+    /**
+     * Human label for the webhook.
+     */
+    name: string;
+    /**
+     * HTTPS webhook destination.
+     */
+    url: string;
+    /**
+     * Event types delivered to this webhook.
+     */
+    events: Array<string>;
+    /**
+     * HMAC secret. Stored encrypted and never returned.
+     */
+    secret: string;
+    /**
+     * Initial delivery enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
+ * Partial request body for updating a webhook.
+ */
+export type WebhookUpdateRequestWritable = {
+    /**
+     * Replacement human label.
+     */
+    name?: string;
+    /**
+     * Replacement HTTPS webhook destination.
+     */
+    url?: string;
+    /**
+     * Replacement event type list.
+     */
+    events?: Array<string>;
+    /**
+     * Replacement HMAC secret. Stored encrypted and never returned.
+     */
+    secret?: string;
+    /**
+     * Replacement delivery enabled state.
+     */
+    enabled?: boolean;
+};
+
+/**
  * Instance name. Lowercase letters, digits, and hyphens only.
  * Max 63 chars. Must start with letter or digit.
  *
  */
 export type InstanceName = string;
+
+/**
+ * UUID v7 string.
+ */
+export type Uuid = string;
+
+/**
+ * Stable local user id.
+ */
+export type UserId = number;
 
 export type GetHealthData = {
     body?: never;
@@ -819,3 +1472,936 @@ export type GetOperationResponses = {
 };
 
 export type GetOperationResponse = GetOperationResponses[keyof GetOperationResponses];
+
+export type ListUsersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users';
+};
+
+export type ListUsersErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ListUsersError = ListUsersErrors[keyof ListUsersErrors];
+
+export type ListUsersResponses = {
+    /**
+     * User list
+     */
+    200: UserListEnvelope;
+};
+
+export type ListUsersResponse = ListUsersResponses[keyof ListUsersResponses];
+
+export type CreateUserData = {
+    /**
+     * User creation request.
+     */
+    body: UserCreateRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/users';
+};
+
+export type CreateUserErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * State conflict (e.g. instance already exists, already running)
+     */
+    409: Error;
+};
+
+export type CreateUserError = CreateUserErrors[keyof CreateUserErrors];
+
+export type CreateUserResponses = {
+    /**
+     * User created
+     */
+    201: UserEnvelope;
+};
+
+export type CreateUserResponse = CreateUserResponses[keyof CreateUserResponses];
+
+export type DeleteUserData = {
+    body?: never;
+    path: {
+        /**
+         * Stable local user id.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/users/{id}';
+};
+
+export type DeleteUserErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type DeleteUserError = DeleteUserErrors[keyof DeleteUserErrors];
+
+export type DeleteUserResponses = {
+    /**
+     * User deleted
+     */
+    204: void;
+};
+
+export type DeleteUserResponse = DeleteUserResponses[keyof DeleteUserResponses];
+
+export type GetUserData = {
+    body?: never;
+    path: {
+        /**
+         * Stable local user id.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/users/{id}';
+};
+
+export type GetUserErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type GetUserError = GetUserErrors[keyof GetUserErrors];
+
+export type GetUserResponses = {
+    /**
+     * User details
+     */
+    200: UserEnvelope;
+};
+
+export type GetUserResponse = GetUserResponses[keyof GetUserResponses];
+
+export type UpdateUserData = {
+    /**
+     * Partial user update request.
+     */
+    body: UserUpdateRequestWritable;
+    path: {
+        /**
+         * Stable local user id.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/users/{id}';
+};
+
+export type UpdateUserErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type UpdateUserError = UpdateUserErrors[keyof UpdateUserErrors];
+
+export type UpdateUserResponses = {
+    /**
+     * User updated
+     */
+    200: UserEnvelope;
+};
+
+export type UpdateUserResponse = UpdateUserResponses[keyof UpdateUserResponses];
+
+export type UpdateUserScopeData = {
+    /**
+     * Scope assignment request.
+     */
+    body: UserScopeRequest;
+    path: {
+        /**
+         * Stable local user id.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/users/{id}/scope';
+};
+
+export type UpdateUserScopeErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type UpdateUserScopeError = UpdateUserScopeErrors[keyof UpdateUserScopeErrors];
+
+export type UpdateUserScopeResponses = {
+    /**
+     * Scope assigned
+     */
+    200: UserScopeEnvelope;
+};
+
+export type UpdateUserScopeResponse = UpdateUserScopeResponses[keyof UpdateUserScopeResponses];
+
+export type ListSchedulesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Schedule kind filter.
+         */
+        kind?: 'backup' | 'snapshot';
+    };
+    url: '/schedules';
+};
+
+export type ListSchedulesErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ListSchedulesError = ListSchedulesErrors[keyof ListSchedulesErrors];
+
+export type ListSchedulesResponses = {
+    /**
+     * Schedule list
+     */
+    200: ScheduleListEnvelope;
+};
+
+export type ListSchedulesResponse = ListSchedulesResponses[keyof ListSchedulesResponses];
+
+export type CreateScheduleData = {
+    /**
+     * Schedule creation request.
+     */
+    body: ScheduleCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/schedules';
+};
+
+export type CreateScheduleErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * State conflict (e.g. instance already exists, already running)
+     */
+    409: Error;
+};
+
+export type CreateScheduleError = CreateScheduleErrors[keyof CreateScheduleErrors];
+
+export type CreateScheduleResponses = {
+    /**
+     * Schedule created
+     */
+    201: ScheduleEnvelope;
+};
+
+export type CreateScheduleResponse = CreateScheduleResponses[keyof CreateScheduleResponses];
+
+export type DeleteScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/schedules/{id}';
+};
+
+export type DeleteScheduleErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type DeleteScheduleError = DeleteScheduleErrors[keyof DeleteScheduleErrors];
+
+export type DeleteScheduleResponses = {
+    /**
+     * Schedule deleted
+     */
+    204: void;
+};
+
+export type DeleteScheduleResponse = DeleteScheduleResponses[keyof DeleteScheduleResponses];
+
+export type GetScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/schedules/{id}';
+};
+
+export type GetScheduleErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type GetScheduleError = GetScheduleErrors[keyof GetScheduleErrors];
+
+export type GetScheduleResponses = {
+    /**
+     * Schedule details
+     */
+    200: ScheduleEnvelope;
+};
+
+export type GetScheduleResponse = GetScheduleResponses[keyof GetScheduleResponses];
+
+export type UpdateScheduleData = {
+    /**
+     * Partial schedule update request.
+     */
+    body: ScheduleUpdateRequest;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/schedules/{id}';
+};
+
+export type UpdateScheduleErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type UpdateScheduleError = UpdateScheduleErrors[keyof UpdateScheduleErrors];
+
+export type UpdateScheduleResponses = {
+    /**
+     * Schedule updated
+     */
+    200: ScheduleEnvelope;
+};
+
+export type UpdateScheduleResponse = UpdateScheduleResponses[keyof UpdateScheduleResponses];
+
+export type RunScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/schedules/{id}/run';
+};
+
+export type RunScheduleErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type RunScheduleError = RunScheduleErrors[keyof RunScheduleErrors];
+
+export type RunScheduleResponses = {
+    /**
+     * Schedule run accepted
+     */
+    202: EventEnvelope;
+};
+
+export type RunScheduleResponse = RunScheduleResponses[keyof RunScheduleResponses];
+
+export type ListWebhooksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/webhooks';
+};
+
+export type ListWebhooksErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ListWebhooksError = ListWebhooksErrors[keyof ListWebhooksErrors];
+
+export type ListWebhooksResponses = {
+    /**
+     * Webhook list
+     */
+    200: WebhookListEnvelope;
+};
+
+export type ListWebhooksResponse = ListWebhooksResponses[keyof ListWebhooksResponses];
+
+export type CreateWebhookData = {
+    /**
+     * Webhook creation request. Secret is write-only.
+     */
+    body: WebhookCreateRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/webhooks';
+};
+
+export type CreateWebhookErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type CreateWebhookError = CreateWebhookErrors[keyof CreateWebhookErrors];
+
+export type CreateWebhookResponses = {
+    /**
+     * Webhook created
+     */
+    201: WebhookEnvelope;
+};
+
+export type CreateWebhookResponse = CreateWebhookResponses[keyof CreateWebhookResponses];
+
+export type DeleteWebhookData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/webhooks/{id}';
+};
+
+export type DeleteWebhookErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type DeleteWebhookError = DeleteWebhookErrors[keyof DeleteWebhookErrors];
+
+export type DeleteWebhookResponses = {
+    /**
+     * Webhook deleted
+     */
+    204: void;
+};
+
+export type DeleteWebhookResponse = DeleteWebhookResponses[keyof DeleteWebhookResponses];
+
+export type GetWebhookData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/webhooks/{id}';
+};
+
+export type GetWebhookErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type GetWebhookError = GetWebhookErrors[keyof GetWebhookErrors];
+
+export type GetWebhookResponses = {
+    /**
+     * Webhook details
+     */
+    200: WebhookEnvelope;
+};
+
+export type GetWebhookResponse = GetWebhookResponses[keyof GetWebhookResponses];
+
+export type UpdateWebhookData = {
+    /**
+     * Partial webhook update request. Secret is write-only.
+     */
+    body: WebhookUpdateRequestWritable;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/webhooks/{id}';
+};
+
+export type UpdateWebhookErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type UpdateWebhookError = UpdateWebhookErrors[keyof UpdateWebhookErrors];
+
+export type UpdateWebhookResponses = {
+    /**
+     * Webhook updated
+     */
+    200: WebhookEnvelope;
+};
+
+export type UpdateWebhookResponse = UpdateWebhookResponses[keyof UpdateWebhookResponses];
+
+export type TestWebhookData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/webhooks/{id}/test';
+};
+
+export type TestWebhookErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type TestWebhookError = TestWebhookErrors[keyof TestWebhookErrors];
+
+export type TestWebhookResponses = {
+    /**
+     * Webhook test queued
+     */
+    202: WebhookDeliveryEnvelope;
+};
+
+export type TestWebhookResponse = TestWebhookResponses[keyof TestWebhookResponses];
+
+export type ListHostFirewallRulesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/firewall/host';
+};
+
+export type ListHostFirewallRulesErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ListHostFirewallRulesError = ListHostFirewallRulesErrors[keyof ListHostFirewallRulesErrors];
+
+export type ListHostFirewallRulesResponses = {
+    /**
+     * Host firewall rule list
+     */
+    200: FirewallRuleListEnvelope;
+};
+
+export type ListHostFirewallRulesResponse = ListHostFirewallRulesResponses[keyof ListHostFirewallRulesResponses];
+
+export type CreateHostFirewallRuleData = {
+    /**
+     * Host firewall rule creation request.
+     */
+    body: FirewallRuleCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/firewall/host';
+};
+
+export type CreateHostFirewallRuleErrors = {
+    /**
+     * Malformed request
+     */
+    400: Error;
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type CreateHostFirewallRuleError = CreateHostFirewallRuleErrors[keyof CreateHostFirewallRuleErrors];
+
+export type CreateHostFirewallRuleResponses = {
+    /**
+     * Host firewall rule created
+     */
+    201: FirewallRuleEnvelope;
+};
+
+export type CreateHostFirewallRuleResponse = CreateHostFirewallRuleResponses[keyof CreateHostFirewallRuleResponses];
+
+export type DeleteHostFirewallRuleData = {
+    body?: never;
+    path: {
+        /**
+         * UUID v7 string.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/firewall/host/{id}';
+};
+
+export type DeleteHostFirewallRuleErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+    /**
+     * Resource not found
+     */
+    404: Error;
+};
+
+export type DeleteHostFirewallRuleError = DeleteHostFirewallRuleErrors[keyof DeleteHostFirewallRuleErrors];
+
+export type DeleteHostFirewallRuleResponses = {
+    /**
+     * Host firewall rule deleted
+     */
+    204: void;
+};
+
+export type DeleteHostFirewallRuleResponse = DeleteHostFirewallRuleResponses[keyof DeleteHostFirewallRuleResponses];
+
+export type ListEventsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of recent events.
+         */
+        limit?: number;
+        /**
+         * Event type or prefix.
+         */
+        type?: string;
+        /**
+         * Event id lower bound.
+         */
+        since?: string;
+    };
+    url: '/events';
+};
+
+export type ListEventsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+};
+
+export type ListEventsError = ListEventsErrors[keyof ListEventsErrors];
+
+export type ListEventsResponses = {
+    /**
+     * Event stream or JSON snapshot
+     */
+    200: EventListEnvelope;
+};
+
+export type ListEventsResponse = ListEventsResponses[keyof ListEventsResponses];
+
+export type ListAuditEventsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Actor username filter.
+         */
+        actor?: string;
+        /**
+         * Helling audit action.
+         */
+        action?: string;
+        /**
+         * Audit outcome filter.
+         */
+        outcome?: 'success' | 'failure' | 'denied';
+        /**
+         * Lower time bound.
+         */
+        since?: string;
+        /**
+         * Upper time bound.
+         */
+        until?: string;
+        /**
+         * Maximum audit result count.
+         */
+        limit?: number;
+    };
+    url: '/audit';
+};
+
+export type ListAuditEventsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ListAuditEventsError = ListAuditEventsErrors[keyof ListAuditEventsErrors];
+
+export type ListAuditEventsResponses = {
+    /**
+     * Audit event list
+     */
+    200: AuditEventListEnvelope;
+};
+
+export type ListAuditEventsResponse = ListAuditEventsResponses[keyof ListAuditEventsResponses];
+
+export type ExportAuditEventsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Actor username filter.
+         */
+        actor?: string;
+        /**
+         * Helling audit action.
+         */
+        action?: string;
+        /**
+         * Audit outcome filter.
+         */
+        outcome?: 'success' | 'failure' | 'denied';
+        /**
+         * Maximum audit export count.
+         */
+        limit?: number;
+    };
+    url: '/audit/export';
+};
+
+export type ExportAuditEventsErrors = {
+    /**
+     * Missing or invalid session
+     */
+    401: Error;
+    /**
+     * Authenticated principal lacks the required role or token scope
+     */
+    403: Error;
+};
+
+export type ExportAuditEventsError = ExportAuditEventsErrors[keyof ExportAuditEventsErrors];
+
+export type ExportAuditEventsResponses = {
+    /**
+     * JSON Lines audit export.
+     */
+    200: string;
+};
+
+export type ExportAuditEventsResponse = ExportAuditEventsResponses[keyof ExportAuditEventsResponses];

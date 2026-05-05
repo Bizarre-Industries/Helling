@@ -13,8 +13,9 @@ import type { CSSProperties, ReactNode } from 'react';
 
 export type QueryLike<T> = {
   isLoading: boolean;
-  error: Error | null;
+  error: unknown | null;
   data: T | undefined;
+  refetch?: () => void;
 };
 
 export type QueryStateViewProps<T> = {
@@ -24,7 +25,7 @@ export type QueryStateViewProps<T> = {
   /** Rendered when loading. Default: skeleton placeholder. */
   loadingFallback?: ReactNode;
   /** Rendered when error is non-null. Default: error card. */
-  errorFallback?: (err: Error) => ReactNode;
+  errorFallback?: (err: unknown) => ReactNode;
   /** Rendered when data is empty. Default: empty card. */
   emptyFallback?: ReactNode;
   /** Children render with the resolved non-empty data. */
@@ -53,6 +54,131 @@ function defaultIsEmpty<T>(data: T): boolean {
   return false;
 }
 
+type ErrorEnvelope = {
+  code?: unknown;
+  message?: unknown;
+  details?: unknown;
+  status?: unknown;
+};
+
+const nonRetryableStatus = new Set([400, 401, 403, 404, 409, 422]);
+const nonRetryableCodes = [
+  'bad_request',
+  'conflict',
+  'forbidden',
+  'invalid',
+  'mfa',
+  'no_session',
+  'not_found',
+  'unauthorized',
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringifyDetails(details: unknown): string | null {
+  if (details === undefined || details === null || details === '') return null;
+  if (typeof details === 'string') return details;
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return String(details);
+  }
+}
+
+export function describeQueryError(error: unknown): {
+  code: string | null;
+  message: string;
+  details: string | null;
+  retryable: boolean;
+} {
+  const envelope: ErrorEnvelope = isRecord(error) ? error : {};
+  const code = typeof envelope.code === 'string' ? envelope.code : null;
+  const status = typeof envelope.status === 'number' ? envelope.status : null;
+  const message =
+    typeof envelope.message === 'string'
+      ? envelope.message
+      : error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'The request failed.';
+  const details = stringifyDetails(envelope.details);
+  const normalizedCode = code?.toLowerCase() ?? '';
+  const retryable =
+    status === null || !nonRetryableStatus.has(status)
+      ? !nonRetryableCodes.some((token) => normalizedCode.includes(token))
+      : false;
+
+  return { code, message, details, retryable };
+}
+
+function StaleDataNotice({
+  errorInfo,
+  onRetry,
+}: {
+  errorInfo: ReturnType<typeof describeQueryError>;
+  onRetry?: () => void;
+}) {
+  return (
+    <output style={{ ...cardStyle, marginBottom: 12, padding: 12, display: 'block' }}>
+      <strong>Showing stale data.</strong>
+      <div style={{ marginTop: 6, fontSize: 13, opacity: 0.82 }}>{errorInfo.message}</div>
+      {onRetry && errorInfo.retryable ? (
+        <button type="button" className="btn btn--sm" style={{ marginTop: 12 }} onClick={onRetry}>
+          Retry
+        </button>
+      ) : null}
+    </output>
+  );
+}
+
+function ErrorDetails({ details }: { details: string | null }) {
+  if (!details) return null;
+  return (
+    <pre
+      className="mono"
+      style={{
+        margin: '10px auto 0',
+        maxWidth: 640,
+        whiteSpace: 'pre-wrap',
+        textAlign: 'left',
+        fontSize: 12,
+        opacity: 0.72,
+      }}
+    >
+      {details}
+    </pre>
+  );
+}
+
+function ErrorCard({
+  errorInfo,
+  onRetry,
+}: {
+  errorInfo: ReturnType<typeof describeQueryError>;
+  onRetry?: () => void;
+}) {
+  return (
+    <div style={cardStyle} role="alert">
+      <strong style={{ color: 'var(--h-danger, #e57373)' }}>Failed to load.</strong>
+      <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>{errorInfo.message}</div>
+      {errorInfo.code ? (
+        <div className="mono" style={{ marginTop: 8, fontSize: 12, opacity: 0.72 }}>
+          {errorInfo.code}
+        </div>
+      ) : null}
+      <ErrorDetails details={errorInfo.details} />
+      {onRetry && errorInfo.retryable ? (
+        <button type="button" className="btn btn--sm" style={{ marginTop: 12 }} onClick={onRetry}>
+          Retry
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function QueryStateView<T>(props: QueryStateViewProps<T>) {
   const {
     query,
@@ -67,13 +193,17 @@ export function QueryStateView<T>(props: QueryStateViewProps<T>) {
     return <div style={skeletonStyle}>{loadingFallback ?? 'Loading…'}</div>;
   }
   if (query.error) {
+    const errorInfo = describeQueryError(query.error);
+    if (query.data !== undefined && !isEmpty(query.data)) {
+      return (
+        <>
+          <StaleDataNotice errorInfo={errorInfo} onRetry={query.refetch} />
+          {children(query.data)}
+        </>
+      );
+    }
     if (errorFallback) return <>{errorFallback(query.error)}</>;
-    return (
-      <div style={cardStyle} role="alert">
-        <strong style={{ color: 'var(--h-danger, #e57373)' }}>Failed to load.</strong>
-        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>{query.error.message}</div>
-      </div>
-    );
+    return <ErrorCard errorInfo={errorInfo} onRetry={query.refetch} />;
   }
   if (query.data === undefined) {
     return <div style={skeletonStyle}>{loadingFallback ?? 'Loading…'}</div>;

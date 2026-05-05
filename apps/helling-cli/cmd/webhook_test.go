@@ -23,6 +23,11 @@ const webhookSecretFixture = "FIXTURE-SECRET-DO-NOT-USE-IN-PROD" // gitleaks:all
 
 func runWebhook(t *testing.T, args []string) (string, error) {
 	t.Helper()
+	return runWebhookWithInput(t, args, "")
+}
+
+func runWebhookWithInput(t *testing.T, args []string, stdin string) (string, error) {
+	t.Helper()
 	root := cmd.NewWebhookCmd()
 	root.PersistentFlags().String("api", "", "")
 	root.PersistentFlags().String("output", "", "")
@@ -32,6 +37,7 @@ func runWebhook(t *testing.T, args []string) (string, error) {
 	buf := &bytes.Buffer{}
 	root.SetOut(buf)
 	root.SetErr(buf)
+	root.SetIn(strings.NewReader(stdin))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err := root.ExecuteContext(ctx)
@@ -128,10 +134,31 @@ func TestWebhookDelete_CallsDelete(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
-	if _, err := runWebhook(t, []string{"delete", "wh1"}); err != nil {
+	if _, err := runWebhook(t, []string{"delete", "wh1", "--yes"}); err != nil {
 		t.Fatal(err)
 	}
 	if method != http.MethodDelete {
 		t.Fatalf("method: %s", method)
+	}
+}
+
+func TestWebhookDelete_RequiresConfirmation(t *testing.T) {
+	useTempConfigDir(t)
+	var called bool
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+	t.Cleanup(srv.Close)
+	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
+
+	out, err := runWebhookWithInput(t, []string{"delete", "wh1"}, "no\n")
+	if err == nil {
+		t.Fatal("expected cancellation error")
+	}
+	if called {
+		t.Fatal("DELETE should not be called without confirmation")
+	}
+	if !strings.Contains(out, "Type yes to confirm") {
+		t.Fatalf("out: %q", out)
 	}
 }

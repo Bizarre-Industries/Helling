@@ -22,6 +22,9 @@ Rationale:
 - Debian-native tool, Debian-packaged, maintained by the debian-live team. Matches ADR-002.
 - Output is an ISO9660 installer image, dd-able to USB. amd64 builds include BIOS and UEFI bootloaders; arm64 builds use UEFI GRUB because Debian does not publish the legacy `grub-pc` bootloader for arm64.
 - Preseed + first-boot hooks handle Helling-specific first-boot work (create a one-time setup token, start hellingd, and let the browser/CLI setup flow create the first admin).
+- Packer is explicitly not the product ISO builder. It may build Parallels
+  Debian dev VM images from Debian netinst media (ADR-052), while Helling
+  installer ISO generation remains live-build-only and release-gate-only.
 
 Rejected alternatives:
 

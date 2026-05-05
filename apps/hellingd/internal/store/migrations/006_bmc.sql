@@ -2,6 +2,7 @@
 -- BMC (Baseboard Management Controller) endpoints for IPMI/Redfish.
 -- Per docs/spec/architecture.md §BMC.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS bmc_endpoints (
     id         TEXT    PRIMARY KEY,         -- uuid v7
     user_id    INTEGER NOT NULL REFERENCES users(id),
@@ -15,3 +16,6 @@ CREATE TABLE IF NOT EXISTS bmc_endpoints (
     updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_bmc_user ON bmc_endpoints(user_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS bmc_endpoints;

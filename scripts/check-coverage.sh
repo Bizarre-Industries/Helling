@@ -14,12 +14,22 @@
 set -euo pipefail
 
 COVERAGE_FILE="${1:-coverage.out}"
+FILTERED_COVERAGE_FILE=""
 
 if [ ! -f "$COVERAGE_FILE" ]; then
   echo "coverage file not found: $COVERAGE_FILE"
   echo "run: go test -race -coverprofile=coverage.out ./..."
   exit 1
 fi
+
+FILTERED_COVERAGE_FILE="$(mktemp)"
+trap 'rm -f "$FILTERED_COVERAGE_FILE"' EXIT
+awk '
+  NR == 1 { print; next }
+  $1 ~ /\.gen\.go:/ { next }
+  $1 ~ /\/internal\/store\/sqlc\// { next }
+  { print }
+' "$COVERAGE_FILE" >"$FILTERED_COVERAGE_FILE"
 
 # Per-package floors. Format: "path-prefix:min-pct"
 FLOORS=(
@@ -34,7 +44,7 @@ OVERALL_FLOOR="${HELLING_COVERAGE_OVERALL_FLOOR:-80}"
 # Format:  <path>:<line>.<col>,<line>.<col>  <funcname>  <pct>
 # Sample:  github.com/Bizarre-Industries/helling/internal/handlers/auth.go:42.1,48.2  Login  92.3%
 
-coverage_output="$(go tool cover -func="$COVERAGE_FILE")"
+coverage_output="$(go tool cover -func="$FILTERED_COVERAGE_FILE")"
 
 if [ -z "$coverage_output" ]; then
   echo "no coverage data in $COVERAGE_FILE"

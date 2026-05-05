@@ -59,7 +59,9 @@ helling user 2fa recovery USERNAME     # Regenerate recovery codes
 ```bash
 helling schedule list                  # List backup/snapshot schedules
 helling schedule create                # Create schedule (interactive)
-helling schedule delete ID             # Delete schedule
+helling schedule get ID                # Get schedule details
+helling schedule update ID             # Update schedule fields
+helling schedule delete ID [--yes]     # Delete schedule
 helling schedule run ID                # Trigger schedule now
 ```
 
@@ -68,7 +70,9 @@ helling schedule run ID                # Trigger schedule now
 ```bash
 helling webhook list                   # List webhooks
 helling webhook create URL             # Create webhook
-helling webhook delete ID              # Delete webhook
+helling webhook get ID                 # Get webhook details
+helling webhook update ID              # Update webhook fields
+helling webhook delete ID [--yes]      # Delete webhook
 helling webhook test ID                # Send test delivery
 ```
 
@@ -84,7 +88,7 @@ helling audit export [FORMAT]          # Export audit events (csv, json)
 
 ```bash
 helling events tail                    # Follow system events (SSE) in terminal
-helling events list [COUNT]            # List recent events
+helling events list [COUNT|--limit=N]  # List recent events as a JSON snapshot
 ```
 
 ### BMC (v0.4+)
@@ -127,7 +131,7 @@ helling system diagnostics             # Self-test
 ```bash
 helling firewall list                  # List host nftables rules
 helling firewall add RULE              # Add host firewall rule
-helling firewall remove ID             # Remove host firewall rule
+helling firewall delete ID [--yes]     # Delete host firewall rule
 ```
 
 ### Utilities
@@ -156,16 +160,31 @@ All commands use the generated Go API client from the Helling OpenAPI spec (~40 
 Helling OpenAPI operationIds whose CLI command names differ from the naive camelCase variant — listed here so `scripts/check-parity.sh` can resolve coverage without a phase0 exception entry.
 
 - operationId: healthGet → `helling system health`
-- operationId: eventsSse → `helling events tail`
+- operationId: listEvents → `helling events list`; SSE mode via `helling events tail`
 - operationId: authSetup → first-boot flow via `helling auth setup`
 - operationId: authSetupStatus → WebUI first-boot status probe
 - operationId: authMfaComplete → `helling auth login` MFA prompt branch + `helling auth mfa` parent
 - operationId: authTotpSetup → `helling auth mfa setup`
 - operationId: authTotpVerify → `helling auth mfa verify`
 - operationId: authTotpDisable → `helling auth mfa disable`
-- operationId: userSetScope → `helling user set-scope`
-- operationId: webhookGet → `helling webhook get`
-- operationId: webhookUpdate → `helling webhook update`
+- operationId: updateUserScope → `helling user set-scope`
+- operationId: listSchedules → `helling schedule list`
+- operationId: createSchedule → `helling schedule create`
+- operationId: getSchedule → `helling schedule get`
+- operationId: updateSchedule → `helling schedule update`
+- operationId: deleteSchedule → `helling schedule delete`
+- operationId: runSchedule → `helling schedule run`
+- operationId: listWebhooks → `helling webhook list`
+- operationId: createWebhook → `helling webhook create`
+- operationId: getWebhook → `helling webhook get`
+- operationId: updateWebhook → `helling webhook update`
+- operationId: deleteWebhook → `helling webhook delete`
+- operationId: testWebhook → `helling webhook test`
+- operationId: listHostFirewallRules → `helling firewall list`
+- operationId: createHostFirewallRule → `helling firewall add`
+- operationId: deleteHostFirewallRule → `helling firewall delete`
+- operationId: listAuditEvents → `helling audit query`
+- operationId: exportAuditEvents → `helling audit export`
 - operationId: systemHardware → `helling system hardware`
 - operationId: systemConfigGet → `helling system config-get`
 - operationId: systemConfigPut → `helling system config-set`

@@ -227,7 +227,8 @@ Proxy requests count toward per-user rate limits:
 
 ## Audit Logging
 
-All proxy requests are logged asynchronously to systemd journal:
+Mutating Incus proxy requests are logged asynchronously to systemd journal with
+the actor, request path, source IP, request ID, and upstream status:
 
 ```json
 {

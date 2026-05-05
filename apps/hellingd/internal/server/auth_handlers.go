@@ -34,10 +34,11 @@ type mfaChallenge struct {
 }
 
 type userResponse struct {
-	ID        int64     `json:"id"`
-	Username  string    `json:"username"`
-	IsAdmin   bool      `json:"is_admin"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           int64     `json:"id"`
+	Username     string    `json:"username"`
+	IsAdmin      bool      `json:"is_admin"`
+	IncusProject string    `json:"incus_project,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 //nolint:gocyclo // Login intentionally spells out rate-limit, password, TOTP, and session branches.
@@ -55,6 +56,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	ip := clientIP(r)
 	if !s.userLimiter.Allow(req.Username) || !s.ipLimiter.Allow(ip) {
+		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
 		return
 	}
@@ -62,6 +64,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	u, err := s.cfg.Store.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 			writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 			return
 		}
@@ -71,6 +74,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, err := auth.Verify(u.PasswordHash, req.Password)
 	if err != nil || !ok {
+		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 		return
 	}
@@ -88,6 +92,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			UserID:    u.ID,
 			ExpiresAt: time.Now().UTC().Add(5 * time.Minute),
 		})
+		s.auditForUser(r, &u, "auth.mfa.challenge", outcomeSuccess, "user", auditID(u.ID), "MFA challenge created")
 		writeAuthData(w, http.StatusAccepted, authTokenResponse{
 			MFARequired: true,
 			MFAToken:    raw,
@@ -102,12 +107,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Login succeeded: clear failure counters for this username.
 	s.userLimiter.Reset(req.Username)
 
-	accessToken, expiresIn, err := s.issueSession(w, r, u)
+	accessToken, expiresIn, err := s.issueSession(w, r, &u)
 	if err != nil {
 		s.cfg.Logger.Error("login: issue session", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	s.auditForUser(r, &u, "auth.login", outcomeSuccess, "user", auditID(u.ID), "login succeeded")
 	if wantsAuthJSON(r) {
 		writeAuthData(w, http.StatusOK, authTokenResponse{
 			AccessToken: accessToken,
@@ -120,7 +126,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) issueSession(w http.ResponseWriter, r *http.Request, u store.User) (accessToken string, expiresIn int64, err error) {
+func (s *Server) issueSession(w http.ResponseWriter, r *http.Request, u *store.User) (accessToken string, expiresIn int64, err error) {
 	raw, hash, err := auth.NewToken()
 	if err != nil {
 		return "", 0, err
@@ -172,6 +178,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
+	s.audit(r, "auth.logout", outcomeSuccess, "session", "", "logout succeeded")
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -1,12 +1,14 @@
 openapi: 3.0.3
 info:
   title: Helling API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Helling is a self-hosted, single-node container and VM management platform.
-    This is the v0.1 vertical slice: authentication, instance CRUD, and operation polling.
+    This is the v0.2 Platform Core bridge: authentication, instance CRUD,
+    operation polling, schedules, webhooks, host firewall, events, audit, and
+    user Incus scope assignment.
 
-    All endpoints under `/v1/` are stable within v0.1. Breaking changes ship under `/v2/`.
+    All endpoints under `/v1/` are stable within v0.2. Breaking changes ship under `/v2/`.
   license:
     name: AGPL-3.0
     url: https://www.gnu.org/licenses/agpl-3.0.html
@@ -27,6 +29,18 @@ tags:
     description: Container and VM lifecycle
   - name: operations
     description: Async operation tracking
+  - name: users
+    description: Admin user management and Incus project scope assignment
+  - name: schedules
+    description: systemd timer-backed Helling schedules
+  - name: webhooks
+    description: HMAC-signed outbound event delivery
+  - name: firewall
+    description: Helling-managed host firewall rules
+  - name: events
+    description: Recent events and SSE streaming
+  - name: audit
+    description: Journal-backed audit query and export
   - name: meta
     description: Server identity, health, version
 
@@ -486,6 +500,876 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /users:
+    get:
+      operationId: listUsers
+      tags:
+        - users
+      summary: List local users
+      description: Returns all local Helling users. Admin role required.
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListEnvelope"
+              example:
+                data:
+                  - id: 1
+                    username: admin
+                    is_admin: true
+                    incus_project: default
+                    created_at: "2026-05-03T12:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createUser
+      tags:
+        - users
+      summary: Create a local user
+      description: Creates a Helling user and provisions its delegated Incus scope. Admin role required.
+      requestBody:
+        required: true
+        description: User creation request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+            example:
+              username: alice
+              password: correct horse battery staple
+              is_admin: false
+              incus_project: alice
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+              example:
+                data:
+                  id: 2
+                  username: alice
+                  is_admin: false
+                  incus_project: alice
+                  created_at: "2026-05-05T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      operationId: getUser
+      tags:
+        - users
+      summary: Get a local user
+      description: Returns one Helling user. Admin role required.
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+              example:
+                data:
+                  id: 2
+                  username: alice
+                  is_admin: false
+                  incus_project: alice
+                  created_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateUser
+      tags:
+        - users
+      summary: Update a local user
+      description: Partially updates mutable user fields. Admin role required.
+      requestBody:
+        required: true
+        description: Partial user update request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateRequest"
+            example:
+              is_admin: false
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+              example:
+                data:
+                  id: 2
+                  username: alice
+                  is_admin: false
+                  incus_project: alice
+                  created_at: "2026-05-05T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteUser
+      tags:
+        - users
+      summary: Delete a local user
+      description: Deletes a user and revokes its delegated Incus trust entry. Admin role required.
+      responses:
+        "204":
+          description: User deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{id}/scope:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    put:
+      operationId: updateUserScope
+      tags:
+        - users
+      summary: Assign a user to an Incus project
+      description: Replaces the user's Incus project scope and rotates the restricted trust entry. Admin role required.
+      requestBody:
+        required: true
+        description: Scope assignment request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserScopeRequest"
+            example:
+              scope: incus:project:alice
+      responses:
+        "200":
+          description: Scope assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserScopeEnvelope"
+              example:
+                data:
+                  scope: incus:project:alice
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schedules:
+    get:
+      operationId: listSchedules
+      tags:
+        - schedules
+      summary: List schedules
+      description: Returns systemd timer-backed schedules tracked by Helling. Admin role required.
+      parameters:
+        - in: query
+          name: kind
+          description: Optional schedule kind filter.
+          schema:
+            type: string
+            description: Schedule kind filter.
+            enum: [backup, snapshot]
+            example: backup
+      responses:
+        "200":
+          description: Schedule list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleListEnvelope"
+              example:
+                data:
+                  - id: 018f3a40-0000-7000-8000-000000000000
+                    name: nightly-backup
+                    kind: backup
+                    target: vm-web-1
+                    on_calendar: daily
+                    enabled: true
+                    unit_name: helling-schedule-018f3a40-0000-7000-8000-000000000000
+                    created_at: "2026-05-05T09:00:00Z"
+                    updated_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createSchedule
+      tags:
+        - schedules
+      summary: Create a schedule
+      description: Writes validated schedule units, enables the timer, persists metadata, and emits audit/event records. Admin role required.
+      requestBody:
+        required: true
+        description: Schedule creation request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleCreateRequest"
+            example:
+              name: nightly-backup
+              kind: backup
+              target: vm-web-1
+              on_calendar: daily
+              enabled: true
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEnvelope"
+              example:
+                data:
+                  id: 018f3a40-0000-7000-8000-000000000000
+                  name: nightly-backup
+                  kind: backup
+                  target: vm-web-1
+                  on_calendar: daily
+                  enabled: true
+                  unit_name: helling-schedule-018f3a40-0000-7000-8000-000000000000
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /schedules/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UUID"
+    get:
+      operationId: getSchedule
+      tags:
+        - schedules
+      summary: Get a schedule
+      description: Returns one schedule. Admin role required.
+      responses:
+        "200":
+          description: Schedule details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEnvelope"
+              example:
+                data:
+                  id: 018f3a40-0000-7000-8000-000000000000
+                  name: nightly-backup
+                  kind: backup
+                  target: vm-web-1
+                  on_calendar: daily
+                  enabled: true
+                  unit_name: helling-schedule-018f3a40-0000-7000-8000-000000000000
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateSchedule
+      tags:
+        - schedules
+      summary: Update a schedule
+      description: Partially updates a schedule, rewrites its units, and preserves unchanged fields. Admin role required.
+      requestBody:
+        required: true
+        description: Partial schedule update request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleUpdateRequest"
+            example:
+              on_calendar: "Mon *-*-* 03:00:00"
+              enabled: true
+      responses:
+        "200":
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEnvelope"
+              example:
+                data:
+                  id: 018f3a40-0000-7000-8000-000000000000
+                  name: nightly-backup
+                  kind: backup
+                  target: vm-web-1
+                  on_calendar: "Mon *-*-* 03:00:00"
+                  enabled: true
+                  unit_name: helling-schedule-018f3a40-0000-7000-8000-000000000000
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteSchedule
+      tags:
+        - schedules
+      summary: Delete a schedule
+      description: Removes managed systemd units and deletes schedule metadata. Admin role required.
+      responses:
+        "204":
+          description: Schedule deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /schedules/{id}/run:
+    parameters:
+      - $ref: "#/components/parameters/UUID"
+    post:
+      operationId: runSchedule
+      tags:
+        - schedules
+      summary: Run a schedule now
+      description: Triggers the schedule through the Helling API and Incus proxy path. Admin role required.
+      responses:
+        "202":
+          description: Schedule run accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventEnvelope"
+              example:
+                data:
+                  id: 018f3a41-0000-7000-8000-000000000000
+                  type: schedule.started
+                  time: "2026-05-05T10:00:00Z"
+                  source: helling
+                  subject: 018f3a40-0000-7000-8000-000000000000
+                  data: {}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /webhooks:
+    get:
+      operationId: listWebhooks
+      tags:
+        - webhooks
+      summary: List webhooks
+      description: Returns webhook definitions without secrets. Admin role required.
+      responses:
+        "200":
+          description: Webhook list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookListEnvelope"
+              example:
+                data:
+                  - id: 018f3a50-0000-7000-8000-000000000000
+                    name: ops
+                    url: https://hooks.example.com/helling
+                    events:
+                      - instance.started
+                    enabled: true
+                    created_at: "2026-05-05T09:00:00Z"
+                    updated_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createWebhook
+      tags:
+        - webhooks
+      summary: Create a webhook
+      description: Stores an age-encrypted HMAC secret and validates the HTTPS destination. Admin role required.
+      requestBody:
+        required: true
+        description: Webhook creation request. Secret is write-only.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreateRequest"
+            example:
+              name: ops
+              url: https://hooks.example.com/helling
+              events:
+                - instance.started
+              secret: "redacted-example"
+      responses:
+        "201":
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEnvelope"
+              example:
+                data:
+                  id: 018f3a50-0000-7000-8000-000000000000
+                  name: ops
+                  url: https://hooks.example.com/helling
+                  events:
+                    - instance.started
+                  enabled: true
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /webhooks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UUID"
+    get:
+      operationId: getWebhook
+      tags:
+        - webhooks
+      summary: Get a webhook
+      description: Returns one webhook without its secret. Admin role required.
+      responses:
+        "200":
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEnvelope"
+              example:
+                data:
+                  id: 018f3a50-0000-7000-8000-000000000000
+                  name: ops
+                  url: https://hooks.example.com/helling
+                  events:
+                    - instance.started
+                  enabled: true
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateWebhook
+      tags:
+        - webhooks
+      summary: Update a webhook
+      description: Partially updates webhook metadata and optionally rotates the secret. Admin role required.
+      requestBody:
+        required: true
+        description: Partial webhook update request. Secret is write-only.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookUpdateRequest"
+            example:
+              enabled: false
+      responses:
+        "200":
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEnvelope"
+              example:
+                data:
+                  id: 018f3a50-0000-7000-8000-000000000000
+                  name: ops
+                  url: https://hooks.example.com/helling
+                  events:
+                    - instance.started
+                  enabled: false
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteWebhook
+      tags:
+        - webhooks
+      summary: Delete a webhook
+      description: Deletes a webhook and delivery history. Admin role required.
+      responses:
+        "204":
+          description: Webhook deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /webhooks/{id}/test:
+    parameters:
+      - $ref: "#/components/parameters/UUID"
+    post:
+      operationId: testWebhook
+      tags:
+        - webhooks
+      summary: Send a webhook test event
+      description: Sends a signed test event and records delivery attempts. Admin role required.
+      responses:
+        "202":
+          description: Webhook test queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryEnvelope"
+              example:
+                data:
+                  id: 018f3a51-0000-7000-8000-000000000000
+                  webhook_id: 018f3a50-0000-7000-8000-000000000000
+                  event_id: 018f3a52-0000-7000-8000-000000000000
+                  event_type: webhook.test
+                  status: pending
+                  attempt: 1
+                  created_at: "2026-05-05T10:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /firewall/host:
+    get:
+      operationId: listHostFirewallRules
+      tags:
+        - firewall
+      summary: List host firewall rules
+      description: Returns Helling-managed nftables host firewall rules. Admin role required.
+      responses:
+        "200":
+          description: Host firewall rule list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FirewallRuleListEnvelope"
+              example:
+                data:
+                  - id: 018f3a60-0000-7000-8000-000000000000
+                    direction: input
+                    action: accept
+                    protocol: tcp
+                    source_cidr: 203.0.113.10/32
+                    destination_port: 22
+                    enabled: true
+                    comment: ssh from admin
+                    nft_comment: helling:018f3a60-0000-7000-8000-000000000000
+                    created_at: "2026-05-05T09:00:00Z"
+                    updated_at: "2026-05-05T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createHostFirewallRule
+      tags:
+        - firewall
+      summary: Create a host firewall rule
+      description: Persists metadata and applies an nft rule using structured argv. Admin role required.
+      requestBody:
+        required: true
+        description: Host firewall rule creation request.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FirewallRuleCreateRequest"
+            example:
+              direction: input
+              action: accept
+              protocol: tcp
+              source_cidr: 203.0.113.10/32
+              destination_port: 22
+              enabled: true
+              comment: ssh from admin
+      responses:
+        "201":
+          description: Host firewall rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FirewallRuleEnvelope"
+              example:
+                data:
+                  id: 018f3a60-0000-7000-8000-000000000000
+                  direction: input
+                  action: accept
+                  protocol: tcp
+                  source_cidr: 203.0.113.10/32
+                  destination_port: 22
+                  enabled: true
+                  comment: ssh from admin
+                  nft_comment: helling:018f3a60-0000-7000-8000-000000000000
+                  created_at: "2026-05-05T09:00:00Z"
+                  updated_at: "2026-05-05T09:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /firewall/host/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UUID"
+    delete:
+      operationId: deleteHostFirewallRule
+      tags:
+        - firewall
+      summary: Delete a host firewall rule
+      description: Deletes a Helling-managed nftables rule by metadata id. Admin role required.
+      responses:
+        "204":
+          description: Host firewall rule deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags:
+        - events
+      summary: Stream or list events
+      description: |
+        Streams Server-Sent Events when requested with
+        `Accept: text/event-stream`; otherwise returns a JSON snapshot for CLI
+        and dashboard hydration.
+      parameters:
+        - in: query
+          name: limit
+          description: Maximum number of recent events for JSON snapshot mode.
+          schema:
+            type: integer
+            description: Maximum number of recent events.
+            minimum: 1
+            maximum: 500
+            default: 50
+            example: 50
+        - in: query
+          name: type
+          description: Optional exact or prefix event type filter.
+          schema:
+            type: string
+            description: Event type or prefix.
+            example: instance.
+        - in: query
+          name: since
+          description: Event id lower bound for replay.
+          schema:
+            type: string
+            description: Event id lower bound.
+            example: 018f3a40-0000-7000-8000-000000000000
+      responses:
+        "200":
+          description: Event stream or JSON snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListEnvelope"
+              example:
+                data:
+                  - id: 018f3a41-0000-7000-8000-000000000000
+                    type: instance.started
+                    time: "2026-05-05T10:00:00Z"
+                    source: incus
+                    subject: vm-web-1
+                    data: {}
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE frames containing Helling event JSON payloads.
+              example: "event: instance.started\nid: 018f3a41-0000-7000-8000-000000000000\ndata: {\"type\":\"instance.started\"}\n\n"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /audit:
+    get:
+      operationId: listAuditEvents
+      tags:
+        - audit
+      summary: Query audit events
+      description: Reads bounded Helling audit entries from journald. Admin role required.
+      parameters:
+        - in: query
+          name: actor
+          description: Optional actor username filter.
+          schema:
+            type: string
+            description: Actor username filter.
+            example: admin
+        - in: query
+          name: action
+          description: Optional action filter.
+          schema:
+            type: string
+            description: Helling audit action.
+            example: schedule.create
+        - in: query
+          name: outcome
+          description: Optional outcome filter.
+          schema:
+            type: string
+            description: Audit outcome filter.
+            enum: [success, failure, denied]
+            example: success
+        - in: query
+          name: since
+          description: Optional RFC 3339 lower time bound.
+          schema:
+            type: string
+            description: Lower time bound.
+            format: date-time
+            example: "2026-05-05T00:00:00Z"
+        - in: query
+          name: until
+          description: Optional RFC 3339 upper time bound.
+          schema:
+            type: string
+            description: Upper time bound.
+            format: date-time
+            example: "2026-05-06T00:00:00Z"
+        - in: query
+          name: limit
+          description: Maximum number of audit entries to return.
+          schema:
+            type: integer
+            description: Maximum audit result count.
+            minimum: 1
+            maximum: 500
+            default: 100
+            example: 100
+      responses:
+        "200":
+          description: Audit event list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventListEnvelope"
+              example:
+                data:
+                  - id: 018f3a70-0000-7000-8000-000000000000
+                    time: "2026-05-05T10:00:00Z"
+                    actor: admin
+                    action: schedule.create
+                    outcome: success
+                    target_type: schedule
+                    target_id: 018f3a40-0000-7000-8000-000000000000
+                    message: schedule created
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /audit/export:
+    get:
+      operationId: exportAuditEvents
+      tags:
+        - audit
+      summary: Export audit events
+      description: Streams bounded journald audit records as JSON Lines. Admin role required.
+      parameters:
+        - in: query
+          name: actor
+          description: Optional actor username filter.
+          schema:
+            type: string
+            description: Actor username filter.
+            example: admin
+        - in: query
+          name: action
+          description: Optional action filter.
+          schema:
+            type: string
+            description: Helling audit action.
+            example: schedule.create
+        - in: query
+          name: outcome
+          description: Optional outcome filter.
+          schema:
+            type: string
+            description: Audit outcome filter.
+            enum: [success, failure, denied]
+            example: success
+        - in: query
+          name: limit
+          description: Maximum number of audit lines to stream.
+          schema:
+            type: integer
+            description: Maximum audit export count.
+            minimum: 1
+            maximum: 5000
+            default: 500
+            example: 500
+      responses:
+        "200":
+          description: Audit JSON Lines stream
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+                description: JSON Lines audit export.
+              example: "{\"action\":\"schedule.create\",\"outcome\":\"success\"}\n"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -507,6 +1391,27 @@ components:
         description: |
           Instance name. Lowercase letters, digits, and hyphens only.
           Max 63 chars. Must start with letter or digit.
+    UUID:
+      in: path
+      name: id
+      required: true
+      description: UUID path parameter.
+      schema:
+        type: string
+        description: UUID v7 string.
+        format: uuid
+        example: 018f3a40-0000-7000-8000-000000000000
+    UserID:
+      in: path
+      name: id
+      required: true
+      description: Local user id path parameter.
+      schema:
+        type: integer
+        description: Stable local user id.
+        format: int64
+        minimum: 1
+        example: 2
 
   responses:
     BadRequest:
@@ -517,6 +1422,12 @@ components:
             $ref: "#/components/schemas/Error"
     Unauthorized:
       description: Missing or invalid session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Authenticated principal lacks the required role or token scope
       content:
         application/json:
           schema:
@@ -719,6 +1630,10 @@ components:
           type: boolean
           description: True for the bootstrap admin user.
           example: false
+        incus_project:
+          type: string
+          description: Incus project assigned to this user for delegated proxy calls.
+          example: alice
         created_at:
           type: string
           description: Account creation time (RFC 3339).
@@ -862,6 +1777,741 @@ components:
           minimum: 0
           maximum: 100
           example: 42
+
+    UserEnvelope:
+      type: object
+      description: Envelope containing one user.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/User"
+
+    UserListEnvelope:
+      type: object
+      description: Envelope containing users.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: User payload list.
+          example:
+            - id: 1
+              username: admin
+              is_admin: true
+              incus_project: default
+              created_at: "2026-05-03T12:00:00Z"
+          items:
+            $ref: "#/components/schemas/User"
+
+    UserCreateRequest:
+      type: object
+      description: Request body for creating a local user.
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: Account username.
+          minLength: 1
+          maxLength: 32
+          example: alice
+        password:
+          type: string
+          description: Initial account password.
+          minLength: 8
+          maxLength: 1024
+          format: password
+          writeOnly: true
+          example: correct horse battery staple
+        is_admin:
+          type: boolean
+          description: True when the created user should receive admin role.
+          default: false
+          example: false
+        incus_project:
+          type: string
+          description: Incus project assigned to the user's restricted certificate.
+          minLength: 1
+          maxLength: 63
+          example: alice
+
+    UserUpdateRequest:
+      type: object
+      description: Partial request body for updating a local user.
+      properties:
+        password:
+          type: string
+          description: Replacement account password.
+          minLength: 8
+          maxLength: 1024
+          format: password
+          writeOnly: true
+          example: correct horse battery staple
+        is_admin:
+          type: boolean
+          description: Replacement admin-role flag.
+          example: false
+
+    UserScopeRequest:
+      type: object
+      description: Request body for assigning a delegated Incus project scope.
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          description: Incus scope label in `incus:project:<name>` form.
+          minLength: 1
+          maxLength: 128
+          example: incus:project:alice
+
+    UserScopeEnvelope:
+      type: object
+      description: Envelope containing the assigned user scope.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/UserScope"
+
+    UserScope:
+      type: object
+      description: Delegated Incus scope assigned to a user.
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          description: Incus scope label in `incus:project:<name>` form.
+          example: incus:project:alice
+
+    Schedule:
+      type: object
+      description: systemd timer-backed Helling schedule.
+      required: [id, name, kind, target, on_calendar, enabled, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          description: Schedule UUID.
+          format: uuid
+          example: 018f3a40-0000-7000-8000-000000000000
+        name:
+          type: string
+          description: Human label for the schedule.
+          minLength: 1
+          maxLength: 63
+          example: nightly-backup
+        kind:
+          type: string
+          description: Scheduled operation kind.
+          enum: [backup, snapshot]
+          example: backup
+        target:
+          type: string
+          description: Target instance, project, or Helling selector for the schedule.
+          minLength: 1
+          maxLength: 128
+          example: vm-web-1
+        on_calendar:
+          type: string
+          description: systemd OnCalendar expression.
+          minLength: 1
+          maxLength: 256
+          example: daily
+        enabled:
+          type: boolean
+          description: True when the timer should be enabled.
+          example: true
+        unit_name:
+          type: string
+          description: Base unit name without extension.
+          example: helling-schedule-018f3a40-0000-7000-8000-000000000000
+        last_run_at:
+          type: string
+          description: Last observed run timestamp.
+          format: date-time
+          nullable: true
+          example: "2026-05-05T10:00:00Z"
+        next_run_at:
+          type: string
+          description: Next scheduled run timestamp when known.
+          format: date-time
+          nullable: true
+          example: "2026-05-06T00:00:00Z"
+        last_status:
+          type: string
+          description: Last run status.
+          enum: [success, failed, skipped, never]
+          example: never
+        last_error:
+          type: string
+          description: Last run error summary.
+          nullable: true
+          example: backup failed
+        created_at:
+          type: string
+          description: Schedule creation time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+        updated_at:
+          type: string
+          description: Schedule update time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+
+    ScheduleCreateRequest:
+      type: object
+      description: Request body for creating a schedule.
+      required: [name, kind, target, on_calendar]
+      properties:
+        name:
+          type: string
+          description: Human label for the schedule.
+          minLength: 1
+          maxLength: 63
+          example: nightly-backup
+        kind:
+          type: string
+          description: Scheduled operation kind.
+          enum: [backup, snapshot]
+          example: backup
+        target:
+          type: string
+          description: Target instance, project, or Helling selector for the schedule.
+          minLength: 1
+          maxLength: 128
+          example: vm-web-1
+        on_calendar:
+          type: string
+          description: systemd OnCalendar expression.
+          minLength: 1
+          maxLength: 256
+          example: daily
+        enabled:
+          type: boolean
+          description: Initial timer enabled state.
+          default: true
+          example: true
+
+    ScheduleUpdateRequest:
+      type: object
+      description: Partial request body for updating a schedule.
+      properties:
+        name:
+          type: string
+          description: Replacement human label.
+          minLength: 1
+          maxLength: 63
+          example: nightly-backup
+        on_calendar:
+          type: string
+          description: Replacement systemd OnCalendar expression.
+          minLength: 1
+          maxLength: 256
+          example: "Mon *-*-* 03:00:00"
+        enabled:
+          type: boolean
+          description: Replacement enabled state.
+          example: true
+
+    ScheduleEnvelope:
+      type: object
+      description: Envelope containing one schedule.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Schedule"
+
+    ScheduleListEnvelope:
+      type: object
+      description: Envelope containing schedules.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: Schedule payload list.
+          example:
+            - id: 018f3a40-0000-7000-8000-000000000000
+              name: nightly-backup
+              kind: backup
+              target: vm-web-1
+              on_calendar: daily
+              enabled: true
+              created_at: "2026-05-05T09:00:00Z"
+              updated_at: "2026-05-05T09:00:00Z"
+          items:
+            $ref: "#/components/schemas/Schedule"
+
+    Webhook:
+      type: object
+      description: Outbound webhook definition without secret material.
+      required: [id, name, url, events, enabled, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          description: Webhook UUID.
+          format: uuid
+          example: 018f3a50-0000-7000-8000-000000000000
+        name:
+          type: string
+          description: Human label for the webhook.
+          minLength: 1
+          maxLength: 63
+          example: ops
+        url:
+          type: string
+          description: HTTPS webhook destination.
+          format: uri
+          example: https://hooks.example.com/helling
+        events:
+          type: array
+          description: Event types delivered to this webhook.
+          items:
+            type: string
+            description: Helling event type.
+            example: instance.started
+        enabled:
+          type: boolean
+          description: True when delivery is enabled.
+          example: true
+        created_at:
+          type: string
+          description: Webhook creation time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+        updated_at:
+          type: string
+          description: Webhook update time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+
+    WebhookCreateRequest:
+      type: object
+      description: Request body for creating a webhook.
+      required: [name, url, events, secret]
+      properties:
+        name:
+          type: string
+          description: Human label for the webhook.
+          minLength: 1
+          maxLength: 63
+          example: ops
+        url:
+          type: string
+          description: HTTPS webhook destination.
+          format: uri
+          example: https://hooks.example.com/helling
+        events:
+          type: array
+          description: Event types delivered to this webhook.
+          minItems: 1
+          example: [instance.started]
+          items:
+            type: string
+            description: Helling event type.
+            example: instance.started
+        secret:
+          type: string
+          description: HMAC secret. Stored encrypted and never returned.
+          minLength: 16
+          maxLength: 512
+          format: password
+          writeOnly: true
+          example: redacted-example
+        enabled:
+          type: boolean
+          description: Initial delivery enabled state.
+          default: true
+          example: true
+
+    WebhookUpdateRequest:
+      type: object
+      description: Partial request body for updating a webhook.
+      properties:
+        name:
+          type: string
+          description: Replacement human label.
+          minLength: 1
+          maxLength: 63
+          example: ops
+        url:
+          type: string
+          description: Replacement HTTPS webhook destination.
+          format: uri
+          example: https://hooks.example.com/helling
+        events:
+          type: array
+          description: Replacement event type list.
+          example: [instance.started]
+          items:
+            type: string
+            description: Helling event type.
+            example: instance.started
+        secret:
+          type: string
+          description: Replacement HMAC secret. Stored encrypted and never returned.
+          minLength: 16
+          maxLength: 512
+          format: password
+          writeOnly: true
+          example: redacted-example
+        enabled:
+          type: boolean
+          description: Replacement delivery enabled state.
+          example: true
+
+    WebhookEnvelope:
+      type: object
+      description: Envelope containing one webhook.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Webhook"
+
+    WebhookListEnvelope:
+      type: object
+      description: Envelope containing webhooks.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: Webhook payload list.
+          example:
+            - id: 018f3a50-0000-7000-8000-000000000000
+              name: ops
+              url: https://hooks.example.com/helling
+              events:
+                - instance.started
+              enabled: true
+              created_at: "2026-05-05T09:00:00Z"
+              updated_at: "2026-05-05T09:00:00Z"
+          items:
+            $ref: "#/components/schemas/Webhook"
+
+    WebhookDelivery:
+      type: object
+      description: Webhook delivery attempt record.
+      required: [id, webhook_id, event_id, event_type, status, attempt, created_at]
+      properties:
+        id:
+          type: string
+          description: Delivery UUID.
+          format: uuid
+          example: 018f3a51-0000-7000-8000-000000000000
+        webhook_id:
+          type: string
+          description: Webhook UUID.
+          format: uuid
+          example: 018f3a50-0000-7000-8000-000000000000
+        event_id:
+          type: string
+          description: Event UUID.
+          format: uuid
+          example: 018f3a52-0000-7000-8000-000000000000
+        event_type:
+          type: string
+          description: Helling event type.
+          example: webhook.test
+        status:
+          type: string
+          description: Delivery status.
+          enum: [pending, success, failed]
+          example: pending
+        attempt:
+          type: integer
+          description: Attempt number starting at 1.
+          minimum: 1
+          example: 1
+        http_status:
+          type: integer
+          description: HTTP response status when available.
+          nullable: true
+          example: 200
+        error:
+          type: string
+          description: Delivery error summary.
+          nullable: true
+          example: request timed out
+        created_at:
+          type: string
+          description: Delivery creation time.
+          format: date-time
+          example: "2026-05-05T10:00:00Z"
+
+    WebhookDeliveryEnvelope:
+      type: object
+      description: Envelope containing one webhook delivery.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/WebhookDelivery"
+
+    FirewallRule:
+      type: object
+      description: Helling-managed host firewall rule.
+      required: [id, direction, action, protocol, enabled, nft_comment, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          description: Firewall rule UUID.
+          format: uuid
+          example: 018f3a60-0000-7000-8000-000000000000
+        direction:
+          type: string
+          description: nftables base chain direction.
+          enum: [input, output, forward]
+          example: input
+        action:
+          type: string
+          description: Firewall verdict.
+          enum: [accept, drop, reject]
+          example: accept
+        protocol:
+          type: string
+          description: Layer-4 protocol.
+          enum: [tcp, udp, icmp, any]
+          example: tcp
+        source_cidr:
+          type: string
+          description: Optional source CIDR.
+          nullable: true
+          example: 203.0.113.10/32
+        destination_cidr:
+          type: string
+          description: Optional destination CIDR.
+          nullable: true
+          example: 10.0.0.5/32
+        destination_port:
+          type: integer
+          description: Optional destination port.
+          minimum: 1
+          maximum: 65535
+          nullable: true
+          example: 22
+        enabled:
+          type: boolean
+          description: True when the rule is active.
+          example: true
+        comment:
+          type: string
+          description: Operator-facing comment.
+          nullable: true
+          example: ssh from admin
+        nft_comment:
+          type: string
+          description: nftables comment used to identify Helling-managed rules.
+          example: helling:018f3a60-0000-7000-8000-000000000000
+        nft_handle:
+          type: integer
+          description: nftables handle when known.
+          nullable: true
+          example: 42
+        created_at:
+          type: string
+          description: Rule creation time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+        updated_at:
+          type: string
+          description: Rule update time.
+          format: date-time
+          example: "2026-05-05T09:00:00Z"
+
+    FirewallRuleCreateRequest:
+      type: object
+      description: Request body for creating a host firewall rule.
+      required: [direction, action, protocol]
+      properties:
+        direction:
+          type: string
+          description: nftables base chain direction.
+          enum: [input, output, forward]
+          example: input
+        action:
+          type: string
+          description: Firewall verdict.
+          enum: [accept, drop, reject]
+          example: accept
+        protocol:
+          type: string
+          description: Layer-4 protocol.
+          enum: [tcp, udp, icmp, any]
+          example: tcp
+        source_cidr:
+          type: string
+          description: Optional source CIDR.
+          example: 203.0.113.10/32
+        destination_cidr:
+          type: string
+          description: Optional destination CIDR.
+          example: 10.0.0.5/32
+        destination_port:
+          type: integer
+          description: Optional destination port.
+          minimum: 1
+          maximum: 65535
+          example: 22
+        enabled:
+          type: boolean
+          description: Initial active state.
+          default: true
+          example: true
+        comment:
+          type: string
+          description: Operator-facing comment.
+          maxLength: 256
+          example: ssh from admin
+
+    FirewallRuleEnvelope:
+      type: object
+      description: Envelope containing one host firewall rule.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/FirewallRule"
+
+    FirewallRuleListEnvelope:
+      type: object
+      description: Envelope containing host firewall rules.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: Host firewall rule payload list.
+          example:
+            - id: 018f3a60-0000-7000-8000-000000000000
+              direction: input
+              action: accept
+              protocol: tcp
+              source_cidr: 203.0.113.10/32
+              destination_port: 22
+              enabled: true
+              nft_comment: helling:018f3a60-0000-7000-8000-000000000000
+              created_at: "2026-05-05T09:00:00Z"
+              updated_at: "2026-05-05T09:00:00Z"
+          items:
+            $ref: "#/components/schemas/FirewallRule"
+
+    Event:
+      type: object
+      description: Helling event payload shared by SSE and webhooks.
+      required: [id, type, time, source, subject, data]
+      properties:
+        id:
+          type: string
+          description: Event UUID.
+          format: uuid
+          example: 018f3a41-0000-7000-8000-000000000000
+        type:
+          type: string
+          description: Helling event type.
+          example: instance.started
+        time:
+          type: string
+          description: Event timestamp.
+          format: date-time
+          example: "2026-05-05T10:00:00Z"
+        source:
+          type: string
+          description: Source subsystem.
+          enum: [incus, podman, helling]
+          example: incus
+        subject:
+          type: string
+          description: Resource affected by the event.
+          example: vm-web-1
+        data:
+          type: object
+          description: Event-specific metadata.
+          additionalProperties: true
+          example: {}
+
+    EventEnvelope:
+      type: object
+      description: Envelope containing one event.
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Event"
+
+    EventListEnvelope:
+      type: object
+      description: Envelope containing events.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: Event payload list.
+          example:
+            - id: 018f3a41-0000-7000-8000-000000000000
+              type: instance.started
+              time: "2026-05-05T10:00:00Z"
+              source: incus
+              subject: vm-web-1
+              data: {}
+          items:
+            $ref: "#/components/schemas/Event"
+
+    AuditEvent:
+      type: object
+      description: Journal-backed Helling audit event.
+      required: [time, action, outcome, message]
+      properties:
+        id:
+          type: string
+          description: Event id derived from journal cursor or generated fallback.
+          example: 018f3a70-0000-7000-8000-000000000000
+        time:
+          type: string
+          description: Audit timestamp.
+          format: date-time
+          example: "2026-05-05T10:00:00Z"
+        actor:
+          type: string
+          description: Actor username when known.
+          example: admin
+        action:
+          type: string
+          description: Helling audit action.
+          example: schedule.create
+        outcome:
+          type: string
+          description: Audit outcome.
+          enum: [success, failure, denied]
+          example: success
+        target_type:
+          type: string
+          description: Target resource type.
+          example: schedule
+        target_id:
+          type: string
+          description: Target resource identifier.
+          example: 018f3a40-0000-7000-8000-000000000000
+        message:
+          type: string
+          description: Human-readable audit summary.
+          example: schedule created
+        metadata:
+          type: object
+          description: Additional journal fields after redaction.
+          additionalProperties: true
+          example: {}
+
+    AuditEventListEnvelope:
+      type: object
+      description: Envelope containing audit events.
+      required: [data]
+      properties:
+        data:
+          type: array
+          description: Audit event payload list.
+          example:
+            - id: 018f3a70-0000-7000-8000-000000000000
+              time: "2026-05-05T10:00:00Z"
+              actor: admin
+              action: schedule.create
+              outcome: success
+              target_type: schedule
+              target_id: 018f3a40-0000-7000-8000-000000000000
+              message: schedule created
+          items:
+            $ref: "#/components/schemas/AuditEvent"
 
     Error:
       type: object

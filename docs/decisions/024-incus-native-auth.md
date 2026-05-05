@@ -1,6 +1,10 @@
 # ADR-024: Incus per-user TLS auth
 
 > Status: Accepted for delegated proxy access; v0.1 defers non-admin proxying until the transport is implemented.
+>
+> Amended 2026-05-05 for v0.2. Incus trust registration and revocation are
+> performed by a narrow helper; `hellingd` itself remains outside the
+> `incus-admin` group.
 
 ## Context
 
@@ -30,7 +34,16 @@ Prerequisite transport requirement:
 
 Certificate identity split model:
 
-- Admin certificate identity: used by hellingd for Incus trust administration and project-level management operations.
+- Trust-management helper identity: used only by
+  `/usr/lib/helling/helling-incus-trust register <fingerprint> <project>
+<helling-user-<id>-<fingerprint>.crt> <request.json>` and
+  `revoke <fingerprint> <request.json>`.
+  `hellingd` writes certificate PEM files to `/var/lib/helling/incus-trust/`
+  plus one-time request manifests to
+  `/var/lib/helling/incus-trust/requests/`. The helper also requires a
+  root-owned, non-writable policy file under `/etc/helling/incus-trust.d/` that
+  authorizes the user id or a root-provisioned default project allowlist, plus
+  the trust action; it is not a member of `incus-admin`.
 - Per-user certificate identity: used for delegated user resource operations proxied through `/api/incus/*`.
 
 Issuance timing:
@@ -38,6 +51,12 @@ Issuance timing:
 - Per-user certificates are issued during user creation/provisioning (not on first request).
 
 Helling does not use query-parameter project injection as an authorization mechanism.
+
+Trust entries are registered with Incus restrictions equivalent to
+`restricted=true` and `projects=<assigned-project>`. User deletion revokes the
+current trust entry. Scope changes register a replacement trust entry first and
+then revoke the previous fingerprint, so a failed replacement does not strand
+the user without an Incus identity.
 
 ## Consequences
 

@@ -1,6 +1,10 @@
 # ADR-036: Incus HTTPS loopback transport for delegated-user proxy calls
 
 > Status: Accepted for delegated-user proxy calls; v0.1 admin-only proxy mode defers this transport.
+>
+> Amended 2026-05-05 for v0.2. Loopback HTTPS mTLS is the required transport
+> for non-admin Incus proxy calls; trust mutation still goes through the narrow
+> helper described in ADR-024/050.
 
 ## Context
 
@@ -18,6 +22,8 @@ For the delegated-user Incus proxy path:
 2. Each delegated user request is forwarded with that caller's per-user client certificate.
 3. Incus Unix socket access remains reserved for host administrator CLI operations.
 4. Query-parameter project scoping is not an authorization mechanism.
+5. `hellingd` is not granted `incus-admin`; trust setup and revocation use the
+   reviewed helper path.
 
 ## Consequences
 

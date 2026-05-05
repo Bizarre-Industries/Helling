@@ -31,4 +31,18 @@ if ! grep -q 'canonical_path' "$REPO_ROOT/scripts/build-iso.sh" \
   exit 1
 fi
 
+if ! grep -q 'HELLING_ISO_RELEASE_GATE' "$REPO_ROOT/scripts/build-iso.sh"; then
+  echo "FAIL: full ISO generation must be release-gate guarded"
+  exit 1
+fi
+
+if output="$(bash "$REPO_ROOT/scripts/build-iso.sh" 2>&1)"; then
+  echo "FAIL: unguarded ISO generation unexpectedly succeeded"
+  exit 1
+elif ! printf '%s\n' "$output" | grep -q 'release-gate only'; then
+  printf '%s\n' "$output" >&2
+  echo "FAIL: unguarded ISO generation did not fail on the release-gate guard"
+  exit 1
+fi
+
 echo "✓ ISO installer config is coherent"

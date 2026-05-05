@@ -22,7 +22,7 @@ function __startTick() {
     });
   }, 1000);
 }
-function useTick(ms = 1000) {
+function useTick(_ms = 1000) {
   const [t, setT] = useState(0);
   useEffect(() => {
     __startTick();
@@ -62,14 +62,9 @@ function useStore() {
 }
 let __taskSeq = 8820;
 function pushTask({ op, target, user = 'admin', status = 'running', progress = 0, err }) {
-  const id = 'T-' + __taskSeq++;
+  const id = `T-${__taskSeq++}`;
   const now = new Date();
-  const started =
-    String(now.getHours()).padStart(2, '0') +
-    ':' +
-    String(now.getMinutes()).padStart(2, '0') +
-    ':' +
-    String(now.getSeconds()).padStart(2, '0');
+  const started = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
   TASKS.unshift({ id, op, target, user, status, progress, started, err });
   if (TASKS.length > 20) TASKS.length = 20;
   __notifyStore();
@@ -84,20 +79,20 @@ function instanceAction(name, action) {
     if (action === 'restart') {
       inst.uptime = '0m';
     }
-    pushTask({ op: 'instance.' + action, target: name });
+    pushTask({ op: `instance.${action}`, target: name });
     window.toast?.success(
-      (action === 'start' ? 'Starting' : 'Restarting') + ' ' + name,
+      `${action === 'start' ? 'Starting' : 'Restarting'} ${name}`,
       'Queued — tracking in task log',
     );
   } else if (action === 'stop' || action === 'pause') {
-    const prevCpu = inst.cpuPct,
-      prevRam = inst.ramPct,
-      prevUp = inst.uptime;
+    const prevCpu = inst.cpuPct;
+    const prevRam = inst.ramPct;
+    const prevUp = inst.uptime;
     inst.status = 'stopped';
     inst.cpuPct = 0;
     inst.ramPct = action === 'pause' ? inst.ramPct : 0;
-    pushTask({ op: 'instance.' + action, target: name });
-    window.toast?.info((action === 'pause' ? 'Pausing' : 'Stopping') + ' ' + name, 'Task queued', {
+    pushTask({ op: `instance.${action}`, target: name });
+    window.toast?.info(`${action === 'pause' ? 'Pausing' : 'Stopping'} ${name}`, 'Task queued', {
       ttl: 6000,
       action: {
         label: 'Undo',
@@ -107,7 +102,7 @@ function instanceAction(name, action) {
           inst.ramPct = prevRam;
           inst.uptime = prevUp;
           pushTask({ op: 'instance.start', target: name });
-          window.toast?.success('Restarted ' + name, 'Action reverted');
+          window.toast?.success(`Restarted ${name}`, 'Action reverted');
         },
       },
     });
@@ -116,14 +111,14 @@ function instanceAction(name, action) {
     const snap = { ...inst };
     INSTANCES.splice(idx, 1);
     pushTask({ op: 'instance.delete', target: name });
-    window.toast?.warn('Deleted ' + name, 'Disks marked for garbage collection', {
+    window.toast?.warn(`Deleted ${name}`, 'Disks marked for garbage collection', {
       ttl: 8000,
       action: {
         label: 'Undo',
         run: () => {
           INSTANCES.splice(idx, 0, snap);
           __notifyStore();
-          window.toast?.success('Restored ' + name, 'Instance and its disks recovered');
+          window.toast?.success(`Restored ${name}`, 'Instance and its disks recovered');
         },
       },
     });
@@ -131,27 +126,27 @@ function instanceAction(name, action) {
     const stamp = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     SNAPSHOTS.unshift({
-      name: 'snap-' + pad(stamp.getHours()) + pad(stamp.getMinutes()) + pad(stamp.getSeconds()),
-      date: '2026-04-24 ' + pad(stamp.getHours()) + ':' + pad(stamp.getMinutes()),
+      name: `snap-${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}`,
+      date: `2026-04-24 ${pad(stamp.getHours())}:${pad(stamp.getMinutes())}`,
       ram: true,
-      size: (Math.random() * 2 + 0.8).toFixed(1) + ' GB',
-      desc: 'manual (' + name + ')',
+      size: `${(Math.random() * 2 + 0.8).toFixed(1)} GB`,
+      desc: `manual (${name})`,
     });
     pushTask({ op: 'instance.snapshot', target: name });
-    window.toast?.info('Snapshotting ' + name, 'Consistent RAM+disk snapshot in progress');
+    window.toast?.info(`Snapshotting ${name}`, 'Consistent RAM+disk snapshot in progress');
   } else if (action === 'backup') {
     const stamp = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     BACKUPS.unshift({
-      ts: '2026-04-24 ' + pad(stamp.getHours()) + ':' + pad(stamp.getMinutes()),
+      ts: `2026-04-24 ${pad(stamp.getHours())}:${pad(stamp.getMinutes())}`,
       inst: name,
-      size: (Math.random() * 4 + 0.5).toFixed(1) + ' GB',
-      dur: '0m 0' + Math.floor(Math.random() * 9) + 's',
+      size: `${(Math.random() * 4 + 0.5).toFixed(1)} GB`,
+      dur: `0m 0${Math.floor(Math.random() * 9)}s`,
       ver: false,
       mode: 'manual',
     });
     pushTask({ op: 'backup', target: name });
-    window.toast?.info('Backup started for ' + name, 'Writing to pool backup-primary');
+    window.toast?.info(`Backup started for ${name}`, 'Writing to pool backup-primary');
   }
   __notifyStore();
 }
@@ -573,7 +568,7 @@ const ALERTS = [
   },
 ];
 function pushAlert({ sev, t, body, target }) {
-  ALERTS.unshift({ id: 'A-' + ++__alertSeq, sev, t, body, time: 'just now', read: false, target });
+  ALERTS.unshift({ id: `A-${++__alertSeq}`, sev, t, body, time: 'just now', read: false, target });
   if (ALERTS.length > 40) ALERTS.length = 40;
   __notifyStore();
 }
@@ -928,7 +923,7 @@ const WARNINGS = [
 
 // ─── SMALL PRIMITIVES ────────────────────────────────────────
 const Badge = ({ children, color, dot }) => (
-  <span className={'badge' + (dot ? ' badge--dot' : '')} style={{ color, borderColor: color }}>
+  <span className={`badge${dot ? ' badge--dot' : ''}`} style={{ color, borderColor: color }}>
     {children}
   </span>
 );
@@ -1013,8 +1008,8 @@ const Kbd = ({ k }) => {
 };
 
 const ProgressBar = ({ v, variant }) => (
-  <div className={'prog' + (variant ? ' prog--' + variant : '')}>
-    <span style={{ width: Math.max(0, Math.min(100, v)) + '%' }} />
+  <div className={`prog${variant ? ` prog--${variant}` : ''}`}>
+    <span style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
   </div>
 );
 
@@ -1033,7 +1028,7 @@ const Copyable = ({ text, mono = true }) => {
   };
   return (
     <span
-      className={'copyable' + (mono ? ' mono' : '')}
+      className={`copyable${mono ? ' mono' : ''}`}
       onClick={doCopy}
       title="Copy"
       style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
@@ -1268,7 +1263,7 @@ function TopBar({
             <div style={{ height: 1, background: 'var(--h-border)' }} />
             <MenuItem
               icon="sun"
-              label={'Density: ' + (density === 'compact' ? 'compact' : 'comfortable')}
+              label={`Density: ${density === 'compact' ? 'compact' : 'comfortable'}`}
               onClick={() => {
                 onDensity?.(density === 'compact' ? 'comfortable' : 'compact');
                 setUserMenu(false);
@@ -1343,7 +1338,7 @@ function NotifBell({ open, onClick, onNav }) {
         className="btn btn--sm btn--ghost"
         title={
           unread.length
-            ? unread.length + ' unread alert' + (unread.length === 1 ? '' : 's')
+            ? `${unread.length} unread alert${unread.length === 1 ? '' : 's'}`
             : 'No alerts'
         }
         style={{ position: 'relative' }}
@@ -1586,11 +1581,11 @@ function ResourceTree({ page, onNav }) {
     };
     return (
       <div
-        className={'node' + (on ? ' on' : '')}
+        className={`node${on ? ' on' : ''}`}
         style={{ paddingLeft: pad }}
         onClick={() => {
-          onToggle && onToggle();
-          onClick && onClick();
+          onToggle?.();
+          onClick?.();
         }}
       >
         {caret !== undefined ? (
@@ -1609,7 +1604,7 @@ function ResourceTree({ page, onNav }) {
   };
 
   // Determine if a section has any matches — hide label if not.
-  const Section = ({ label, children }) => {
+  const _Section = ({ label, children }) => {
     if (!q)
       return (
         <>
@@ -1774,8 +1769,8 @@ function ResourceTree({ page, onNav }) {
                         label={x.name}
                         icon={x.status === 'running' ? 'circle' : 'circle-off'}
                         pad={52}
-                        on={page === 'instance:' + x.name}
-                        onClick={() => onNav('instance:' + x.name)}
+                        on={page === `instance:${x.name}`}
+                        onClick={() => onNav(`instance:${x.name}`)}
                       />
                     ))}
                     <Node
@@ -1790,8 +1785,8 @@ function ResourceTree({ page, onNav }) {
                         label={x.name}
                         icon={x.status === 'running' ? 'circle' : 'circle-off'}
                         pad={52}
-                        on={page === 'instance:' + x.name}
-                        onClick={() => onNav('instance:' + x.name)}
+                        on={page === `instance:${x.name}`}
+                        onClick={() => onNav(`instance:${x.name}`)}
                       />
                     ))}
                     <Node
@@ -1877,9 +1872,21 @@ function ResourceTree({ page, onNav }) {
 
         <div className="section-label">ADMIN</div>
         <Node label="Users" icon="users" on={page === 'users'} onClick={() => onNav('users')} />
+        <Node
+          label="Webhooks"
+          icon="plug"
+          on={page === 'webhooks'}
+          onClick={() => onNav('webhooks')}
+        />
         <Node label="Audit" icon="list" on={page === 'audit'} onClick={() => onNav('audit')} />
         <Node label="Logs" icon="scroll-text" on={page === 'logs'} onClick={() => onNav('logs')} />
         <Node label="Operations" icon="activity" on={page === 'ops'} onClick={() => onNav('ops')} />
+        <Node
+          label="API Docs"
+          icon="book-open"
+          on={page === 'api-docs'}
+          onClick={() => onNav('api-docs')}
+        />
         <Node
           label="Settings"
           icon="settings"
@@ -1944,7 +1951,7 @@ function TaskDrawer({ open, onToggle }) {
     __notifyStore();
     window.toast?.info(
       'Cleared completed tasks',
-      completed + ' task' + (completed === 1 ? '' : 's') + ' removed from log',
+      `${completed} task${completed === 1 ? '' : 's'} removed from log`,
     );
   };
   const groups =
@@ -1954,7 +1961,7 @@ function TaskDrawer({ open, onToggle }) {
         )
       : [['', filtered]];
   return (
-    <div className={'drawer' + (open ? '' : ' closed')}>
+    <div className={`drawer${open ? '' : ' closed'}`}>
       <div className="drawer__handle" onClick={onToggle}>
         <span>
           <I n={open ? 'chevron-down' : 'chevron-up'} s={12} />
@@ -2012,7 +2019,7 @@ function TaskDrawer({ open, onToggle }) {
               </div>
             </div>
             <button className="btn btn--sm" disabled={completed === 0} onClick={clearCompleted}>
-              <I n="x" s={11} /> Clear completed {completed ? '(' + completed + ')' : ''}
+              <I n="x" s={11} /> Clear completed {completed ? `(${completed})` : ''}
             </button>
           </div>
           <table className="tbl">
@@ -2039,7 +2046,7 @@ function TaskDrawer({ open, onToggle }) {
                       fontSize: 12,
                     }}
                   >
-                    No {filter === 'all' ? 'tasks' : filter + ' tasks'}.
+                    No {filter === 'all' ? 'tasks' : `${filter} tasks`}.
                   </td>
                 </tr>
               ) : (
@@ -2206,6 +2213,18 @@ function CommandPalette({ open, onClose, onNav }) {
         run: () => onNav('audit'),
       },
       {
+        id: 'nav.webhooks',
+        label: 'Go to Webhooks',
+        cat: 'Navigation',
+        run: () => onNav('webhooks'),
+      },
+      {
+        id: 'nav.api-docs',
+        label: 'Go to API Docs',
+        cat: 'Navigation',
+        run: () => onNav('api-docs'),
+      },
+      {
         id: 'nav.logs',
         label: 'Go to Logs',
         cat: 'Navigation',
@@ -2365,7 +2384,7 @@ function CommandPalette({ open, onClose, onNav }) {
           {withSearch.map((a, i) => (
             <div
               key={a.id}
-              className={'row' + (i === sel ? ' on' : '')}
+              className={`row${i === sel ? ' on' : ''}`}
               onMouseEnter={() => setSel(i)}
               onClick={() => {
                 a.run();

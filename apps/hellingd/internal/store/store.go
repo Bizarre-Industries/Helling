@@ -14,7 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
+	"filippo.io/age"
 	_ "modernc.org/sqlite" // pure-Go SQLite driver, registered as "sqlite"
 )
 
@@ -23,7 +25,9 @@ var migrationsFS embed.FS
 
 // Store is the persistence handle. Safe for concurrent use.
 type Store struct {
-	db *sql.DB
+	db           *sql.DB
+	ageIdentity  *age.X25519Identity
+	ageRecipient *age.X25519Recipient
 }
 
 // Open creates the state directory if needed, opens the SQLite database,
@@ -50,7 +54,13 @@ func Open(stateDir string) (*Store, error) {
 		return nil, fmt.Errorf("pinging sqlite: %w", err)
 	}
 
-	return &Store{db: db}, nil
+	identity, err := loadOrCreateAgeIdentity(stateDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	return &Store{db: db, ageIdentity: identity, ageRecipient: identity.Recipient()}, nil
 }
 
 // Close releases the database handle.
@@ -114,12 +124,13 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("reading migration %s: %w", f.Name(), err)
 		}
+		sqlText := migrationUpSQL(string(body))
 
 		tx, err := s.db.BeginTx(ctx, nil)
 		if err != nil {
 			return fmt.Errorf("begin tx for migration %d: %w", version, err)
 		}
-		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
+		if _, err := tx.ExecContext(ctx, sqlText); err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("running migration %d (%s): %w", version, f.Name(), err)
 		}
@@ -136,7 +147,17 @@ func (s *Store) Migrate(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return s.repairLegacyV02State(ctx)
+}
+
+func (s *Store) repairLegacyV02State(ctx context.Context) error {
+	if err := s.repairV02Schema(ctx); err != nil {
+		return err
+	}
+	if err := s.encryptLegacyWebhookSecrets(ctx); err != nil {
+		return err
+	}
+	return s.encryptLegacyIncusUserCerts(ctx)
 }
 
 // parseMigrationVersion extracts the integer prefix from a migration filename.
@@ -147,4 +168,23 @@ func parseMigrationVersion(name string) (int, error) {
 		return 0, fmt.Errorf("malformed migration filename %q: %w", name, err)
 	}
 	return v, nil
+}
+
+func migrationUpSQL(body string) string {
+	const (
+		upMarker   = "-- +goose Up"
+		downMarker = "-- +goose Down"
+	)
+	up := strings.Index(body, upMarker)
+	if up == -1 {
+		return body
+	}
+	body = body[up+len(upMarker):]
+	down := strings.Index(body, downMarker)
+	if down != -1 {
+		body = body[:down]
+	}
+	body = strings.ReplaceAll(body, "-- +goose StatementBegin", "")
+	body = strings.ReplaceAll(body, "-- +goose StatementEnd", "")
+	return body
 }

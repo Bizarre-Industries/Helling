@@ -2,6 +2,7 @@
 -- Kubernetes clusters provisioned via CAPN on Incus VMs.
 -- Per docs/spec/architecture.md §Kubernetes.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS k8s_clusters (
     id              TEXT    PRIMARY KEY,     -- uuid v7
     user_id         INTEGER NOT NULL REFERENCES users(id),
@@ -16,3 +17,6 @@ CREATE TABLE IF NOT EXISTS k8s_clusters (
 );
 CREATE INDEX IF NOT EXISTS idx_k8s_clusters_user ON k8s_clusters(user_id);
 CREATE INDEX IF NOT EXISTS idx_k8s_clusters_status ON k8s_clusters(status);
+
+-- +goose Down
+DROP TABLE IF EXISTS k8s_clusters;

@@ -76,7 +76,7 @@ export default function PageBMC() {
                     title="Power cycle"
                     onClick={() =>
                       openConfirm({
-                        title: 'Power cycle ' + r[0] + '?',
+                        title: `Power cycle ${r[0]}?`,
                         body: 'Hard reset via BMC. VMs will be killed ungracefully. Prefer Drain + Restart.',
                         danger: true,
                         confirmLabel: 'Power cycle',
@@ -91,7 +91,7 @@ export default function PageBMC() {
                     title="Graceful restart"
                     onClick={() =>
                       openConfirm({
-                        title: 'Restart ' + r[0] + '?',
+                        title: `Restart ${r[0]}?`,
                         body: 'Drains VMs to other nodes, then reboots. ~4 min.',
                         confirmLabel: 'Restart',
                       })
@@ -106,7 +106,7 @@ export default function PageBMC() {
                       toast(
                         'info',
                         'Serial-over-LAN',
-                        'Attaching to ' + r[0] + ' BMC — scroll to remote console below',
+                        `Attaching to ${r[0]} BMC — scroll to remote console below`,
                       )
                     }
                   >

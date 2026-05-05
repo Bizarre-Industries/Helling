@@ -2,6 +2,7 @@
 -- systemd timer-backed schedules for backups, snapshots, and custom actions.
 -- Per ADR-017: schedules write .timer + .service units to /etc/systemd/system/.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS schedules (
     id          TEXT    PRIMARY KEY,        -- uuid v7
     user_id     INTEGER NOT NULL REFERENCES users(id),
@@ -17,3 +18,6 @@ CREATE TABLE IF NOT EXISTS schedules (
 );
 CREATE INDEX IF NOT EXISTS idx_schedules_user ON schedules(user_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_target ON schedules(target);
+
+-- +goose Down
+DROP TABLE IF EXISTS schedules;

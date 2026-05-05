@@ -339,11 +339,36 @@ Setup: probe `/auth/setup/status`, create first admin only while setup is requir
 
 Helling OpenAPI operationIds whose WebUI surface does not match the naive camelCase variant of the operationId as a substring — listed here so `scripts/check-parity.sh` can resolve coverage without a phase0 exception entry.
 
-- operationId: userGet → user detail drawer on `/users` page (`docs/design/pages/users.md`)
-- operationId: userUpdate → user edit `ModalForm` on `/users` page (`docs/design/pages/users.md`)
-- operationId: auditQuery → filter controls on `/audit` page (`docs/design/pages/audit.md`)
-- operationId: auditExport → CSV/JSONL export button on `/audit` page (`docs/design/pages/audit.md`)
+- operationId: listUsers → users table on `/users` page (`docs/design/pages/users.md`)
+- operationId: createUser → user create `ModalForm` on `/users` page (`docs/design/pages/users.md`)
+- operationId: getUser → user detail drawer on `/users` page (`docs/design/pages/users.md`)
+- operationId: updateUser → user edit `ModalForm` on `/users` page (`docs/design/pages/users.md`)
+- operationId: deleteUser → user delete row action on `/users` page (`docs/design/pages/users.md`)
+- operationId: updateUserScope → delegated Incus scope control on `/users` page (`docs/design/pages/users.md`)
+- operationId: listSchedules → schedules table on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: createSchedule → schedule create `ModalForm` on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: getSchedule → schedule detail drawer on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: updateSchedule → schedule edit action on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: deleteSchedule → schedule delete row action on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: runSchedule → schedule run-now action on `/schedules` page (`docs/design/pages/schedules.md`)
+- operationId: listWebhooks → webhooks table in Helling feature set
+- operationId: createWebhook → webhook create `ModalForm` in Helling feature set
+- operationId: getWebhook → webhook detail drawer in Helling feature set
+- operationId: updateWebhook → webhook edit action in Helling feature set
+- operationId: deleteWebhook → webhook delete row action in Helling feature set
+- operationId: testWebhook → webhook test action in Helling feature set
+- operationId: listHostFirewallRules → rules table on `/firewall` page (`docs/design/pages/firewall.md`)
+- operationId: createHostFirewallRule → add-rule `ModalForm` on `/firewall` page (`docs/design/pages/firewall.md`)
+- operationId: deleteHostFirewallRule → delete-rule row action on `/firewall` page (`docs/design/pages/firewall.md`)
+- operationId: listEvents → task log + event hydration consumers across pages
+- operationId: listAuditEvents → filter controls on `/audit` page (`docs/design/pages/audit.md`)
+- operationId: exportAuditEvents → CSV export button on `/audit` page (`docs/design/pages/audit.md`)
 - operationId: healthGet → consumed internally by app-shell status banner (no dedicated route)
-- operationId: eventsSse → consumed internally by task log + SSE subscribers across pages (no dedicated route)
+- operationId: authLogin → login form on `/login` (`docs/design/pages/auth.md`)
+- operationId: authLogout → user menu sign-out action in the app shell (`docs/design/pages/auth.md`)
+- operationId: authMfaComplete → MFA completion form on `/login` (`docs/design/pages/auth.md`)
+- operationId: authTotpSetup → account security MFA setup modal (`docs/design/pages/auth.md`)
+- operationId: authTotpVerify → account security MFA verification form (`docs/design/pages/auth.md`)
+- operationId: authTotpDisable → account security MFA disable action (`docs/design/pages/auth.md`)
 - operationId: authSetup → first-admin setup form on `/setup` (`docs/design/pages/auth.md`)
 - operationId: authSetupStatus → setup availability probe on `/setup` (`docs/design/pages/auth.md`)

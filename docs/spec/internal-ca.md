@@ -1,6 +1,6 @@
 # Internal CA Specification
 
-This document specifies the deferred Certificate Authority (CA) lifecycle for Helling's per-user Incus client certificates. It is not active in v0.1; raw Incus proxy access is admin-only until ADR-024 is wired end to end.
+This document specifies the Certificate Authority (CA) lifecycle for Helling's per-user Incus client certificates. v0.2 uses this CA for delegated non-admin Incus proxy access.
 
 ## Overview
 
@@ -11,28 +11,28 @@ Helling will maintain an internal CA to issue per-user client certificates for m
 ### Key Type
 
 - **Algorithm:** Ed25519 (RFC 8037 per ADR-031)
-- **Location:** `/etc/helling/ca.key.age` (file, encrypted with age per ADR-039)
-- **Permissions:** `0400` (readable by `helling` user only)
+- **Location:** `/var/lib/helling/ca.key.age` (file, encrypted with age per ADR-039)
+- **Permissions:** `0600` (readable by `helling` user only)
 - **Ownership:** `helling:helling`
 
 ### CA Key Encryption
 
 - **Method:** age (filippo.io/age v1.2.x per ADR-039)
-- **Identity:** Stored in `/var/lib/helling/ca-identity` (file, not encrypted, created at first boot)
-- **Derivation:** Identity derived from host entropy (e.g., machine-id + random seed)
+- **Identity:** Stored in `/etc/helling/age/identity.txt` on packaged installs, or under the configured state directory for non-default state dirs.
+- **Derivation:** Generated from host entropy by `filippo.io/age`
 - **Rotation:** Identity is permanent for a host; CA key rekeying requires manual intervention
 
 ### Bootstrap Process
 
 1. At first hellingd startup:
-   - Check if `/var/lib/helling/ca-identity` exists
+   - Check if the configured age identity exists
    - If not, generate new age identity → store to file
-   - Generate CA key (Ed25519) → encrypt with age identity → write to `/etc/helling/ca.key.age`
-   - Record CA cert validity window in SQLite
+   - Generate CA key (Ed25519) → encrypt with age identity → write to `/var/lib/helling/ca.key.age`
+   - Write the public CA certificate to `/var/lib/helling/ca.crt`
 
 2. On each hellingd startup:
-   - Read age identity from `/var/lib/helling/ca-identity`
-   - Decrypt `/etc/helling/ca.key.age` using identity
+   - Read the age identity
+   - Decrypt `/var/lib/helling/ca.key.age` using identity
    - Load into memory (runtime use only)
    - **Never** store unencrypted key to disk
 
@@ -41,7 +41,7 @@ Helling will maintain an internal CA to issue per-user client certificates for m
 ### Validity Period
 
 - **Validity:** 5 years from generation date
-- **Storage:** `/etc/helling/ca.crt` (plaintext PEM, no secrets)
+- **Storage:** `/var/lib/helling/ca.crt` (plaintext PEM, no secrets)
 - **Subject:** `CN=Helling CA, O=Bizarre Industries, C=US` (or configurable)
 - **Public key:** Ed25519 (matches CA key)
 
@@ -99,25 +99,24 @@ openssl req -new -x509 -key ca.key -days 1825 -out ca.crt \
 
 ### Storage Format
 
-User certificates stored in SQLite table `user_certificates`:
+User certificates stored in SQLite table `incus_user_certs`:
 
 ```sql
-CREATE TABLE user_certificates (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id),
-  serial_number TEXT NOT NULL,
-  cert_pem TEXT NOT NULL,      -- encrypted with age
-  private_key_pem TEXT NOT NULL, -- encrypted with age
-  issued_at TIMESTAMP NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  status TEXT NOT NULL,          -- active|superseded|expired
-  created_at TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP NOT NULL,
-  UNIQUE(user_id, status) -- only one active cert per user
+CREATE TABLE incus_user_certs (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  encrypted_cert_pem TEXT NOT NULL,
+  encrypted_key_pem TEXT NOT NULL,
+  fingerprint TEXT UNIQUE NOT NULL,
+  restricted INTEGER NOT NULL DEFAULT 1,
+  project_scope TEXT NOT NULL DEFAULT 'default',
+  expires_at INTEGER,
+  revoked_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 ```
 
-All PEM text fields are encrypted using age with a per-user key stored in the `users` table.
+All PEM text fields are encrypted using the host age identity from ADR-039.
 
 ### Hashing
 

@@ -15,6 +15,7 @@ declare module '*.jsx' {
 // window for cross-file resolution. Keep Window loosely typed here so the
 // .jsx files can destructure without TS complaint. Narrow per-key in a
 // follow-up once individual components are converted to proper TSX modules.
+// biome-ignore lint/correctness/noUnusedVariables: ambient Window extension for legacy JSX globals.
 interface Window {
   [key: string]: unknown;
 }

@@ -227,7 +227,7 @@ Generates .deb packages from a YAML config. Contents: binaries, systemd units, c
 
 **Tool:** `live-build` (ADR-046)
 
-Builds a bootable ISO from: Debian 13 base + Incus packages (Zabbly repo) + Podman + Helling .deb packages + preseed answers. `make iso` produces `helling-VERSION-amd64.iso`.
+Builds a bootable ISO from: Debian 13 base + Incus packages (Zabbly repo) + Podman + Helling .deb packages + preseed answers. `HELLING_ISO_RELEASE_GATE=1 task iso:build` produces `helling-VERSION-amd64.iso` during version-gate validation.
 
 The preseed automates the 3 setup questions (hostname, disk, admin password) and the rest is unattended.
 
@@ -285,7 +285,12 @@ Property-based fuzzing from the Helling OpenAPI spec. Runs in CI against a Lima 
 
 **Tool:** `goss` + `packer`
 
-packer builds a VM from the ISO. goss validates the running system: services running, ports listening, sockets present, packages installed. Catches "builds but doesn't boot" bugs.
+Packer has two separate roles. The v0.2 local workflow uses Packer to build a
+Parallels Debian dev VM from Debian netinst media. Future release validation
+may use Packer to boot the Helling installer ISO, but that ISO build remains a
+version-gate-only live-build artifact. goss validates the running system:
+services running, ports listening, sockets present, packages installed. Catches
+"builds but doesn't boot" bugs.
 
 ```yaml
 # goss.yaml

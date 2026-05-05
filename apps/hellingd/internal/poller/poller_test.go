@@ -40,6 +40,14 @@ func (f *fakeIncus) DeleteInstance(_ context.Context, _ string) (incus.Operation
 	panic("DeleteInstance not expected in poller tests")
 }
 
+func (f *fakeIncus) CreateInstanceBackup(_ context.Context, _, _ string) (incus.OperationHandle, error) {
+	panic("CreateInstanceBackup not expected in poller tests")
+}
+
+func (f *fakeIncus) CreateInstanceSnapshot(_ context.Context, _, _ string) (incus.OperationHandle, error) {
+	panic("CreateInstanceSnapshot not expected in poller tests")
+}
+
 func (f *fakeIncus) GetOperation(_ context.Context, id string) (incus.OperationStatus, string, error) {
 	if v, ok := f.state[id]; ok {
 		return v.status, v.errMsg, nil

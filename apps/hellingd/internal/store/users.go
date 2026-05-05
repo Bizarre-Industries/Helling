@@ -16,6 +16,7 @@ type User struct {
 	Username     string
 	PasswordHash string
 	IsAdmin      bool
+	IncusProject string
 	CreatedAt    time.Time
 }
 
@@ -51,6 +52,7 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash string, i
 		Username:     username,
 		PasswordHash: passwordHash,
 		IsAdmin:      isAdmin,
+		IncusProject: "default",
 		CreatedAt:    time.Unix(now, 0).UTC(),
 	}, nil
 }
@@ -95,6 +97,7 @@ func (s *Store) CreateFirstAdmin(ctx context.Context, username, passwordHash str
 		Username:     username,
 		PasswordHash: passwordHash,
 		IsAdmin:      true,
+		IncusProject: "default",
 		CreatedAt:    time.Unix(now, 0).UTC(),
 	}, nil
 }
@@ -104,11 +107,12 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, e
 	var u User
 	var createdAt int64
 	var isAdmin int
+	var incusProject sql.NullString
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, username, password_hash, created_at, is_admin FROM users WHERE username = ?`,
+		`SELECT id, username, password_hash, created_at, is_admin, incus_project FROM users WHERE username = ?`,
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin, &incusProject)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -117,6 +121,7 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, e
 	}
 	u.CreatedAt = time.Unix(createdAt, 0).UTC()
 	u.IsAdmin = isAdmin != 0
+	u.IncusProject = defaultString(incusProject, "default")
 	return u, nil
 }
 
@@ -125,11 +130,12 @@ func (s *Store) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var u User
 	var createdAt int64
 	var isAdmin int
+	var incusProject sql.NullString
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, username, password_hash, created_at, is_admin FROM users WHERE id = ?`,
+		`SELECT id, username, password_hash, created_at, is_admin, incus_project FROM users WHERE id = ?`,
 		id,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin, &incusProject)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -138,6 +144,7 @@ func (s *Store) GetUserByID(ctx context.Context, id int64) (User, error) {
 	}
 	u.CreatedAt = time.Unix(createdAt, 0).UTC()
 	u.IsAdmin = isAdmin != 0
+	u.IncusProject = defaultString(incusProject, "default")
 	return u, nil
 }
 
@@ -154,7 +161,7 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 // ListUsers returns all users ordered by creation time.
 func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, username, password_hash, created_at, is_admin FROM users ORDER BY created_at ASC`)
+		`SELECT id, username, password_hash, created_at, is_admin, incus_project FROM users ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("listing users: %w", err)
 	}
@@ -165,11 +172,13 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 		var u User
 		var createdAt int64
 		var isAdmin int
-		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin); err != nil {
+		var incusProject sql.NullString
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &createdAt, &isAdmin, &incusProject); err != nil {
 			return nil, fmt.Errorf("scanning user: %w", err)
 		}
 		u.CreatedAt = time.Unix(createdAt, 0).UTC()
 		u.IsAdmin = isAdmin != 0
+		u.IncusProject = defaultString(incusProject, "default")
 		users = append(users, u)
 	}
 	return users, rows.Err()
@@ -190,6 +199,29 @@ func (s *Store) UpdateUser(ctx context.Context, id int64, passwordHash string, i
 		return fmt.Errorf("updating user %d: %w", id, err)
 	}
 	return nil
+}
+
+// SetUserIncusProject updates the Incus project assigned to a user.
+func (s *Store) SetUserIncusProject(ctx context.Context, id int64, project string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE users SET incus_project = ? WHERE id = ?`, project, id)
+	if err != nil {
+		return fmt.Errorf("updating user %d incus project: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking user %d incus project update: %w", id, err)
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func defaultString(v sql.NullString, fallback string) string {
+	if v.Valid && v.String != "" {
+		return v.String
+	}
+	return fallback
 }
 
 // DeleteUser removes a user and cascades to sessions, tokens, etc.

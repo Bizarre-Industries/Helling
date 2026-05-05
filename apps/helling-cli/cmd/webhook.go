@@ -159,11 +159,15 @@ func newWebhookUpdateCmd() *cobra.Command {
 }
 
 func newWebhookDeleteCmd() *cobra.Command {
-	return &cobra.Command{
+	var yes bool
+	c := &cobra.Command{
 		Use:   "delete <id>",
 		Short: "Delete a webhook",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := confirmDestructiveAction(cmd, yes, "delete webhook", args[0]); err != nil {
+				return err
+			}
 			cli, ctx, cancel, err := userClient(cmd.Context())
 			if err != nil {
 				return err
@@ -176,6 +180,8 @@ func newWebhookDeleteCmd() *cobra.Command {
 			return werr
 		},
 	}
+	c.Flags().BoolVar(&yes, "yes", false, "Skip interactive confirmation")
+	return c
 }
 
 func newWebhookTestCmd() *cobra.Command {

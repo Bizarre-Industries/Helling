@@ -84,6 +84,11 @@ func (e *APIError) Error() string {
 // Do performs a request, returning the response body on 2xx or an APIError
 // otherwise. body may be nil; when non-nil it is JSON-marshaled.
 func (c *Client) Do(ctx context.Context, method, path string, body any) ([]byte, error) {
+	return c.DoWithHeaders(ctx, method, path, body, nil)
+}
+
+// DoWithHeaders performs a request with additional headers.
+func (c *Client) DoWithHeaders(ctx context.Context, method, path string, body any, headers map[string]string) ([]byte, error) {
 	bodyReader, hasBody, err := encodeRequestBody(body)
 	if err != nil {
 		return nil, err
@@ -96,6 +101,9 @@ func (c *Client) Do(ctx context.Context, method, path string, body any) ([]byte,
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 	if c.bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+c.bearer)
 	}
@@ -114,6 +122,35 @@ func (c *Client) Do(ctx context.Context, method, path string, body any) ([]byte,
 		return raw, nil
 	}
 
+	return nil, decodeAPIError(resp.StatusCode, raw)
+}
+
+// Stream performs a long-lived GET request. Caller must close the response body.
+func (c *Client) Stream(ctx context.Context, path, accept string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.api+path, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	if accept == "" {
+		accept = "application/json"
+	}
+	req.Header.Set("Accept", accept)
+	if c.bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+c.bearer)
+	}
+	if c.cookie != "" {
+		req.Header.Set("Cookie", c.cookie)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("client: GET %s: %w", path, err)
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		c.captureSessionCookie(resp)
+		return resp, nil
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, _ := io.ReadAll(resp.Body)
 	return nil, decodeAPIError(resp.StatusCode, raw)
 }
 

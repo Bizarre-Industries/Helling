@@ -25,6 +25,8 @@ type Client interface {
 	CreateInstance(ctx context.Context, req InstanceCreate) (OperationHandle, error)
 	UpdateInstanceState(ctx context.Context, name, action string, force bool, timeoutSec int) (OperationHandle, error)
 	DeleteInstance(ctx context.Context, name string) (OperationHandle, error)
+	CreateInstanceBackup(ctx context.Context, name, backupName string) (OperationHandle, error)
+	CreateInstanceSnapshot(ctx context.Context, name, snapshotName string) (OperationHandle, error)
 	GetOperation(ctx context.Context, id string) (OperationStatus, string, error)
 }
 
@@ -122,6 +124,29 @@ func (c *realClient) DeleteInstance(ctx context.Context, name string) (Operation
 	op, err := c.doOperation(ctx, http.MethodDelete, "/1.0/instances/"+pathEscape(name), nil)
 	if err != nil {
 		return nil, fmt.Errorf("deleting instance %q: %w", name, err)
+	}
+	return op, nil
+}
+
+// CreateInstanceBackup creates an Incus-native backup for an instance.
+func (c *realClient) CreateInstanceBackup(ctx context.Context, name, backupName string) (OperationHandle, error) {
+	body := map[string]any{"name": backupName}
+	op, err := c.doOperation(ctx, http.MethodPost, "/1.0/instances/"+pathEscape(name)+"/backups", body)
+	if err != nil {
+		return nil, fmt.Errorf("creating instance %q backup %q: %w", name, backupName, err)
+	}
+	return op, nil
+}
+
+// CreateInstanceSnapshot creates an Incus-native snapshot for an instance.
+func (c *realClient) CreateInstanceSnapshot(ctx context.Context, name, snapshotName string) (OperationHandle, error) {
+	body := map[string]any{
+		"name":     snapshotName,
+		"stateful": false,
+	}
+	op, err := c.doOperation(ctx, http.MethodPost, "/1.0/instances/"+pathEscape(name)+"/snapshots", body)
+	if err != nil {
+		return nil, fmt.Errorf("creating instance %q snapshot %q: %w", name, snapshotName, err)
 	}
 	return op, nil
 }

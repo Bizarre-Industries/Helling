@@ -41,7 +41,7 @@ backup.completed, backup.failed
 GET    /api/v1/webhooks
 POST   /api/v1/webhooks
 GET    /api/v1/webhooks/{id}
-PUT    /api/v1/webhooks/{id}
+PATCH  /api/v1/webhooks/{id}
 DELETE /api/v1/webhooks/{id}
 POST   /api/v1/webhooks/{id}/test
 ```
@@ -126,8 +126,8 @@ nftables rules for host-level and Podman networking. See docs/spec/networking.md
 Every API mutation logged to systemd journal (ADR-019). See docs/spec/architecture.md.
 
 ```text
-GET /api/v1/audit → query journal with filters (user, since, until, method, path)
-GET /api/v1/audit/export → CSV or JSON export
+GET /api/v1/audit → query journal with filters (actor, action, outcome, since, until, limit)
+GET /api/v1/audit/export → bounded JSON Lines export
 ```
 
 ---

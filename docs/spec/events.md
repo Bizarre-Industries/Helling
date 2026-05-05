@@ -2,8 +2,9 @@
 
 Helling emits events through two delivery surfaces.
 
-1. SSE stream: `GET /api/v1/events`
-2. Webhooks: configured destinations under `/api/v1/webhooks/*`
+1. SSE stream: `GET /api/v1/events` with `Accept: text/event-stream`
+2. JSON snapshot: `GET /api/v1/events?limit=N` with JSON `Accept`
+3. Webhooks: configured destinations under `/api/v1/webhooks/*`
 
 The event type namespace is shared across both surfaces.
 
@@ -83,6 +84,9 @@ Headers:
 - `user.created`
 - `user.updated`
 - `user.deleted`
+- `schedule.created`
+- `schedule.updated`
+- `schedule.deleted`
 - `schedule.started`
 - `schedule.completed`
 - `schedule.failed`
@@ -90,6 +94,12 @@ Headers:
 - `backup.failed`
 - `webhook.delivery.ok`
 - `webhook.delivery.fail`
+- `webhook.created`
+- `webhook.updated`
+- `webhook.deleted`
+- `webhook.test`
+- `firewall.rule.created`
+- `firewall.rule.deleted`
 - `warning.raised`
 - `warning.resolved`
 - `system.upgrade.started`
@@ -104,6 +114,9 @@ SSE query filters (optional):
 - `since`: event id lower bound
 
 Replay window is implementation-defined; baseline retention target is 5 minutes in-memory for reconnect continuity.
+
+JSON snapshot mode returns recent events in the Helling envelope shape and is
+used by CLI snapshot tests and non-streaming WebUI state hydration.
 
 ## Delivery Guarantees
 

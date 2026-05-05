@@ -15,8 +15,7 @@ import './api/client';
 // Expose the dashboard-counts hook on window so PageDashboard in pages.jsx
 // can call it without restructuring the monolithic JSX module (PR G).
 import { useDashboardCounts } from './api/queries';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).useDashboardCounts = useDashboardCounts;
+window.useDashboardCounts = useDashboardCounts;
 
 // Side-effect imports populate window.* globals referenced by App.
 // Order matters: shell defines primitives, infra adds shared UI, pages add

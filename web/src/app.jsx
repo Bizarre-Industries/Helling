@@ -2,6 +2,7 @@
 /* eslint-disable */
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { clearAccessToken, isAuthenticated, subscribeAuthChange } from './api/auth-store';
+import { performLogout } from './api/logout';
 import { ErrorBoundary } from './error-boundary';
 // Phase 2C (audit F-29): each extracted page is lazy-loaded so the initial
 // chunk only ships shell + dashboard, and per-route navigation triggers a
@@ -310,6 +311,10 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  const handleLogout = useCallback(() => {
+    void performLogout();
+  }, []);
+
   useEffect(() => {
     const onKey = (e) => {
       const meta = e.metaKey || e.ctrlKey;
@@ -384,7 +389,7 @@ function App() {
         onDensity={setDensity}
         theme={theme}
         onTheme={setTheme}
-        onLogout={() => clearAccessToken()}
+        onLogout={handleLogout}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <ResourceTree page={page} onNav={nav} />

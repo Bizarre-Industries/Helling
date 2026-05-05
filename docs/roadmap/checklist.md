@@ -139,7 +139,7 @@ Proxy middleware is wired in hellingd per ADR-014 (`apps/hellingd/internal/proxy
 - [ ] **F-43** (types): `IncusInstanceDetail` + `PodmanContainerDetail` hand-written from upstream OpenAPI; mock seeds match real shape
 - [ ] **F-45** (verify): no Phase 3 query reverts `refetchOnWindowFocus: true` default
 - [ ] **F-04 + F-38 sequencing**: token-expired path renders error state cleanly (post Phase 1 wiring)
-- [ ] **logout flow** (Phase 1 follow-up): TopBar `onLogout` calls `useLogoutMutation` → `POST /api/v1/auth/logout` → `clearAccessToken()` (currently only clears local token; refresh-cookie not revoked server-side)
+- [x] **logout flow** (Phase 1 follow-up): TopBar `onLogout` calls server `POST /api/v1/auth/logout` before `clearAccessToken()`; local token is still cleared if server logout fails.
 
 ### WebUI Audit Phase 4 — Layout primitives + antd migration spike (audit 2026-04-27)
 

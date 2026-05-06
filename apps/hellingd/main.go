@@ -109,7 +109,10 @@ func run() error {
 			Argon2:            argon2ParamsFromConfig(&cfg.Auth),
 			JWTSigner:         jwtSigner,
 		},
-		IncusProber:         incusProber(cfg.Incus.SocketPath),
+		IncusProber: incusProber(cfg.Incus.SocketPath),
+		IncusMetrics: func(ctx context.Context) (string, error) {
+			return incus.ScrapeMetrics(ctx, cfg.Incus.SocketPath)
+		},
 		Incus:               incusClient,
 		IncusProxy:          incusProxy,
 		DelegatedIncusProxy: delegatedIncusProxy,

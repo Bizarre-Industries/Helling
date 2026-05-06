@@ -246,7 +246,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 **Gate:** Webhook fires on instance.created. Warning shows for full disk. Prometheus scrapes /metrics.
 
 - [ ] Warnings engine (goroutine, 5min checks, capacity forecasting)
-- [ ] Prometheus /metrics endpoint (Helling baseline landed 2026-05-06; proxied Incus metrics pending)
+- [x] Prometheus /metrics endpoint (Helling baseline and proxied Incus `/1.0/metrics` scrape landed 2026-05-06; warnings/notifications metrics still pending)
 - [ ] Notification channels (Discord, Slack, email, Gotify, ntfy)
 - [ ] Notification handlers: CRUD + test send
 - [ ] Grafana dashboard JSON (grafonnet)

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,10 +40,71 @@ func TestMetricsEndpointExposesPrometheusBaseline(t *testing.T) {
 		"# TYPE helling_goroutines gauge",
 		"# TYPE helling_open_connections gauge",
 		"# TYPE helling_db_size_bytes gauge",
+		"# TYPE helling_upstream_metrics_scrape_success gauge",
+		`helling_upstream_metrics_scrape_success{upstream="incus"} 0`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("metrics body missing %q:\n%s", want, body)
 		}
+	}
+}
+
+func TestMetricsIncludesProxiedIncusMetrics(t *testing.T) {
+	t.Parallel()
+	srv, _ := newTestServerWithConfig(t, func(cfg *Config) {
+		cfg.IncusMetrics = func(_ context.Context) (string, error) {
+			return "# HELP incus_instances_total Instances known to Incus.\n# TYPE incus_instances_total gauge\nincus_instances_total 2", nil
+		}
+	})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	resp := doGet(t, ts.Client(), ts.URL+"/metrics")
+	defer func() { _ = resp.Body.Close() }()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+	for _, want := range []string{
+		`helling_upstream_metrics_scrape_success{upstream="incus"} 1`,
+		"# BEGIN proxied Incus /1.0/metrics",
+		"incus_instances_total 2",
+		"# END proxied Incus /1.0/metrics",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("metrics body missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestMetricsScrapeFailureKeepsHellingMetricsAvailable(t *testing.T) {
+	t.Parallel()
+	srv, _ := newTestServerWithConfig(t, func(cfg *Config) {
+		cfg.IncusMetrics = func(_ context.Context) (string, error) {
+			return "", errors.New("incus unavailable")
+		}
+	})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	resp := doGet(t, ts.Client(), ts.URL+"/metrics")
+	defer func() { _ = resp.Body.Close() }()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+	for _, want := range []string{
+		"# TYPE helling_api_requests_total counter",
+		`helling_upstream_metrics_scrape_success{upstream="incus"} 0`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("metrics body missing %q:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, "# BEGIN proxied Incus /1.0/metrics") {
+		t.Fatalf("failed Incus scrape unexpectedly appended upstream block:\n%s", body)
 	}
 }
 

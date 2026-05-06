@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"sort"
@@ -169,6 +170,22 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(&b, "helling_db_size_bytes %d\n", size)
 	} else {
 		fmt.Fprintf(&b, "helling_db_size_bytes 0\n")
+	}
+
+	b.WriteString("# HELP helling_upstream_metrics_scrape_success Whether the latest upstream metrics scrape succeeded.\n")
+	b.WriteString("# TYPE helling_upstream_metrics_scrape_success gauge\n")
+	if s.cfg.IncusMetrics == nil {
+		b.WriteString("helling_upstream_metrics_scrape_success{upstream=\"incus\"} 0\n")
+	} else if upstream, err := s.cfg.IncusMetrics(r.Context()); err == nil {
+		b.WriteString("helling_upstream_metrics_scrape_success{upstream=\"incus\"} 1\n")
+		if upstream != "" {
+			b.WriteString("\n# BEGIN proxied Incus /1.0/metrics\n")
+			b.WriteString(upstream)
+			b.WriteString("\n# END proxied Incus /1.0/metrics\n")
+		}
+	} else {
+		s.cfg.Logger.Warn("scrape incus metrics", slog.Any("err", err))
+		b.WriteString("helling_upstream_metrics_scrape_success{upstream=\"incus\"} 0\n")
 	}
 
 	_, _ = w.Write([]byte(b.String()))

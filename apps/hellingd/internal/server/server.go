@@ -51,6 +51,9 @@ type AuthSettings struct {
 // tests can stub the probe without hitting a real socket.
 type IncusProber func(context.Context) bool
 
+// IncusMetricsScraper scrapes Incus' native Prometheus metrics surface.
+type IncusMetricsScraper func(context.Context) (string, error)
+
 // WebhookDeliveryFunc sends one signed webhook HTTP request.
 type WebhookDeliveryFunc func(context.Context, string, string, []byte) (*int, *string, error)
 
@@ -76,6 +79,7 @@ type Config struct {
 	Version             VersionInfo
 	Auth                AuthSettings
 	IncusProber         IncusProber
+	IncusMetrics        IncusMetricsScraper
 	Incus               incus.Client
 	IncusProxy          *proxy.IncusProxy
 	DelegatedIncusProxy *proxy.DelegatedIncusProxy

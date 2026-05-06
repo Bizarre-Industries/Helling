@@ -142,6 +142,10 @@ body {
   opacity: 0.4;
   pointer-events: none;
 }
+.btn[aria-disabled="true"] {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
 .btn-group {
   display: inline-flex;
 }
@@ -179,6 +183,20 @@ body {
 }
 .input::placeholder {
   color: var(--h-text-3);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.form-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--h-text-muted);
+  font-size: var(--h-fs-xs);
+}
+.form-grid--compact .input {
+  height: 32px;
 }
 
 /* badges */

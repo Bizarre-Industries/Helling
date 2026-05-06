@@ -116,7 +116,7 @@ function PageDashboard({ onNav }) {
       </div>
 
       {WARNINGS.slice(0, 2).map((w, i) => (
-        <div key={i} className={'alert alert--' + w.sev} style={{ marginBottom: 8 }}>
+        <div key={i} className={`alert alert--${w.sev}`} style={{ marginBottom: 8 }}>
           <I n={w.sev === 'danger' ? 'octagon-x' : 'triangle-alert'} s={14} />
           <div style={{ flex: 1 }}>
             <span style={{ fontWeight: 600 }}>{w.msg}</span>
@@ -180,7 +180,7 @@ function PageDashboard({ onNav }) {
           </div>
         </div>
         <div className="stat" style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div className="donut" style={{ ['--p']: health + '%' }}>
+          <div className="donut" style={{ '--p': `${health}%` }}>
             <span className="n">{health}</span>
           </div>
           <div>
@@ -255,7 +255,7 @@ function PageDashboard({ onNav }) {
                     </div>
                   </td>
                   <td className="mono" style={{ textAlign: 'right' }}>
-                    {n.watts ? n.watts + ' W' : '—'}
+                    {n.watts ? `${n.watts} W` : '—'}
                   </td>
                 </tr>
               ))}
@@ -291,7 +291,7 @@ function PageDashboard({ onNav }) {
                 }}
               >
                 <div style={{ flex: '0 0 6px', marginTop: 7 }}>
-                  <span className={'dot dot--' + (a.status === 'ok' ? 'running' : 'stopped')} />
+                  <span className={`dot dot--${a.status === 'ok' ? 'running' : 'stopped'}`} />
                 </div>
                 <div style={{ flex: 1, fontSize: 12, lineHeight: 1.45 }}>
                   <div>
@@ -373,7 +373,7 @@ function PageDashboard({ onNav }) {
                 <div style={{ marginTop: 10, display: 'flex', gap: 4 }}>
                   <button
                     className="btn btn--sm btn--ghost"
-                    onClick={() => onNav('instance:' + i.name)}
+                    onClick={() => onNav(`instance:${i.name}`)}
                   >
                     <I n="arrow-right" s={12} /> Open
                   </button>
@@ -538,16 +538,14 @@ function PageInstances({ onNav }) {
         (filter === 'running' && i.status === 'running') ||
         (filter === 'stopped' && i.status === 'stopped')) &&
       (!q ||
-        (i.name + ' ' + i.os + ' ' + i.tags.join(' ') + ' ' + i.ip)
-          .toLowerCase()
-          .includes(q.toLowerCase())),
+        `${i.name} ${i.os} ${i.tags.join(' ')} ${i.ip}`.toLowerCase().includes(q.toLowerCase())),
   );
   const toggle = (name) =>
     setSel((s) => (s.includes(name) ? s.filter((x) => x !== name) : [...s, name]));
 
   useEffect(() => {
     const onKey = (e) => {
-      const tag = (e.target && e.target.tagName) || '';
+      const tag = e.target?.tagName || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey) return;
       if (!rows.length) return;
       if (e.key === 'j' || e.key === 'ArrowDown') {
@@ -559,7 +557,7 @@ function PageInstances({ onNav }) {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const r = rows[focus];
-        if (r) onNav('instance:' + r.name);
+        if (r) onNav(`instance:${r.name}`);
       } else if (e.key === 'x' || e.key === ' ') {
         e.preventDefault();
         const r = rows[focus];
@@ -661,17 +659,17 @@ function PageInstances({ onNav }) {
               setSel([]);
             }}
           >
-            <I n="play" s={13} /> Start{sel.length ? ' (' + sel.length + ')' : ''}
+            <I n="play" s={13} /> Start{sel.length ? ` (${sel.length})` : ''}
           </button>
           <button
             className="btn btn--sm"
             disabled={sel.length === 0}
             onClick={() => {
               window.openModal?.('confirm', {
-                title: 'Stop ' + sel.length + ' instance' + (sel.length === 1 ? '' : 's') + '?',
+                title: `Stop ${sel.length} instance${sel.length === 1 ? '' : 's'}?`,
                 body:
                   sel.length >= 3
-                    ? 'Targets: ' + sel.join(', ') + '. Type STOP to confirm a wide selection.'
+                    ? `Targets: ${sel.join(', ')}. Type STOP to confirm a wide selection.`
                     : sel.join(', '),
                 danger: true,
                 confirmLabel: 'Stop',
@@ -683,7 +681,7 @@ function PageInstances({ onNav }) {
               });
             }}
           >
-            <I n="square" s={13} /> Stop{sel.length ? ' (' + sel.length + ')' : ''}
+            <I n="square" s={13} /> Stop{sel.length ? ` (${sel.length})` : ''}
           </button>
           <button className="btn btn--sm btn--primary" onClick={() => onNav('new-instance')}>
             <I n="plus" s={13} /> Create instance
@@ -743,7 +741,7 @@ function PageInstances({ onNav }) {
               <tr
                 key={r.name}
                 className={(sel.includes(r.name) ? 'sel' : '') + (i === focus ? ' kbd-focus' : '')}
-                onClick={() => onNav('instance:' + r.name)}
+                onClick={() => onNav(`instance:${r.name}`)}
                 onMouseEnter={() => setFocus(i)}
                 style={{ cursor: 'pointer' }}
               >
@@ -849,7 +847,7 @@ function PageInstances({ onNav }) {
               key={r.name}
               className="card"
               style={{ cursor: 'pointer' }}
-              onClick={() => onNav('instance:' + r.name)}
+              onClick={() => onNav(`instance:${r.name}`)}
             >
               <header style={{ background: 'var(--h-surface-2)' }}>
                 <div>
@@ -932,7 +930,7 @@ function PageInstanceDetail({ name, onNav }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span
-              className={'dot dot--' + (inst.status === 'running' ? 'running' : 'stopped')}
+              className={`dot dot--${inst.status === 'running' ? 'running' : 'stopped'}`}
               style={{ width: 10, height: 10 }}
             />
             <h1 className="stencil" style={{ fontSize: 22, margin: 0 }}>
@@ -963,7 +961,7 @@ function PageInstanceDetail({ name, onNav }) {
                   className="btn btn--sm btn--danger"
                   onClick={() =>
                     window.openModal?.('confirm', {
-                      title: 'Stop ' + inst.name + '?',
+                      title: `Stop ${inst.name}?`,
                       body: 'Graceful shutdown. Running processes will receive SIGTERM.',
                       danger: true,
                       confirmLabel: 'Stop',
@@ -984,7 +982,7 @@ function PageInstanceDetail({ name, onNav }) {
             )}
           </div>
           <div className="btn-group">
-            <button className="btn btn--sm" onClick={() => onNav('console:' + inst.name)}>
+            <button className="btn btn--sm" onClick={() => onNav(`console:${inst.name}`)}>
               <I n="terminal" s={13} /> Console
             </button>
             <button className="btn btn--sm" onClick={() => instanceAction(inst.name, 'snapshot')}>
@@ -1000,11 +998,7 @@ function PageInstanceDetail({ name, onNav }) {
         </div>
         <div className="tabs" style={{ marginTop: 16, marginLeft: -4 }}>
           {TABS.map(([id, label, icon]) => (
-            <button
-              key={id}
-              className={'tab' + (tab === id ? ' on' : '')}
-              onClick={() => setTab(id)}
-            >
+            <button key={id} className={`tab${tab === id ? ' on' : ''}`} onClick={() => setTab(id)}>
               <I n={icon} s={13} /> {label}
             </button>
           ))}
@@ -1106,7 +1100,7 @@ function InstanceOverview({ inst }) {
             <span className="title">Health</span>
           </header>
           <div style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div className="donut" style={{ ['--p']: inst.health + '%' }}>
+            <div className="donut" style={{ '--p': `${inst.health}%` }}>
               <span className="n">{inst.health}</span>
             </div>
             <div
@@ -1211,11 +1205,11 @@ function InstanceOverview({ inst }) {
 
 function Sparkline() {
   const pts = [6, 8, 5, 9, 12, 8, 10, 14, 11, 9, 13, 15, 11, 10, 12, 9, 7, 8, 10, 12];
-  const w = 140,
-    h = 28,
-    max = Math.max(...pts),
-    min = Math.min(...pts),
-    step = w / (pts.length - 1);
+  const w = 140;
+  const h = 28;
+  const max = Math.max(...pts);
+  const min = Math.min(...pts);
+  const step = w / (pts.length - 1);
   const d = pts
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${i * step} ${h - ((p - min) / (max - min)) * h}`)
     .join(' ');
@@ -1259,7 +1253,7 @@ function InstanceConsole({ inst }) {
             <span className="c-lime">
               {inst.os.includes('Windows')
                 ? 'Microsoft Windows [Version 10.0.22631.3007]'
-                : 'Debian GNU/Linux 13 ' + inst.name + ' tty1'}
+                : `Debian GNU/Linux 13 ${inst.name} tty1`}
             </span>
           </div>
           <div style={{ marginTop: 8 }}>
@@ -1760,7 +1754,7 @@ function PageContainers({ onNav }) {
           {CONTAINERS.map((c) => (
             <tr
               key={c.id}
-              onClick={() => onNav?.('container:' + c.name)}
+              onClick={() => onNav?.(`container:${c.name}`)}
               style={{ cursor: 'pointer' }}
             >
               <td onClick={(e) => e.stopPropagation()}>
@@ -1884,7 +1878,7 @@ function PageKubernetes() {
                 </dd>
                 <dt>Endpoint</dt>
                 <dd>
-                  <Copyable text={'https://' + c.name + '.k8s.local:6443'} />
+                  <Copyable text={`https://${c.name}.k8s.local:6443`} />
                 </dd>
               </dl>
               <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
@@ -2411,7 +2405,7 @@ function PageImages() {
                   className="btn btn--sm btn--ghost"
                   title="Download"
                   onClick={() =>
-                    window.toast?.info('Download', 'Streaming ' + i.name + ' to your browser')
+                    window.toast?.info('Download', `Streaming ${i.name} to your browser`)
                   }
                 >
                   <I n="download" s={13} />
@@ -2421,7 +2415,7 @@ function PageImages() {
                   title="Delete"
                   onClick={() =>
                     window.openModal?.('confirm', {
-                      title: 'Delete ' + i.name + '?',
+                      title: `Delete ${i.name}?`,
                       body: 'This removes the image from pool-primary. Existing VMs will not be affected. Type the image name to confirm.',
                       danger: true,
                       confirmLabel: 'Delete',
@@ -2449,7 +2443,7 @@ function PageBackups() {
     if (tab === 'successful' && (b.err || !b.ver)) return false;
     if (tab === 'failed' && !b.err) return false;
     if (tab === 'unverified' && (b.ver || b.err)) return false;
-    if (q && !(b.inst + ' ' + b.ts).toLowerCase().includes(q.toLowerCase())) return false;
+    if (q && !`${b.inst} ${b.ts}`.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
   return (
@@ -2851,7 +2845,7 @@ function PageSettings() {
             style={{
               padding: '8px 16px',
               color: tab === s ? 'var(--h-accent)' : 'var(--h-text-2)',
-              borderLeft: '2px solid ' + (tab === s ? 'var(--h-accent)' : 'transparent'),
+              borderLeft: `2px solid ${tab === s ? 'var(--h-accent)' : 'transparent'}`,
               fontSize: 13,
               cursor: 'pointer',
               background: tab === s ? 'rgba(198,255,36,0.05)' : 'transparent',

@@ -15,7 +15,7 @@ Summary (see ADR-019 for types and required-ness):
 - Request correlation: `HELLING_REQUEST_ID`, `HELLING_METHOD`, `HELLING_PATH`, `HELLING_STATUS`, `HELLING_DURATION_MS`
 - Target: `HELLING_TARGET_TYPE`, `HELLING_TARGET_ID`, `HELLING_BEFORE`, `HELLING_AFTER`
 - Transport: `HELLING_SOURCE_IP`, `HELLING_USER_AGENT`, `HELLING_JWT_ID`
-- Journal defaults: `MESSAGE`, `PRIORITY`, `SYSLOG_IDENTIFIER=hellingd`
+- Journal defaults and markers: `MESSAGE`, `PRIORITY`, `SYSLOG_IDENTIFIER=hellingd`, `HELLING_AUDIT=1`
 
 `HELLING_BEFORE`/`HELLING_AFTER` payloads are truncated at 4 KB each with a `"truncated":true` marker; if larger context is needed, emit a separate detail event.
 
@@ -30,6 +30,7 @@ Emission path uses `github.com/coreos/go-systemd/v22/journal` (ADR-018 narrow ex
 Read access is exposed via `/api/v1/audit/*` operations. Query implementation is a wrapper around `journalctl --output=json` executed as the `hellingd` user (ADR-050). The wrapper is responsible for:
 
 - Translating Helling filter DTOs (`actor`, `action`, `outcome`, time range) into `journalctl` flags and `HELLING_FIELD=value` predicates
+- Always constraining API reads to `HELLING_AUDIT=1` so ordinary `hellingd` application logs are not returned as audit entries
 - Parsing the JSON-per-line output into Helling response envelopes
 - Enforcing the pagination contract in `docs/spec/pagination.md`
 - Enforcing the field redaction rules below

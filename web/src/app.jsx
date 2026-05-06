@@ -2,6 +2,7 @@
 /* eslint-disable */
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { clearAccessToken, isAuthenticated, subscribeAuthChange } from './api/auth-store';
+import { performLogout } from './api/logout';
 import { ErrorBoundary } from './error-boundary';
 // Phase 2C (audit F-29): each extracted page is lazy-loaded so the initial
 // chunk only ships shell + dashboard, and per-route navigation triggers a
@@ -15,6 +16,9 @@ const PageSetup = lazy(() => import('./pages/auth/setup'));
 const PageNetworking = lazy(() => import('./pages/networking'));
 const PageBMC = lazy(() => import('./pages/bmc'));
 const PageSchedules = lazy(() => import('./pages/schedules'));
+const PageFirewall = lazy(() => import('./pages/firewall'));
+const PageWebhooks = lazy(() => import('./pages/webhooks'));
+const PageAPIDocs = lazy(() => import('./pages/api-docs'));
 const PageSearchResults = lazy(() => import('./pages/search/results'));
 import './shell.jsx';
 import './infra.jsx';
@@ -49,7 +53,6 @@ const {
   PageContainers,
   PageKubernetes,
   PageStorage,
-  PageFirewall,
   PageImages,
   PageBackups,
   PageTemplates,
@@ -79,6 +82,8 @@ const CRUMBS = {
   storage: ['Resources', 'Storage'],
   networking: ['Resources', 'Networking'],
   firewall: ['Resources', 'Firewall'],
+  webhooks: ['Admin', 'Webhooks'],
+  'api-docs': ['Admin', 'API Docs'],
   images: ['Resources', 'Images'],
   backups: ['Resources', 'Backups'],
   schedules: ['Resources', 'Schedules'],
@@ -96,37 +101,157 @@ const CRUMBS = {
   search: ['Search', 'Results'],
 };
 
+const PAGE_PATHS = {
+  dashboard: '/',
+  instances: '/instances',
+  containers: '/containers',
+  kubernetes: '/kubernetes',
+  storage: '/storage',
+  networking: '/networking',
+  firewall: '/firewall',
+  webhooks: '/webhooks',
+  'api-docs': '/api-docs',
+  images: '/images',
+  backups: '/backups',
+  schedules: '/schedules',
+  templates: '/templates',
+  bmc: '/bmc',
+  cluster: '/cluster',
+  metrics: '/metrics',
+  alerts: '/alerts',
+  marketplace: '/marketplace',
+  users: '/users',
+  audit: '/audit',
+  logs: '/logs',
+  ops: '/ops',
+  settings: '/settings',
+  search: '/search',
+};
+
+const PATH_PAGES = Object.fromEntries(
+  Object.entries(PAGE_PATHS).map(([page, path]) => [path, page]),
+);
+
+function pageFromLocation() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  return PATH_PAGES[path] || 'dashboard';
+}
+
+function initialSetupDone() {
+  try {
+    return localStorage.getItem('helling-setup-dismissed') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function initialDensity() {
+  try {
+    const v = localStorage.getItem('helling-density');
+    return v === 'comfortable' || v === 'compact' ? v : 'compact';
+  } catch {
+    return 'compact';
+  }
+}
+
+function initialTheme() {
+  try {
+    const stored = localStorage.getItem('helling-theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {}
+  // Audit F-44 (b): first paint honors OS preference when no stored value.
+  try {
+    if (window.matchMedia?.('(prefers-color-scheme: light)').matches) return 'light';
+  } catch {}
+  return 'dark';
+}
+
+function getPageContent(page, nav) {
+  if (page.startsWith('instance:')) {
+    const name = page.split(':')[1];
+    return {
+      crumbs: ['Datacenter', 'Instances', name],
+      body: <PageInstanceDetail name={name} onNav={nav} />,
+    };
+  }
+  if (page.startsWith('console:')) {
+    const name = page.split(':')[1];
+    return {
+      crumbs: ['Datacenter', 'Instances', name, 'Console'],
+      body: <PageConsole name={name} onNav={nav} />,
+    };
+  }
+  if (page.startsWith('container:')) {
+    const name = page.split(':')[1];
+    return {
+      crumbs: ['Datacenter', 'Containers', name],
+      body: <PageContainerDetail name={name} onNav={nav} />,
+    };
+  }
+  if (page.startsWith('cluster:')) {
+    return { crumbs: ['Datacenter', 'Kubernetes', page.split(':')[1]], body: <PageKubernetes /> };
+  }
+  if (page.startsWith('files:')) {
+    const [, scope, id] = page.split(':');
+    return {
+      crumbs: [
+        scope === 'backup' ? 'Resources' : 'Datacenter',
+        scope === 'backup' ? 'Backups' : 'Containers',
+        id,
+        'Files',
+      ],
+      body: <PageFileBrowser scope={scope} id={id} onNav={nav} />,
+    };
+  }
+  if (page.startsWith('rbac:')) {
+    const u = page.split(':')[1];
+    return { crumbs: ['Admin', 'Users', u], body: <PageUserDetail user={u} onNav={nav} /> };
+  }
+  if (page === 'new-instance') {
+    return { crumbs: ['Datacenter', 'Instances', 'New'], body: <PageNewInstance onNav={nav} /> };
+  }
+
+  const M = {
+    dashboard: PageDashboard,
+    instances: PageInstances,
+    containers: PageContainers,
+    kubernetes: PageKubernetes,
+    storage: PageStorage,
+    networking: PageNetworking,
+    firewall: PageFirewall,
+    webhooks: PageWebhooks,
+    'api-docs': PageAPIDocs,
+    images: PageImages,
+    backups: PageBackups,
+    schedules: PageSchedules,
+    templates: PageTemplates,
+    bmc: PageBMC,
+    cluster: PageCluster,
+    users: PageUsers,
+    audit: PageAudit,
+    logs: PageLogs,
+    ops: PageOps,
+    settings: PageSettings,
+    metrics: PageMetrics,
+    alerts: PageAlerts,
+    marketplace: PageMarketplace,
+    search: PageSearchResults,
+    access: PageRBAC,
+    rbac: PageRBAC,
+    'firewall-editor': PageFirewallEditor,
+  };
+  const P = M[page] || PageDashboard;
+  return { crumbs: CRUMBS[page] || ['Datacenter', page], body: <P onNav={nav} /> };
+}
+
 function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
-  const [setupDone, setSetupDone] = useState(() => {
-    try {
-      return localStorage.getItem('helling-setup-dismissed') === '1';
-    } catch {
-      return false;
-    }
-  });
-  const [page, setPage] = useState('dashboard');
+  const [setupDone, setSetupDone] = useState(initialSetupDone);
+  const [page, setPage] = useState(() => pageFromLocation());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [density, setDensity] = useState(() => {
-    try {
-      const v = localStorage.getItem('helling-density');
-      return v === 'comfortable' || v === 'compact' ? v : 'compact';
-    } catch {
-      return 'compact';
-    }
-  });
-  const [theme, setTheme] = useState(() => {
-    try {
-      const stored = localStorage.getItem('helling-theme');
-      if (stored === 'light' || stored === 'dark') return stored;
-    } catch {}
-    // Audit F-44 (b): first paint honors OS preference when no stored value.
-    try {
-      if (window.matchMedia?.('(prefers-color-scheme: light)').matches) return 'light';
-    } catch {}
-    return 'dark';
-  });
+  const [density, setDensity] = useState(initialDensity);
+  const [theme, setTheme] = useState(initialTheme);
   const [modalState, setModalState] = useState(null); // {kind, props}
 
   useEffect(() => {
@@ -144,7 +269,7 @@ function App() {
     const onExpired = () => {
       clearAccessToken();
       setAuthed(false);
-      setPage('dashboard');
+      nav('dashboard', { replace: true });
     };
     const unsubscribe = subscribeAuthChange(sync);
     window.addEventListener('auth:session-expired', onExpired);
@@ -167,13 +292,28 @@ function App() {
     window.closeModal = () => setModalState(null);
   }, []);
 
-  const nav = useCallback((p) => {
+  const nav = useCallback((p, opts = {}) => {
     setPage(p);
     setPaletteOpen(false);
+    const path = PAGE_PATHS[p];
+    if (path && window.location.pathname !== path) {
+      const method = opts.replace ? 'replaceState' : 'pushState';
+      window.history[method]({ page: p }, '', path);
+    }
   }, []);
   useEffect(() => {
     window.__nav = nav;
   }, [nav]);
+
+  useEffect(() => {
+    const onPopState = () => setPage(pageFromLocation());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    void performLogout();
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -236,72 +376,7 @@ function App() {
     );
   }
 
-  // figure out crumbs + page render
-  let crumbs;
-  let body;
-  if (page.startsWith('instance:')) {
-    const name = page.split(':')[1];
-    crumbs = ['Datacenter', 'Instances', name];
-    body = <PageInstanceDetail name={name} onNav={nav} />;
-  } else if (page.startsWith('console:')) {
-    const name = page.split(':')[1];
-    crumbs = ['Datacenter', 'Instances', name, 'Console'];
-    body = <PageConsole name={name} onNav={nav} />;
-  } else if (page.startsWith('container:')) {
-    const name = page.split(':')[1];
-    crumbs = ['Datacenter', 'Containers', name];
-    body = <PageContainerDetail name={name} onNav={nav} />;
-  } else if (page.startsWith('cluster:')) {
-    crumbs = ['Datacenter', 'Kubernetes', page.split(':')[1]];
-    body = <PageKubernetes />;
-  } else if (page.startsWith('files:')) {
-    const [, scope, id] = page.split(':');
-    crumbs = [
-      scope === 'backup' ? 'Resources' : 'Datacenter',
-      scope === 'backup' ? 'Backups' : 'Containers',
-      id,
-      'Files',
-    ];
-    body = <PageFileBrowser scope={scope} id={id} onNav={nav} />;
-  } else if (page.startsWith('rbac:')) {
-    const u = page.split(':')[1];
-    crumbs = ['Admin', 'Users', u];
-    body = <PageUserDetail user={u} onNav={nav} />;
-  } else if (page === 'new-instance') {
-    crumbs = ['Datacenter', 'Instances', 'New'];
-    body = <PageNewInstance onNav={nav} />;
-  } else {
-    crumbs = CRUMBS[page] || ['Datacenter', page];
-    const M = {
-      dashboard: PageDashboard,
-      instances: PageInstances,
-      containers: PageContainers,
-      kubernetes: PageKubernetes,
-      storage: PageStorage,
-      networking: PageNetworking,
-      firewall: PageFirewall,
-      images: PageImages,
-      backups: PageBackups,
-      schedules: PageSchedules,
-      templates: PageTemplates,
-      bmc: PageBMC,
-      cluster: PageCluster,
-      users: PageUsers,
-      audit: PageAudit,
-      logs: PageLogs,
-      ops: PageOps,
-      settings: PageSettings,
-      metrics: PageMetrics,
-      alerts: PageAlerts,
-      marketplace: PageMarketplace,
-      search: PageSearchResults,
-      access: PageRBAC,
-      rbac: PageRBAC,
-      'firewall-editor': PageFirewallEditor,
-    };
-    const P = M[page] || PageDashboard;
-    body = <P onNav={nav} />;
-  }
+  const { crumbs, body } = getPageContent(page, nav);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -314,7 +389,7 @@ function App() {
         onDensity={setDensity}
         theme={theme}
         onTheme={setTheme}
-        onLogout={() => clearAccessToken()}
+        onLogout={handleLogout}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <ResourceTree page={page} onNav={nav} />

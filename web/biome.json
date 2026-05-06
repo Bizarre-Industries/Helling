@@ -8,7 +8,17 @@
   },
 
   "files": {
-    "ignore": ["node_modules", "dist", "build", "src/api/generated", "coverage"]
+    "ignore": [
+      "node_modules",
+      "dist",
+      "build",
+      "src/api/generated",
+      "src/infra.jsx",
+      "src/pages.jsx",
+      "src/pages2.jsx",
+      "src/shell.jsx",
+      "coverage"
+    ]
   },
 
   "formatter": {

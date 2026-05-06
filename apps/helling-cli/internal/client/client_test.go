@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -142,5 +143,35 @@ func TestClient_HTTPUnixEndpoint(t *testing.T) {
 	}
 	if string(raw) != `{"ok":true}` {
 		t.Fatalf("body = %q", raw)
+	}
+}
+
+func TestClient_StreamSetsAcceptAndAuthHeaders(t *testing.T) {
+	var sawAccept, sawAuthz string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawAccept = r.Header.Get("Accept")
+		sawAuthz = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte("event: ready\n\n"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c, err := client.New(&config.Profile{API: srv.URL, AccessToken: "jwt.stream"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := c.Stream(context.Background(), "/api/v1/events", "text/event-stream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, _ := io.ReadAll(resp.Body)
+	if string(raw) != "event: ready\n\n" {
+		t.Fatalf("body = %q", raw)
+	}
+	if sawAccept != "text/event-stream" {
+		t.Fatalf("accept = %q", sawAccept)
+	}
+	if sawAuthz != "Bearer jwt.stream" {
+		t.Fatalf("authz = %q", sawAuthz)
 	}
 }

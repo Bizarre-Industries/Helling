@@ -144,18 +144,18 @@ Checks:
 
 ### 3.2 incus_user_certs
 
-| Column            | Type                 | Notes                        |
-| ----------------- | -------------------- | ---------------------------- |
-| user_id           | TEXT PRIMARY KEY     | FK to users.id               |
-| cert_pem          | TEXT NOT NULL        | Public certificate           |
-| encrypted_key_pem | BLOB NOT NULL        | Encrypted private key        |
-| fingerprint       | TEXT UNIQUE NOT NULL | Incus trust fingerprint      |
-| restricted        | INTEGER NOT NULL     | Must be 1 for user certs     |
-| project_scope     | TEXT NOT NULL        | Assigned project/limit scope |
-| expires_at        | INTEGER NOT NULL     | Unix epoch seconds           |
-| revoked_at        | INTEGER              | Null when active             |
-| created_at        | INTEGER NOT NULL     | Unix epoch seconds           |
-| updated_at        | INTEGER NOT NULL     | Unix epoch seconds           |
+| Column             | Type                 | Notes                        |
+| ------------------ | -------------------- | ---------------------------- |
+| user_id            | TEXT PRIMARY KEY     | FK to users.id               |
+| encrypted_cert_pem | TEXT NOT NULL        | Encrypted public certificate |
+| encrypted_key_pem  | BLOB NOT NULL        | Encrypted private key        |
+| fingerprint        | TEXT UNIQUE NOT NULL | Incus trust fingerprint      |
+| restricted         | INTEGER NOT NULL     | Must be 1 for user certs     |
+| project_scope      | TEXT NOT NULL        | Assigned project/limit scope |
+| expires_at         | INTEGER NOT NULL     | Unix epoch seconds           |
+| revoked_at         | INTEGER              | Null when active             |
+| created_at         | INTEGER NOT NULL     | Unix epoch seconds           |
+| updated_at         | INTEGER NOT NULL     | Unix epoch seconds           |
 
 Checks:
 

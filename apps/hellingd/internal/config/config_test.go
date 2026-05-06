@@ -56,6 +56,14 @@ auth:
 			wantErr: "auth.login_rate_limit_per_15m must be > 0",
 		},
 		{
+			name: "excessive session ttl",
+			config: `
+auth:
+  session_ttl_hours: 721
+`,
+			wantErr: "auth.session_ttl_hours must be <= 720",
+		},
+		{
 			name: "empty setup token path",
 			config: `
 auth:

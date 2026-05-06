@@ -9,9 +9,11 @@ SHELL := /bin/bash
 
 GO            ?= go
 BUN           ?= bun
+BUNX          ?= bunx
 GOLANGCI_LINT ?= golangci-lint
 GOFUMPT       ?= gofumpt
 GOIMPORTS     ?= goimports
+TYGO          ?= tygo
 
 VERSION       ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT        ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -25,7 +27,7 @@ GO_TEST_FLAGS        := -race -count=1
 GO_BUILD_FLAGS       := -trimpath -ldflags '$(LDFLAGS)'
 
 OUT_DIR := ./bin
-GENERATED_PATHS := apps/hellingd/api web/src/api/generated
+GENERATED_PATHS := apps/hellingd/api web/src/api/generated web/src/api/events.gen.ts apps/hellingd/internal/store/sqlc
 
 # ---- Help ----------------------------------------------------------------
 
@@ -58,7 +60,7 @@ dev-setup: ## Install required tools, frontend deps, and git hooks
 # ---- Code generation -----------------------------------------------------
 
 .PHONY: generate
-generate: generate-go generate-web ## Regenerate all OpenAPI artifacts
+generate: generate-go generate-web generate-events generate-sqlc ## Regenerate all generated artifacts
 
 .PHONY: generate-go
 generate-go: ## Regenerate Go server and client code from OpenAPI
@@ -76,6 +78,24 @@ generate-web: ## Regenerate the TypeScript client (Hey API)
 	else \
 		echo "→ skipping: web/ not present"; \
 	fi
+
+.PHONY: generate-events
+generate-events: ## Regenerate TypeScript event types from Go structs
+	@if command -v $(TYGO) >/dev/null; then \
+		$(TYGO) generate --config tygo.yaml; \
+	elif [ -x "$$($(GO) env GOPATH)/bin/tygo" ]; then \
+		"$$($(GO) env GOPATH)/bin/tygo" generate --config tygo.yaml; \
+	else \
+		echo "tygo missing; install with: go install github.com/gzuidhof/tygo@v0.2.21"; \
+		exit 1; \
+	fi
+	@if [ -d web ] && [ -f web/package.json ]; then \
+		cd web && $(BUNX) biome format --write src/api/events.gen.ts; \
+	fi
+
+.PHONY: generate-sqlc
+generate-sqlc: ## Regenerate sqlc store query code
+	@if [ -f sqlc.yaml ]; then sqlc generate; fi
 
 .PHONY: check-generated
 check-generated: generate ## Fail if generated artifacts drift from spec
@@ -131,10 +151,10 @@ test-cover: ## Run tests with coverage report
 # ---- Build ---------------------------------------------------------------
 
 .PHONY: build
-build: build-hellingd build-cli ## Build all binaries to $(OUT_DIR)
+build: build-hellingd build-cli build-unit-link build-incus-trust build-firewall-helper ## Build all binaries to $(OUT_DIR)
 
 .PHONY: iso
-iso: ## Build the Helling Debian installer ISO (requires Debian + live-build)
+iso: ## Build the release-gate Helling Debian installer ISO (requires HELLING_ISO_RELEASE_GATE=1 unless on v* tag)
 	bash scripts/build-iso.sh
 
 .PHONY: check-iso
@@ -150,6 +170,18 @@ build-cli: $(OUT_DIR)
 	@if [ -d apps/helling-cli ]; then \
 		$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling ./apps/helling-cli; \
 	fi
+
+.PHONY: build-unit-link
+build-unit-link: $(OUT_DIR)
+	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-unit-link ./apps/hellingd/cmd/helling-unit-link
+
+.PHONY: build-incus-trust
+build-incus-trust: $(OUT_DIR)
+	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-incus-trust ./apps/hellingd/cmd/helling-incus-trust
+
+.PHONY: build-firewall-helper
+build-firewall-helper: $(OUT_DIR)
+	$(GO) build $(GO_BUILD_FLAGS) -o $(OUT_DIR)/helling-firewall ./apps/hellingd/cmd/helling-firewall
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)

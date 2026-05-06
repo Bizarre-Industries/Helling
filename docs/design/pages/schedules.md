@@ -19,7 +19,7 @@ Sidebar: "Schedules" selected. Main panel: single `ProTable` of all scheduled ac
 - `GET /api/v1/schedules` -- `scheduleList`
 - `POST /api/v1/schedules` -- `scheduleCreate`
 - `GET /api/v1/schedules/{id}` -- `scheduleGet`
-- `PUT /api/v1/schedules/{id}` -- `scheduleUpdate`
+- `PATCH /api/v1/schedules/{id}` -- `scheduleUpdate`
 - `DELETE /api/v1/schedules/{id}` -- `scheduleDelete`
 - `POST /api/v1/schedules/{id}/run` -- `scheduleRunNow`
 
@@ -35,7 +35,7 @@ Schedules are evaluated by systemd timers on the host (ADR-017), not by a Go-lev
 - Name (bold)
 - Action `Tag` (backup | snapshot | restart | update-check | custom-hookscript)
 - Target: instance name, "all instances", or tag expression (monospace)
-- Cron spec (monospace, with humanized hint on hover: "Every Monday at 03:00")
+- `OnCalendar` spec (monospace, with humanized hint on hover: "Every Monday at 03:00")
 - Next run (relative time, e.g. "in 2h 14m")
 - Last status `Badge` (success | failed | skipped | never)
 - Last duration (e.g. "1m 42s")
@@ -54,7 +54,7 @@ Schedules are evaluated by systemd timers on the host (ADR-017), not by a Go-lev
 - If custom: hookscript dropdown (populated from `/api/v1/system/hookscripts` — v0.5+)
 - Target mode (Segmented): Single instance | All instances | By tag
 - Target value (conditional: instance Select, or tag expression input)
-- Cron (Input + live validation against a robust cron parser; show next 5 runs below)
+- `OnCalendar` (Input + live validation using systemd-compatible expressions; show next 5 runs below)
 - Retention (if action is backup/snapshot): keep last N / keep for days
 - Enabled (Switch, default on)
 
@@ -68,7 +68,7 @@ Schedules are evaluated by systemd timers on the host (ADR-017), not by a Go-lev
 
 ## Data Model
 
-- Schedule: `id`, `name`, `action`, `target` (string, expression or instance name), `cron`, `timezone`, `retention_days`, `retention_count`, `enabled`, `last_run`, `last_status`, `last_duration_ms`, `next_run`
+- Schedule: `id`, `name`, `kind`, `target` (string, expression or instance name), `on_calendar`, `timezone`, `retention_days`, `retention_count`, `enabled`, `last_run`, `last_status`, `last_duration_ms`, `next_run`
 
 ## States
 

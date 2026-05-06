@@ -63,6 +63,36 @@ async function fetchEventsBatch(): Promise<HellingEvent[]> {
   return body.events ?? [];
 }
 
+function trimSeenEvents(seen: Set<string>) {
+  if (seen.size <= SEEN_LIMIT) return;
+
+  // Trim oldest entries; Set keeps insertion order.
+  const toDrop = seen.size - SEEN_LIMIT;
+  const it = seen.values();
+  for (let i = 0; i < toDrop; i++) {
+    const next = it.next();
+    if (next.done) break;
+    seen.delete(next.value);
+  }
+}
+
+function invalidateEventQueries(
+  events: HellingEvent[],
+  seen: Set<string>,
+  invalidate: (key: string[]) => void,
+) {
+  for (const ev of events) {
+    if (seen.has(ev.id)) continue;
+
+    seen.add(ev.id);
+    trimSeenEvents(seen);
+
+    for (const key of dispatchKeys(ev.type)) {
+      invalidate(key);
+    }
+  }
+}
+
 /** Poll the events endpoint and invalidate query keys per event type. */
 export function useEventsStream() {
   const qc = useQueryClient();
@@ -76,24 +106,9 @@ export function useEventsStream() {
       if (cancelled) return;
       try {
         const events = await fetchEventsBatch();
-        const seen = seenRef.current;
-        for (const ev of events) {
-          if (seen.has(ev.id)) continue;
-          seen.add(ev.id);
-          if (seen.size > SEEN_LIMIT) {
-            // Trim oldest entries; Set keeps insertion order.
-            const toDrop = seen.size - SEEN_LIMIT;
-            const it = seen.values();
-            for (let i = 0; i < toDrop; i++) {
-              const next = it.next();
-              if (next.done) break;
-              seen.delete(next.value);
-            }
-          }
-          for (const key of dispatchKeys(ev.type)) {
-            qc.invalidateQueries({ queryKey: key });
-          }
-        }
+        invalidateEventQueries(events, seenRef.current, (queryKey) => {
+          qc.invalidateQueries({ queryKey });
+        });
       } catch {
         // Swallow; next tick retries. Unauthenticated callers no-op.
       }

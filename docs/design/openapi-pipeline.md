@@ -7,7 +7,7 @@
 
 ## The Pipeline
 
-Helling v0.1 uses a spec-first contract flow. `api/openapi.yaml` is the hand-authored source of truth; generated Go and TypeScript clients must be regenerated from that file.
+Helling v0.2 uses a spec-first contract flow. `api/openapi.yaml` is the hand-authored source of truth; generated Go and TypeScript clients must be regenerated from that file.
 
 ```text
 api/openapi.yaml
@@ -36,7 +36,7 @@ These routes bypass generated Helling-owned handlers to preserve ADR-014 and ADR
 ## Scope and Invariants
 
 - `api/openapi.yaml` manages Helling-owned endpoints under /api/v1/\*.
-- chi remains the top-level router for the current v0.1 implementation.
+- chi remains the top-level router for the current v0.2 implementation.
 - URI major versioning remains /api/v1 (ADR-041 preserved).
 - OpenAPI remains committed in-repo and is intentionally reviewed by humans.
 
@@ -55,13 +55,14 @@ For Helling-owned routes, contract truth lives in `api/openapi.yaml`:
 ### Generated artifact
 
 - Go server/model code: `apps/hellingd/api/*.gen.go`
-- Go CLI client code: `apps/helling-cli/internal/client/*.gen.go`
 - Web client code: `web/src/api/generated/**`
+- Event DTO code: `web/src/api/events.gen.ts`
 - Any PR changing API behavior must update `api/openapi.yaml` first, then regenerate downstream artifacts.
 
 ### Downstream codegen
 
-- CLI: oapi-codegen client continues unchanged.
+- CLI: hand-authored Unix-socket client in `apps/helling-cli/internal/client`
+  until a generated client is explicitly scaffolded.
 - WebUI: hey-api/openapi-ts generates fetch client, SDK, schemas, and TanStack Query options.
 
 ---
@@ -70,7 +71,7 @@ For Helling-owned routes, contract truth lives in `api/openapi.yaml`:
 
 - Keeps the API contract reviewable before implementation changes.
 - Lets backend, CLI, and WebUI generation share one source of truth.
-- Avoids code-first migration churn until v0.1 is stable.
+- Avoids code-first migration churn while the v0.2 Platform Core surface is still changing.
 
 ---
 
@@ -78,7 +79,7 @@ For Helling-owned routes, contract truth lives in `api/openapi.yaml`:
 
 1. Validate the committed OpenAPI contract.
 2. Run vacuum against api/.vacuum.yaml.
-3. Regenerate CLI and WebUI clients from committed api/openapi.yaml.
+3. Regenerate Go server code and WebUI clients from committed api/openapi.yaml.
 4. Ensure no stale generated diff remains in CI.
 
 Reference command:
@@ -94,12 +95,14 @@ vacuum lint --ruleset api/.vacuum.yaml --fail-severity info api/openapi.yaml
 ### Generated artifacts (never hand-edit)
 
 - apps/hellingd/api/\*.gen.go
-- apps/helling-cli/internal/client/\*.gen.go
 - web/src/api/generated/\*\*
+- web/src/api/events.gen.ts
+- apps/hellingd/internal/store/sqlc/\*\*
 
 ### Hand-authored artifacts
 
 - api/openapi.yaml
+- apps/helling-cli/internal/client/\*.go
 - Handler implementation in apps/hellingd/
 - Proxy pass-through handlers for /api/incus/\* and /api/podman/\*
 - Contract policy docs in docs/spec/

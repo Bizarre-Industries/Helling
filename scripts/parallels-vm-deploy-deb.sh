@@ -9,9 +9,8 @@
 #   HELLING_VM_USER   default: helling
 #   HELLING_VM_SSH_PORT default: 22
 #
-# Behavior when reprepro tooling is not yet wired (ADR-045 in flight):
-#   exits 0 with "SKIPPED: reprepro not configured (ADR-045)" so the smoke test
-#   downstream can decide whether to bail or proceed.
+# Skip behavior is opt-in only:
+#   set HELLING_VM_RELEASE_ALLOW_SKIPS=1 to allow ADR-045 tooling gaps to exit 0.
 
 set -euo pipefail
 
@@ -37,8 +36,11 @@ SCP_OPTS=(
 log() { printf '▶ %s\n' "$*"; }
 done_() { printf '✓ %s\n' "$*"; }
 skip() {
-  printf '○ %s\n' "$*"
-  exit 0
+  if [ "${HELLING_VM_RELEASE_ALLOW_SKIPS:-0}" = "1" ]; then
+    printf '○ %s\n' "$*"
+    exit 0
+  fi
+  fail "$* (set HELLING_VM_RELEASE_ALLOW_SKIPS=1 only for non-gating local smoke)"
 }
 fail() {
   printf '✗ %s\n' "$*" >&2

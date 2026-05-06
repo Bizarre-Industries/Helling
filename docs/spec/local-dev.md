@@ -90,13 +90,17 @@ Expected: all checks pass (on a clean checkout). If something fails on the first
 Per ADR-052. See `docs/standards/development-environment.md` for the full Parallels Baseline.
 
 ```bash
-bash scripts/parallels-vm-bootstrap.sh
+task vm:parallels:build-image
 task vm:parallels:up
 task vm:parallels:dev
 task vm:parallels:smoke
 ```
 
-This provisions a Debian 13 VM named `helling-dev`, installs the toolchain plus systemd / DBus / Incus / Podman, deploys the current `hellingd` + `helling` binaries, and verifies `/healthz` returns 200 from `hellingd`'s Unix socket in the VM.
+This builds a Debian 13 `.pvm` from Debian netinst media with Packer, registers
+the `helling-dev` VM in Parallels, deploys the current `hellingd` + `helling`
+binaries, and verifies `/healthz` returns 200 from `hellingd`'s Unix socket in
+the VM. `scripts/parallels-vm-bootstrap.sh` remains available for repairing or
+finishing a manually installed Parallels VM.
 
 If the VM is on Parallels shared networking instead of bridged networking, expose SSH with a NAT rule and run the same tasks with `HELLING_VM_HOST=127.0.0.1` and `HELLING_VM_SSH_PORT=<host-port>`.
 

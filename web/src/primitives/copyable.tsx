@@ -17,7 +17,7 @@ type Props = {
 
 export function Copyable({ text, mono = true, style }: Props) {
   const [ok, setOk] = useState(false);
-  const doCopy = (e: MouseEvent<HTMLSpanElement>) => {
+  const doCopy = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     try {
       navigator.clipboard.writeText(text);
@@ -29,14 +29,24 @@ export function Copyable({ text, mono = true, style }: Props) {
     setTimeout(() => setOk(false), 1200);
   };
   return (
-    <span
-      className={'copyable' + (mono ? ' mono' : '')}
+    <button
+      type="button"
+      className={`copyable${mono ? ' mono' : ''}`}
       onClick={doCopy}
       title="Copy"
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, ...style }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        border: 0,
+        background: 'transparent',
+        color: 'inherit',
+        padding: 0,
+        ...style,
+      }}
     >
       {text}
       <I n={ok ? 'check' : 'copy'} s={11} style={{ opacity: 0.5 }} />
-    </span>
+    </button>
   );
 }

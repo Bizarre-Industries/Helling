@@ -2,6 +2,7 @@
 -- API tokens for non-interactive auth (CLI, scripts, CI).
 -- Tokens are stored as SHA-256 hashes; the raw token is shown once at creation.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS api_tokens (
     id          TEXT    PRIMARY KEY,        -- uuid v7
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -13,3 +14,6 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     last_used_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS api_tokens;

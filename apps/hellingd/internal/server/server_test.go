@@ -18,6 +18,11 @@ import (
 
 func newTestServer(t *testing.T) (*Server, *store.Store) {
 	t.Helper()
+	return newTestServerWithConfig(t, nil)
+}
+
+func newTestServerWithConfig(t *testing.T, mutate func(*Config)) (*Server, *store.Store) {
+	t.Helper()
 	st, err := store.Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("store.Open: %v", err)
@@ -27,7 +32,7 @@ func newTestServer(t *testing.T) (*Server, *store.Store) {
 		t.Fatalf("Migrate: %v", err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	srv, err := New(&Config{
+	cfg := &Config{
 		Store:   st,
 		Logger:  logger,
 		Version: VersionInfo{Version: "test", Commit: "test", BuildTime: "test"},
@@ -39,7 +44,11 @@ func newTestServer(t *testing.T) (*Server, *store.Store) {
 			IPWindow:       time.Minute,
 			Argon2:         auth.Argon2Params{Time: 1, MemoryKiB: 8 * 1024, Parallelism: 1, SaltLen: 16, KeyLen: 32},
 		},
-	})
+	}
+	if mutate != nil {
+		mutate(cfg)
+	}
+	srv, err := New(cfg)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}

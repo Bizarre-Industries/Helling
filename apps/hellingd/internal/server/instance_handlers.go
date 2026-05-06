@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +13,8 @@ import (
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
 )
+
+var instanceNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 
 // instanceCreateRequest mirrors components.schemas.InstanceCreate in
 // api/openapi.yaml.
@@ -28,13 +31,13 @@ type instanceStopRequest struct {
 }
 
 func (s *Server) handleListInstances(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.Incus == nil {
-		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+	client, ok := s.incusClientForRequest(w, r)
+	if !ok {
 		return
 	}
 
 	want := strings.ToLower(r.URL.Query().Get("status"))
-	raw, err := s.cfg.Incus.ListInstances(r.Context())
+	raw, err := client.ListInstances(r.Context())
 	if err != nil {
 		s.cfg.Logger.Error("list instances", slog.Any("err", err))
 		writeError(w, http.StatusBadGateway, "incus_error", "could not list instances")
@@ -52,12 +55,16 @@ func (s *Server) handleListInstances(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetInstance(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.Incus == nil {
-		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+	client, ok := s.incusClientForRequest(w, r)
+	if !ok {
 		return
 	}
 	name := chi.URLParam(r, "name")
-	inst, err := s.cfg.Incus.GetInstance(r.Context(), name)
+	if !validInstanceName(name) {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid instance name")
+		return
+	}
+	inst, err := client.GetInstance(r.Context(), name)
 	if err != nil {
 		s.cfg.Logger.Error("get instance", slog.String("name", name), slog.Any("err", err))
 		writeError(w, http.StatusNotFound, "not_found", "instance not found")
@@ -67,8 +74,8 @@ func (s *Server) handleGetInstance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.Incus == nil {
-		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+	client, clientOK := s.incusClientForRequest(w, r)
+	if !clientOK {
 		return
 	}
 	user, ok := UserFromContext(r.Context())
@@ -86,8 +93,16 @@ func (s *Server) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "name and image are required")
 		return
 	}
+	if !validInstanceName(req.Name) {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid instance name")
+		return
+	}
 	if req.Type == "" {
 		req.Type = "container"
+	}
+	if req.Type != "container" && req.Type != "virtual-machine" {
+		writeError(w, http.StatusBadRequest, "bad_request", "type must be container or virtual-machine")
+		return
 	}
 
 	post := incus.InstanceCreate{
@@ -96,7 +111,7 @@ func (s *Server) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 		Image: req.Image,
 		Start: req.Start,
 	}
-	op, err := s.cfg.Incus.CreateInstance(r.Context(), post)
+	op, err := client.CreateInstance(r.Context(), post)
 	if err != nil {
 		s.cfg.Logger.Error("incus create instance", slog.String("name", req.Name), slog.Any("err", err))
 		if isAlreadyExists(err) {
@@ -117,8 +132,8 @@ func (s *Server) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteInstance(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.Incus == nil {
-		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+	client, clientOK := s.incusClientForRequest(w, r)
+	if !clientOK {
 		return
 	}
 	user, ok := UserFromContext(r.Context())
@@ -127,8 +142,12 @@ func (s *Server) handleDeleteInstance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := chi.URLParam(r, "name")
+	if !validInstanceName(name) {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid instance name")
+		return
+	}
 
-	op, err := s.cfg.Incus.DeleteInstance(r.Context(), name)
+	op, err := client.DeleteInstance(r.Context(), name)
 	if err != nil {
 		s.cfg.Logger.Error("incus delete instance", slog.String("name", name), slog.Any("err", err))
 		if isNotFound(err) {
@@ -164,8 +183,8 @@ func (s *Server) handleStopInstance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleInstanceStateChange(w http.ResponseWriter, r *http.Request, action string, force bool, timeoutSec int, kind string) {
-	if s.cfg.Incus == nil {
-		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+	client, clientOK := s.incusClientForRequest(w, r)
+	if !clientOK {
 		return
 	}
 	user, ok := UserFromContext(r.Context())
@@ -174,8 +193,12 @@ func (s *Server) handleInstanceStateChange(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	name := chi.URLParam(r, "name")
+	if !validInstanceName(name) {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid instance name")
+		return
+	}
 
-	op, err := s.cfg.Incus.UpdateInstanceState(r.Context(), name, action, force, timeoutSec)
+	op, err := client.UpdateInstanceState(r.Context(), name, action, force, timeoutSec)
 	if err != nil {
 		s.cfg.Logger.Error(
 			"incus update state",
@@ -201,6 +224,23 @@ func (s *Server) handleInstanceStateChange(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusAccepted, toOperationResponse(&dbOp))
+}
+
+func (s *Server) incusClientForRequest(w http.ResponseWriter, r *http.Request) (incus.Client, bool) {
+	user, ok := UserFromContext(r.Context())
+	if ok && !user.IsAdmin {
+		writeError(w, http.StatusForbidden, "forbidden", "non-admin Incus access must use the delegated /api/incus proxy")
+		return nil, false
+	}
+	if s.cfg.Incus == nil {
+		writeError(w, http.StatusServiceUnavailable, "incus_unavailable", "Incus client not configured")
+		return nil, false
+	}
+	return s.cfg.Incus, true
+}
+
+func validInstanceName(name string) bool {
+	return instanceNamePattern.MatchString(name)
 }
 
 // toOperationResponse converts a store.Operation into the JSON shape from

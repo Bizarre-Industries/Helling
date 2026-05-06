@@ -9,15 +9,34 @@ by ADR-021 and ADR-046. It builds a Debian 13 installer ISO with:
 - A first-boot service that creates users, groups, directories, Caddy config,
   Incus loopback HTTPS, and socket permissions automatically.
 
-Build from a Debian 13 host or VM with `live-build` installed:
+Validate the profile cheaply during normal development:
 
 ```sh
+task iso:verify
+```
+
+Stage the payload without running live-build when you need to inspect the
+generated live-build workdir. This builds Go binaries and may build the WebUI,
+so it is slower than source validation:
+
+```sh
+task iso:prepare
+```
+
+Build from a Debian 13 host or VM with `live-build` installed only for a
+version gate:
+
+```sh
+HELLING_ISO_RELEASE_GATE=1 \
 task iso:build
 ```
 
 `scripts/build-iso.sh` writes `dist/iso/helling-<version>-<arch>.iso` and a
 detached ASCII-armored signature at `.iso.asc`. Set `HELLING_ISO_SIGN=0` only
 for local throwaway experiments.
+
+The Parallels development VM is built under `deploy/packer/parallels-dev/` from
+Debian netinst media. It does not use this product ISO path.
 
 The amd64 image includes BIOS and UEFI bootloaders. The arm64 image uses UEFI
 GRUB only because Debian does not publish `grub-pc` for arm64.

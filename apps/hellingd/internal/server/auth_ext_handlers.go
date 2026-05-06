@@ -64,6 +64,12 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	if err := s.provisionIncusTrust(r.Context(), &u); err != nil {
+		_ = s.cfg.Store.DeleteUser(context.WithoutCancel(r.Context()), u.ID)
+		s.cfg.Logger.Error("setup: provision incus trust", slog.Any("err", err), slog.Int64("user", u.ID))
+		writeError(w, http.StatusInternalServerError, "internal", "could not provision Incus project scope")
+		return
+	}
 
 	s.cfg.Logger.LogAttrs(
 		r.Context(), slog.LevelInfo, "setup_admin_created",
@@ -72,16 +78,18 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		slog.String("source_ip", clientIP(r)),
 		slog.String("request_id", RequestIDFromContext(r.Context())),
 	)
+	s.auditForUser(r, &u, "auth.setup", outcomeSuccess, "user", auditID(u.ID), "first admin created")
 
 	if err := s.setup.RetireSetupToken(); err != nil {
 		s.cfg.Logger.Warn("setup: retire token", slog.Any("err", err))
 	}
 
 	writeJSON(w, http.StatusCreated, userResponse{
-		ID:        u.ID,
-		Username:  u.Username,
-		IsAdmin:   u.IsAdmin,
-		CreatedAt: u.CreatedAt,
+		ID:           u.ID,
+		Username:     u.Username,
+		IsAdmin:      u.IsAdmin,
+		IncusProject: u.IncusProject,
+		CreatedAt:    u.CreatedAt,
 	})
 }
 
@@ -317,6 +325,7 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	s.audit(r, "auth.token.create", outcomeSuccess, "api_token", t.ID, "API token created")
 
 	writeJSON(w, http.StatusCreated, createTokenResponse{
 		ID:        t.ID,
@@ -362,6 +371,7 @@ func (s *Server) handleRevokeToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	s.audit(r, "auth.token.revoke", outcomeSuccess, "api_token", id, "API token revoked")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -415,6 +425,7 @@ func (s *Server) handleTOTPSetup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	s.audit(r, "auth.totp.setup", outcomeSuccess, "user", auditID(u.ID), "TOTP setup started")
 
 	keyURI := auth.TOTPKeyURI("Helling", u.Username, secret)
 	writeJSON(w, http.StatusOK, totpSetupResponse{
@@ -466,6 +477,7 @@ func (s *Server) handleTOTPVerify(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	s.audit(r, "auth.totp.enable", outcomeSuccess, "user", auditID(u.ID), "TOTP enabled")
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -484,6 +496,7 @@ func (s *Server) handleTOTPDelete(w http.ResponseWriter, r *http.Request) {
 	if err := s.cfg.Store.DeleteRecoveryCodes(r.Context(), u.ID); err != nil {
 		s.cfg.Logger.Error("totp delete: recovery codes", slog.Any("err", err))
 	}
+	s.audit(r, "auth.totp.delete", outcomeSuccess, "user", auditID(u.ID), "TOTP deleted")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -548,6 +561,7 @@ func (s *Server) handleMFAComplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	valid := false
+	usedRecoveryCode := false
 	if code != "" {
 		valid = auth.ValidateTOTP(ts.Secret, code)
 	}
@@ -559,20 +573,28 @@ func (s *Server) handleMFAComplete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		valid = consumed
+		usedRecoveryCode = consumed
 	}
 	if !valid {
 		s.deleteMFAChallenge(tokenHash)
+		s.auditForUser(r, &u, "auth.mfa.complete", outcomeFailed, "user", auditID(u.ID), "invalid MFA code")
 		writeError(w, http.StatusUnauthorized, "invalid_mfa_code", "invalid MFA code")
 		return
 	}
 
 	s.deleteMFAChallenge(tokenHash)
-	accessToken, expiresIn, err := s.issueSession(w, r, u)
+	accessToken, expiresIn, err := s.issueSession(w, r, &u)
 	if err != nil {
 		s.cfg.Logger.Error("mfa complete: issue session", slog.Any("err", err))
 		writeError(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
+	message := "MFA completed"
+	if usedRecoveryCode {
+		message = "MFA completed with recovery code"
+	}
+	s.auditForUser(r, &u, "auth.mfa.complete", outcomeSuccess, "user", auditID(u.ID), message)
+	s.auditForUser(r, &u, "auth.login", outcomeSuccess, "user", auditID(u.ID), "login succeeded after MFA")
 	if wantsAuthJSON(r) {
 		writeAuthData(w, http.StatusOK, authTokenResponse{
 			AccessToken: accessToken,

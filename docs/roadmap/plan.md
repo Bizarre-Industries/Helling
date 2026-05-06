@@ -132,7 +132,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 | 17  | Prometheus promauto                 | Structured metric definitions                      | v0.3.0       |
 | 18  | grafonnet                           | Grafana dashboard JSON from metrics                | v0.3.0       |
 | 19  | Schemathesis                        | API fuzzing from spec in CI                        | v0.8.0       |
-| 20  | goss + packer                       | VM-level system validation                         | v0.8.0       |
+| 20  | goss + packer                       | Release ISO VM-level system validation             | v0.8.0       |
 | 21  | Cobra doc generation                | Man pages + markdown CLI reference                 | v1.0.0       |
 | 22  | nfpm                                | .deb packaging                                     | v1.0.0       |
 | 23  | live-build                          | Bootable ISO image (ADR-046)                       | v0.1.0-alpha |
@@ -246,7 +246,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 **Gate:** Webhook fires on instance.created. Warning shows for full disk. Prometheus scrapes /metrics.
 
 - [ ] Warnings engine (goroutine, 5min checks, capacity forecasting)
-- [ ] Prometheus /metrics endpoint (Helling + proxied Incus metrics)
+- [x] Prometheus /metrics endpoint (Helling baseline and proxied Incus `/1.0/metrics` scrape landed 2026-05-06; warnings/notifications metrics still pending)
 - [ ] Notification channels (Discord, Slack, email, Gotify, ntfy)
 - [ ] Notification handlers: CRUD + test send
 - [ ] Grafana dashboard JSON (grafonnet)
@@ -284,7 +284,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 **Gate:** All E2E pass. API p95 <200ms. Zero nil-pointer panics. Zero govulncheck findings.
 
 - [ ] Schemathesis API fuzzing in CI
-- [ ] goss + packer VM-level system validation
+- [ ] goss + packer release ISO VM-level system validation
 - [ ] Performance tuning (profiling, connection pooling)
 - [ ] Security audit (nilaway results clean, govulncheck clean)
 - [ ] Memory leak testing (24h soak test)
@@ -300,7 +300,7 @@ All automation surfaces, with version assignments. See docs/design/full-automati
 - [ ] nfpm: .deb packages (binaries, systemd units, config, AppArmor profile)
 - [ ] Man pages (Cobra doc.GenManTree) installed via .deb
 - [ ] Shell completions installed via .deb postinst
-- [ ] live-build: bootable ISO (`make iso`, ADR-046)
+- [ ] live-build: bootable ISO (`HELLING_ISO_RELEASE_GATE=1 task iso:build`, ADR-046)
 - [ ] Signed APT repository (ADR-025): ISO configures apt source and keyring at install time
 
 #### Release

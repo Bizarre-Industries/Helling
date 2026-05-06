@@ -129,7 +129,7 @@ function PageNewInstance({ onNav }) {
         <div className="stepper">
           {STEPS.map((s, i) => (
             <React.Fragment key={s}>
-              <div className={'s ' + (i === step ? 'on' : i < step ? 'done' : '')}>
+              <div className={`s ${i === step ? 'on' : i < step ? 'done' : ''}`}>
                 <span className="n">{i < step ? '✓' : i + 1}</span>
                 {s}
               </div>
@@ -176,12 +176,10 @@ function PageNewInstance({ onNav }) {
                 className="btn btn--sm btn--primary"
                 onClick={() => {
                   window.toast?.success(
-                    'Creating ' + cfg.name,
-                    'Provisioning ' +
-                      (cfg.type === 'VM' ? 'VM' : 'container') +
-                      ' — track progress in the task drawer',
+                    `Creating ${cfg.name}`,
+                    `Provisioning ${cfg.type === 'VM' ? 'VM' : 'container'} — track progress in the task drawer`,
                   );
-                  onNav('instance:' + cfg.name);
+                  onNav(`instance:${cfg.name}`);
                 }}
               >
                 <I n="play" s={13} /> Create & start
@@ -213,7 +211,7 @@ function WizGeneral({ cfg, set }) {
           ].map((o) => (
             <div
               key={o.id}
-              className={'opt' + (cfg.type === o.id ? ' on' : '')}
+              className={`opt${cfg.type === o.id ? ' on' : ''}`}
               onClick={() => set('type', o.id)}
             >
               <div className="t">{o.t}</div>
@@ -327,11 +325,11 @@ function WizImage({ cfg, set }) {
         {IMGS.map((im) => (
           <div
             key={im.id}
-            className={'opt choices opt' + (cfg.os === im.id ? ' on' : '')}
+            className={`opt choices opt${cfg.os === im.id ? ' on' : ''}`}
             style={{
               padding: 14,
               cursor: 'pointer',
-              border: '1px solid ' + (cfg.os === im.id ? 'var(--h-accent)' : 'var(--h-border)'),
+              border: `1px solid ${cfg.os === im.id ? 'var(--h-accent)' : 'var(--h-border)'}`,
               borderRadius: 'var(--h-radius)',
               display: 'flex',
               flexDirection: 'column',
@@ -433,7 +431,7 @@ function WizStorage({ cfg, set }) {
           ].map((o) => (
             <div
               key={o.id}
-              className={'opt' + (cfg.bus === o.id ? ' on' : '')}
+              className={`opt${cfg.bus === o.id ? ' on' : ''}`}
               onClick={() => set('bus', o.id)}
             >
               <div className="t">{o.t}</div>
@@ -633,13 +631,13 @@ function PageConsole({ instance = 'web-prod-1', onNav }) {
         <div style={{ display: 'flex', gap: 6 }}>
           <div className="seg">
             <button
-              className={'seg__b ' + (mode === 'graphical' ? 'on' : '')}
+              className={`seg__b ${mode === 'graphical' ? 'on' : ''}`}
               onClick={() => setMode('graphical')}
             >
               <I n="monitor" s={12} /> Graphical
             </button>
             <button
-              className={'seg__b ' + (mode === 'serial' ? 'on' : '')}
+              className={`seg__b ${mode === 'serial' ? 'on' : ''}`}
               onClick={() => setMode('serial')}
             >
               <I n="terminal" s={12} /> Serial
@@ -1068,7 +1066,7 @@ function PageMetrics({ onNav }) {
             {RANGES.map((r) => (
               <button
                 key={r}
-                className={'seg__b ' + (range === r ? 'on' : '')}
+                className={`seg__b ${range === r ? 'on' : ''}`}
                 onClick={() => setRange(r)}
               >
                 {r}
@@ -1108,7 +1106,7 @@ function PageMetrics({ onNav }) {
           { l: 'VMs only', on: false },
           { l: 'Containers only', on: false },
         ].map((c) => (
-          <span key={c.l} className={'chip ' + (c.on ? 'chip--on' : '')}>
+          <span key={c.l} className={`chip ${c.on ? 'chip--on' : ''}`}>
             {c.l} {c.on && <I n="x" s={10} />}
           </span>
         ))}
@@ -1216,7 +1214,7 @@ function PageMetrics({ onNav }) {
               <th>USAGE</th>
               <th>AVG {range}</th>
               <th>PEAK</th>
-              <th></th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -1229,7 +1227,7 @@ function PageMetrics({ onNav }) {
             ].map(([name, node, u, a, p]) => (
               <tr key={name}>
                 <td>
-                  <a className="link" onClick={() => onNav('instance:' + name)}>
+                  <a className="link" onClick={() => onNav(`instance:${name}`)}>
                     {name}
                   </a>
                 </td>
@@ -1247,7 +1245,7 @@ function PageMetrics({ onNav }) {
                     >
                       <div
                         style={{
-                          width: u + '%',
+                          width: `${u}%`,
                           height: '100%',
                           background:
                             u > 80
@@ -1266,7 +1264,7 @@ function PageMetrics({ onNav }) {
                 <td className="mono">{a}%</td>
                 <td className="mono">{p}%</td>
                 <td>
-                  <button className="btn btn--sm" onClick={() => onNav('instance:' + name)}>
+                  <button className="btn btn--sm" onClick={() => onNav(`instance:${name}`)}>
                     Open →
                   </button>
                 </td>
@@ -1281,16 +1279,16 @@ function PageMetrics({ onNav }) {
 function MiniChart({ points = 24, accent = false }) {
   const vals = useMemo(() => {
     let v = 40 + Math.random() * 20;
-    return Array.from({ length: points }, (_, i) => {
+    return Array.from({ length: points }, (_, _i) => {
       v += (Math.random() - 0.5) * 12;
       v = Math.max(10, Math.min(90, v));
       return v;
     });
   }, [points]);
   const d = vals
-    .map((v, i) => (i === 0 ? 'M' : 'L') + (i / (points - 1)) * 100 + ' ' + (40 - (v / 100) * 36))
+    .map((v, i) => `${(i === 0 ? 'M' : 'L') + (i / (points - 1)) * 100} ${40 - (v / 100) * 36}`)
     .join(' ');
-  const dArea = d + ` L 100 40 L 0 40 Z`;
+  const dArea = `${d} L 100 40 L 0 40 Z`;
   return (
     <svg
       viewBox="0 0 100 40"
@@ -1308,8 +1306,8 @@ function MiniChart({ points = 24, accent = false }) {
   );
 }
 function BigChart({ title, series }) {
-  const W = 800,
-    H = 200;
+  const W = 800;
+  const H = 200;
   const data = useMemo(
     () =>
       series.map((s) => {
@@ -1329,7 +1327,7 @@ function BigChart({ title, series }) {
     pts
       .map(
         (v, i) =>
-          (i === 0 ? 'M' : 'L') + (i / (pts.length - 1)) * W + ' ' + (H - (v / 100) * (H - 20)),
+          `${(i === 0 ? 'M' : 'L') + (i / (pts.length - 1)) * W} ${H - (v / 100) * (H - 20)}`,
       )
       .join(' ');
   return (
@@ -1379,7 +1377,7 @@ function BigChart({ title, series }) {
         ))}
         {data.map((s) => (
           <g key={s.name}>
-            <path d={path(s.pts) + ` L ${W} ${H} L 0 ${H} Z`} fill={s.color} opacity="0.08" />
+            <path d={`${path(s.pts)} L ${W} ${H} L 0 ${H} Z`} fill={s.color} opacity="0.08" />
             <path d={path(s.pts)} fill="none" stroke={s.color} strokeWidth="1.5" />
           </g>
         ))}
@@ -1436,7 +1434,7 @@ function PageAlerts({ onNav }) {
         ].map(([id, l]) => (
           <button
             key={id}
-            className={'tab ' + (tab === id ? 'tab--on' : '')}
+            className={`tab ${tab === id ? 'tab--on' : ''}`}
             onClick={() => setTab(id)}
           >
             {l}
@@ -1533,14 +1531,14 @@ function AlertsFiring() {
             <th>VALUE</th>
             <th>FIRED</th>
             <th>ACK</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
               <td>
-                <span className={'dot dot--' + (r.sev === 'crit' ? 'danger' : 'warn')} />{' '}
+                <span className={`dot dot--${r.sev === 'crit' ? 'danger' : 'warn'}`} />{' '}
                 <span
                   className="mono"
                   style={{
@@ -1687,7 +1685,7 @@ function AlertsRules() {
             <th>SEV</th>
             <th>CHANNELS</th>
             <th>LAST TRIGGER</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -1951,7 +1949,7 @@ function PageRBAC({ onNav }) {
         ].map(([id, l]) => (
           <button
             key={id}
-            className={'tab ' + (tab === id ? 'tab--on' : '')}
+            className={`tab ${tab === id ? 'tab--on' : ''}`}
             onClick={() => setTab(id)}
           >
             {l}
@@ -1987,14 +1985,14 @@ function RBACUsers({ onNav }) {
             <th>MFA</th>
             <th>LAST SEEN</th>
             <th>STATUS</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
           {users.map((u, i) => (
             <tr
               key={i}
-              onClick={() => onNav?.('rbac:' + u.name.split('@')[0])}
+              onClick={() => onNav?.(`rbac:${u.name.split('@')[0]}`)}
               style={{ cursor: 'pointer' }}
             >
               <td onClick={(e) => e.stopPropagation()}>
@@ -2176,7 +2174,7 @@ function RBACTokens() {
             <th>LAST USED</th>
             <th>CREATED</th>
             <th>EXPIRES</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -2241,7 +2239,7 @@ function RBACKeys() {
             <th>USER</th>
             <th>COMMENT</th>
             <th>ADDED</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -2482,7 +2480,7 @@ function PageFirewallEditor({ onNav }) {
           <table className="tbl">
             <thead>
               <tr>
-                <th style={{ width: 32 }}></th>
+                <th style={{ width: 32 }} />
                 <th style={{ width: 50 }}>#</th>
                 <th style={{ width: 44 }}>ON</th>
                 <th style={{ width: 80 }}>ACTION</th>
@@ -2492,7 +2490,7 @@ function PageFirewallEditor({ onNav }) {
                 <th>PORT</th>
                 <th>NOTE</th>
                 <th>HITS</th>
-                <th></th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -2607,16 +2605,10 @@ function FWRuleEditor({ rule }) {
         <div className="field">
           <label>Action</label>
           <div className="seg" style={{ width: '100%' }}>
-            <button
-              className={'seg__b ' + (rule.action === 'allow' ? 'on' : '')}
-              style={{ flex: 1 }}
-            >
+            <button className={`seg__b ${rule.action === 'allow' ? 'on' : ''}`} style={{ flex: 1 }}>
               Allow
             </button>
-            <button
-              className={'seg__b ' + (rule.action === 'deny' ? 'on' : '')}
-              style={{ flex: 1 }}
-            >
+            <button className={`seg__b ${rule.action === 'deny' ? 'on' : ''}`} style={{ flex: 1 }}>
               Deny
             </button>
             <button className="seg__b" style={{ flex: 1 }}>
@@ -2627,10 +2619,10 @@ function FWRuleEditor({ rule }) {
         <div className="field">
           <label>Direction</label>
           <div className="seg" style={{ width: '100%' }}>
-            <button className={'seg__b ' + (rule.dir === 'in' ? 'on' : '')} style={{ flex: 1 }}>
+            <button className={`seg__b ${rule.dir === 'in' ? 'on' : ''}`} style={{ flex: 1 }}>
               In
             </button>
-            <button className={'seg__b ' + (rule.dir === 'out' ? 'on' : '')} style={{ flex: 1 }}>
+            <button className={`seg__b ${rule.dir === 'out' ? 'on' : ''}`} style={{ flex: 1 }}>
               Out
             </button>
           </div>
@@ -2876,7 +2868,7 @@ function PageMarketplace({ onNav }) {
         {CATS.map(([id, l]) => (
           <span
             key={id}
-            className={'chip ' + (cat === id ? 'chip--on' : '')}
+            className={`chip ${cat === id ? 'chip--on' : ''}`}
             onClick={() => setCat(id)}
             style={{ cursor: 'pointer' }}
           >
@@ -3093,7 +3085,7 @@ function PageFileBrowser({ target = 'web-prod-1', onNav }) {
                 <th style={{ width: 100 }}>SIZE</th>
                 <th style={{ width: 120 }}>MODIFIED</th>
                 <th style={{ width: 80 }}>PERMS</th>
-                <th></th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -3314,7 +3306,7 @@ function PageContainerDetail({ name = 'jellyfin', onNav }) {
           <button className="btn btn--sm">
             <I n="square" s={12} /> Stop
           </button>
-          <button className="btn btn--sm" onClick={() => onNav?.('files:container:' + name)}>
+          <button className="btn btn--sm" onClick={() => onNav?.(`files:container:${name}`)}>
             <I n="folder" s={12} /> Files
           </button>
           <button className="btn btn--sm" style={{ color: 'var(--h-danger)' }}>
@@ -3333,7 +3325,7 @@ function PageContainerDetail({ name = 'jellyfin', onNav }) {
           ['compose', 'Compose'],
           ['stats', 'Stats'],
         ].map(([id, l]) => (
-          <button key={id} className={'tab ' + (tab === id ? 'on' : '')} onClick={() => setTab(id)}>
+          <button key={id} className={`tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>
             {l}
           </button>
         ))}
@@ -3359,7 +3351,7 @@ function CtOverview({ c }) {
         <dl className="desc">
           <dt>Container ID</dt>
           <dd className="mono" style={{ wordBreak: 'break-all' }}>
-            {(c.id || 'c_a91f82c3') + 'd4e0b9e8f7c6a5b4c3d2e1f0'}
+            {`${c.id || 'c_a91f82c3'}d4e0b9e8f7c6a5b4c3d2e1f0`}
           </dd>
           <dt>Image</dt>
           <dd className="mono">{c.image}</dd>
@@ -3536,7 +3528,7 @@ function CtEnv() {
             <th>KEY</th>
             <th>VALUE</th>
             <th style={{ width: 100 }}>TYPE</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -3597,7 +3589,7 @@ function CtVolumes() {
             <th>CONTAINER PATH</th>
             <th>MODE</th>
             <th>SIZE</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -3782,7 +3774,7 @@ function PageUserDetail({ user = 'alice', onNav }) {
               width: 56,
               height: 56,
               borderRadius: '50%',
-              background: `linear-gradient(135deg, hsl(200, 60%, 50%), hsl(280, 60%, 40%))`,
+              background: 'linear-gradient(135deg, hsl(200, 60%, 50%), hsl(280, 60%, 40%))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -3824,7 +3816,7 @@ function PageUserDetail({ user = 'alice', onNav }) {
           ['ssh', 'SSH keys'],
           ['activity', 'Activity'],
         ].map(([id, l]) => (
-          <button key={id} className={'tab ' + (tab === id ? 'on' : '')} onClick={() => setTab(id)}>
+          <button key={id} className={`tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>
             {l}
           </button>
         ))}
@@ -3840,12 +3832,12 @@ function PageUserDetail({ user = 'alice', onNav }) {
               <label>Display name</label>
               <input
                 className="input"
-                defaultValue={user.charAt(0).toUpperCase() + user.slice(1) + ' Martin'}
+                defaultValue={`${user.charAt(0).toUpperCase() + user.slice(1)} Martin`}
               />
             </div>
             <div className="field">
               <label>Email</label>
-              <input className="input" defaultValue={user + '@helling.io'} />
+              <input className="input" defaultValue={`${user}@helling.io`} />
             </div>
             <div className="field">
               <label>Role</label>
@@ -3892,7 +3884,7 @@ function PageUserDetail({ user = 'alice', onNav }) {
                 <th>IP</th>
                 <th>STARTED</th>
                 <th>LAST ACTIVE</th>
-                <th></th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -4039,7 +4031,7 @@ function ModalInstallApp({ onClose, app }) {
         </div>
         <div className="field">
           <label>Subdomain</label>
-          <input className="input input--mono" defaultValue={(app?.id || 'app') + '.local'} />
+          <input className="input input--mono" defaultValue={`${app?.id || 'app'}.local`} />
         </div>
         <div className="field">
           <label>Storage pool</label>

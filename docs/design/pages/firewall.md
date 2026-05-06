@@ -4,45 +4,31 @@
 
 Route: `/firewall`
 
-> **Data source (ADR-014):** Helling API (`/api/v1/*`). Responses in Helling envelope format `{data, meta}`. VM/CT firewalling uses Incus Network ACLs; host firewall uses `nft --json` (see ADR-012).
+> **Data source (ADR-014):** Helling API (`/api/v1/firewall/host`). Responses in Helling envelope format `{data, meta}`. v0.2 manages host firewall rules only with structured nftables DTOs (see ADR-012).
 
 ---
 
 ## Layout
 
-Sidebar: "Firewall" selected. Main panel: 4 Tabs. Each tab contains a ProTable.
+Sidebar: "Firewall" selected. Main panel: one host-rule table. Security groups,
+IP sets, macros, VM/CT Network ACL views, and drag reordering are post-v0.2.
 
 ## API Endpoints
 
-- `GET /api/v1/firewall/rules` -- list rules
-- `POST /api/v1/firewall/rules` -- create rule
-- `PUT /api/v1/firewall/rules/:id` -- update rule
-- `PUT /api/v1/firewall/rules/order` -- reorder rules
-- `DELETE /api/v1/firewall/rules/:id` -- delete rule
-- `GET /api/v1/firewall/groups` -- security groups
-- `POST /api/v1/firewall/groups` -- create group
-- `GET /api/v1/firewall/ipsets` -- IP sets
-- `POST /api/v1/firewall/ipsets` -- create IP set
-- `GET /api/v1/firewall/macros` -- macro/alias list
+- `GET /api/v1/firewall/host` -- list Helling-managed host rules
+- `POST /api/v1/firewall/host` -- create a host rule
+- `DELETE /api/v1/firewall/host/{id}` -- delete a host rule
 
 ## Components
 
-- `Tabs` -- Rules | Security Groups | IP Sets | Macros
-
-**Rules tab:** `ProTable` with drag-to-reorder rows (direction Tag, action Tag, protocol, port, source, enable Switch). `ModalForm` for Add Rule (direction, action, protocol, port range, source CIDR, comment). Scope selector: cluster-wide vs node-level.
-
-**Security Groups tab:** `ProTable` (name, rules count, assigned instances count). Click to expand/edit rules. Assign group to instances via `Select`.
-
-**IP Sets tab:** `ProTable` (name, entries count, type). Click to view/edit entries. `ModalForm` to create set and add IPs/subnets.
-
-**Macros tab:** Read-only `ProTable` of built-in macros (HTTP, SSH, DNS, SMTP, etc.) with protocol/port details.
+**Host rules table:** `ProTable` with direction Tag, action Tag, protocol, port,
+source CIDR, destination CIDR, enabled state, nft handle when known, and
+`helling:<uuid>` comment. `ModalForm` for Add Rule uses structured fields only;
+the daemon renders nft as argv with `exec.CommandContext`.
 
 ## Data Model
 
-- Rule: `id`, `direction` (in/out), `action` (accept/drop/reject), `protocol`, `dport`, `source`, `enabled`, `comment`, `position`
-- SecurityGroup: `id`, `name`, `rules[]`, `instances[]`
-- IPSet: `id`, `name`, `type` (ip/net/port), `entries[]`
-- Macro: `name`, `protocol`, `dport`, `description`
+- Rule: `id`, `direction` (input/output/forward), `action` (accept/drop/reject), `protocol`, `source_cidr`, `destination_cidr`, `destination_port`, `enabled`, `comment`, `nft_handle`, `created_at`, `updated_at`
 
 ## States
 
@@ -60,12 +46,9 @@ nftables unavailable: banner with link to system logs. Rules shown as read-only 
 
 ## User Actions
 
-- Add/edit/delete/reorder firewall rules (drag-to-reorder)
-- Toggle individual rules on/off
-- Create/manage security groups and assign to instances
-- Create/manage IP sets
-- View built-in macros
-- Switch scope between cluster-wide and node-level
+- Add/delete host firewall rules
+- Inspect nft metadata and last apply status
+- Filter by action, protocol, source, destination, and enabled state
 
 ## Cross-References
 

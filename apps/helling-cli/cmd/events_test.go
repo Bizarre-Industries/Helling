@@ -33,8 +33,10 @@ func runEvents(t *testing.T, args []string) (string, error) {
 func TestEventsTail_Default(t *testing.T) {
 	useTempConfigDir(t)
 	var gotURL string
+	var gotAccept string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotURL = r.URL.String()
+		gotAccept = r.Header.Get("Accept")
 		_, _ = w.Write([]byte(`{"data":[{"id":"evt_1","type":"instance.created","timestamp":"2026-04-23T10:05:00Z","source":"incus"}]}`))
 	}))
 	t.Cleanup(srv.Close)
@@ -46,24 +48,53 @@ func TestEventsTail_Default(t *testing.T) {
 	if gotURL != "/api/v1/events" {
 		t.Fatalf("url: %s", gotURL)
 	}
+	if gotAccept != "text/event-stream" {
+		t.Fatalf("accept: %s", gotAccept)
+	}
 	if !strings.Contains(out, "evt_1") {
 		t.Fatalf("out: %q", out)
 	}
 }
 
-func TestEventsTail_LimitFlag(t *testing.T) {
+func TestEventsList_LimitFlag(t *testing.T) {
 	useTempConfigDir(t)
 	var gotURL string
+	var gotAccept string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotURL = r.URL.String()
+		gotAccept = r.Header.Get("Accept")
 		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	t.Cleanup(srv.Close)
 	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
-	if _, err := runEvents(t, []string{"tail", "--limit=25"}); err != nil {
+	if _, err := runEvents(t, []string{"list", "--limit=25"}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(gotURL, "limit=25") {
 		t.Fatalf("url: %s", gotURL)
+	}
+	if gotAccept != "application/json" {
+		t.Fatalf("accept: %s", gotAccept)
+	}
+}
+
+func TestEventsList_CountArg(t *testing.T) {
+	useTempConfigDir(t)
+	var gotURL string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotURL = r.URL.String()
+		_, _ = w.Write([]byte(`{"data":[{"id":"evt_2"}]}`))
+	}))
+	t.Cleanup(srv.Close)
+	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
+	out, err := runEvents(t, []string{"list", "10"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(gotURL, "limit=10") {
+		t.Fatalf("url: %s", gotURL)
+	}
+	if !strings.Contains(out, "evt_2") {
+		t.Fatalf("out: %q", out)
 	}
 }

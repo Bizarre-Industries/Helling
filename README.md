@@ -2,7 +2,7 @@
 
 A self-hosted, single-node, Debian-first system container and VM management platform built on top of [Incus](https://linuxcontainers.org/incus/) and [Podman](https://podman.io/).
 
-> **Status:** v0.1 in active development. APIs and behavior are not yet stable. Don't run this in production.
+> **Status:** v0.2 Platform Core in active development. APIs and behavior are not yet stable. Don't run this in production.
 
 ## What it is
 
@@ -10,14 +10,14 @@ Helling gives you a unified web UI, REST API, and CLI for managing containers an
 
 - A clean HTTP API generated from a single OpenAPI contract
 - Local user authentication with sessions (no PAM, no LDAP needed)
-- A React 19 + Ant Design 6 dashboard
+- A React 19 + Vite dashboard
 - A typed Go and TypeScript client, both generated from the same spec
 - Audit logging and async operation tracking
 
 ## What it isn't
 
 - Not Kubernetes. Not trying to be.
-- Not multi-node. Single host only in v0.1.
+- Not multi-node. Single host only in v0.2.
 - Not a Docker replacement. Use Podman or Incus's application containers if you want OCI workloads.
 - Not a managed cloud. You run it on your own hardware.
 
@@ -29,7 +29,7 @@ helling/
 ├── apps/
 │   ├── hellingd/           # Backend daemon
 │   ├── helling-cli/        # CLI client
-├── web/                    # React 19 + Vite + antd dashboard
+├── web/                    # React 19 + Vite dashboard
 ├── deploy/                 # Installer ISO profile, Caddy config, systemd units, packaging
 ├── docs/
 │   ├── spec/               # Architecture, source-of-truth specs
@@ -100,7 +100,8 @@ If AGPL doesn't work for your use case, get in touch.
 ## Project status and roadmap
 
 - v0.1: see [docs/v0.1.md](docs/v0.1.md). Minimum viable platform — auth + container CRUD + dashboard shell.
-- Beyond v0.1: VM support, storage volumes, network management, multi-user RBAC tied to Incus projects, OIDC SSO. Not committed; will be tracked in versioned roadmap docs.
+- v0.2: see [docs/plans/v0.2-plan.md](docs/plans/v0.2-plan.md). Platform core expansion — users, schedules, webhooks, firewall, events, and audit surfaces.
+- Beyond v0.2: VM depth, storage volume management, network management, OIDC SSO, and multi-node work are not committed; they belong in versioned roadmap docs.
 
 ## Naming
 

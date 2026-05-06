@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - engine: sqlite
+    schema: apps/hellingd/internal/store/migrations
+    queries: apps/hellingd/internal/store/queries
+    gen:
+      go:
+        package: sqlc
+        out: apps/hellingd/internal/store/sqlc
+        emit_json_tags: true
+        emit_empty_slices: true

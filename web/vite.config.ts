@@ -19,6 +19,21 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     target: 'es2022',
+    modulePreload: {
+      resolveDependencies(_filename, deps) {
+        return deps.filter((dep) => !dep.includes('scalar-'));
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/node_modules/@scalar/')) {
+            const match = id.match(/\/node_modules\/@scalar\/([^/]+)/);
+            return match ? `scalar-${match[1]}` : 'scalar';
+          }
+        },
+      },
+    },
   },
   resolve: {
     alias: {

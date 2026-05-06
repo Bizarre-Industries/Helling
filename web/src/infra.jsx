@@ -1,6 +1,6 @@
 /* Helling — shared UI infra: modals, toasts, empties, charts, switch */
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId, useRef } from 'react';
 import { Switch } from './primitives/switch';
 
 // ─── Toast system ───────────────────────────────────────────────
@@ -50,7 +50,12 @@ function ToastStack() {
   return (
     <div className="toast-stack">
       {items.map((t) => (
-        <div key={t.id} className={'toast toast--' + t.kind}>
+        <div
+          key={t.id}
+          className={`toast toast--${t.kind}`}
+          role={t.kind === 'danger' ? 'alert' : 'status'}
+          aria-live={t.kind === 'danger' ? 'assertive' : 'polite'}
+        >
           <I n={iconFor(t.kind)} s={16} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="t-title">{t.title}</div>
@@ -67,7 +72,11 @@ function ToastStack() {
               {t.action.label}
             </button>
           )}
-          <button className="t-close" onClick={() => ToastBus.dismiss(t.id)}>
+          <button
+            className="t-close"
+            aria-label="Dismiss notification"
+            onClick={() => ToastBus.dismiss(t.id)}
+          >
             <I n="x" s={12} />
           </button>
         </div>
@@ -78,13 +87,43 @@ function ToastStack() {
 
 // ─── Modal ──────────────────────────────────────────────────────
 function Modal({ open, onClose, title, size, danger, children, footer }) {
+  const titleId = useId();
+  const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
   useEffect(() => {
     if (!open) return;
+    previousFocusRef.current = document.activeElement;
+    const focusableSelector =
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+    const focusFirstControl = () => {
+      const focusable = dialogRef.current?.querySelectorAll(focusableSelector);
+      focusable?.[0]?.focus?.();
+      if (!focusable?.length) dialogRef.current?.focus();
+    };
+    window.setTimeout(focusFirstControl, 0);
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape') {
+        onClose?.();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusable = dialogRef.current?.querySelectorAll(focusableSelector);
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      previousFocusRef.current?.focus?.();
+    };
   }, [open, onClose]);
   if (!open) return null;
   const sizeCls =
@@ -98,14 +137,19 @@ function Modal({ open, onClose, title, size, danger, children, footer }) {
   return (
     <div className="modal-bg" onClick={onClose}>
       <div
-        className={'modal' + sizeCls + (danger ? ' modal--danger' : '')}
+        ref={dialogRef}
+        className={`modal${sizeCls}${danger ? ' modal--danger' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <header>
-          <div className="stencil" style={{ fontSize: 14 }}>
+          <div id={titleId} className="stencil" style={{ fontSize: 14 }}>
             {title}
           </div>
-          <button className="btn btn--sm btn--ghost" onClick={onClose}>
+          <button className="btn btn--sm btn--ghost" aria-label="Close dialog" onClick={onClose}>
             <I n="x" s={14} />
           </button>
         </header>
@@ -144,7 +188,7 @@ function ConfirmModal({
             Cancel
           </button>
           <button
-            className={'btn btn--sm ' + (danger ? 'btn--danger' : 'btn--primary')}
+            className={`btn btn--sm ${danger ? 'btn--danger' : 'btn--primary'}`}
             disabled={!canConfirm}
             onClick={() => {
               onConfirm?.();
@@ -199,15 +243,15 @@ function EmptyState({ icon = 'inbox', title, body, action }) {
 // ─── Sparkline ──────────────────────────────────────────────────
 function Sparkline({ data, color = 'var(--h-accent)', w = 120, h = 24, fill = true }) {
   if (!data || !data.length) return <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} />;
-  const max = Math.max(...data, 1),
-    min = Math.min(...data, 0);
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
   const range = max - min || 1;
   const step = w / (data.length - 1 || 1);
   const pts = data.map((v, i) => [i * step, h - ((v - min) / range) * (h - 2) - 1]);
   const path = pts
-    .map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1))
+    .map((p, i) => `${(i ? 'L' : 'M') + p[0].toFixed(1)},${p[1].toFixed(1)}`)
     .join(' ');
-  const area = path + ` L${w},${h} L0,${h} Z`;
+  const area = `${path} L${w},${h} L0,${h} Z`;
   return (
     <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
       {fill && <path d={area} fill={color} opacity="0.15" />}
@@ -220,14 +264,14 @@ function Sparkline({ data, color = 'var(--h-accent)', w = 120, h = 24, fill = tr
 function MultiChart({ series, w = 800, h = 260, yMax, yLabel = '', xLabels = [] }) {
   // series: [{name, color, data:[]}]
   const pad = { t: 16, r: 16, b: 26, l: 44 };
-  const cw = w - pad.l - pad.r,
-    ch = h - pad.t - pad.b;
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
   const n = series[0]?.data.length || 1;
   const max = yMax || Math.max(1, ...series.flatMap((s) => s.data));
   const step = cw / Math.max(1, n - 1);
   const scaleY = (v) => ch - (v / max) * ch;
   const gridY = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
-  const gridX = Math.min(8, n);
+  const _gridX = Math.min(8, n);
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="chart">
       {/* y grid */}
@@ -271,9 +315,9 @@ function MultiChart({ series, w = 800, h = 260, yMax, yLabel = '', xLabels = [] 
       {series.map((s, si) => {
         const pts = s.data.map((v, i) => [pad.l + i * step, pad.t + scaleY(v)]);
         const path = pts
-          .map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1))
+          .map((p, i) => `${(i ? 'L' : 'M') + p[0].toFixed(1)},${p[1].toFixed(1)}`)
           .join(' ');
-        const area = path + ` L${pad.l + cw},${pad.t + ch} L${pad.l},${pad.t + ch} Z`;
+        const area = `${path} L${pad.l + cw},${pad.t + ch} L${pad.l},${pad.t + ch} Z`;
         return (
           <g key={si}>
             <path d={area} fill={s.color} opacity="0.08" />
@@ -326,7 +370,7 @@ function FilePath({ path, onNav }) {
       </span>
       {parts.map((p, i) => (
         <React.Fragment key={i}>
-          <span className="seg" onClick={() => onNav('/' + parts.slice(0, i + 1).join('/'))}>
+          <span className="seg" onClick={() => onNav(`/${parts.slice(0, i + 1).join('/')}`)}>
             {p}
           </span>
           {i < parts.length - 1 && <span className="sep">/</span>}

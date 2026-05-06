@@ -1,6 +1,7 @@
 -- 003_totp.sql
 -- TOTP secrets and recovery codes per docs/spec/architecture.md §5.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS totp_secrets (
     user_id        INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     secret         TEXT    NOT NULL,        -- base32-encoded TOTP secret
@@ -16,3 +17,7 @@ CREATE TABLE IF NOT EXISTS totp_recovery_codes (
     used     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_totp_recovery_user ON totp_recovery_codes(user_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS totp_recovery_codes;
+DROP TABLE IF EXISTS totp_secrets;

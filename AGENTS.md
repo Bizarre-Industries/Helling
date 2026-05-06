@@ -12,7 +12,7 @@ The repository contains:
 - **Go backend daemon:** `apps/hellingd/` — listens on a Unix socket, talks to Incus.
 - **Go CLI:** `apps/helling-cli/` — interactive client over the same socket.
 - **Caddy edge service:** `deploy/install/Caddyfile` — terminates TLS, serves the web bundle, forwards API.
-- **React + Vite Web UI:** `web/` — React 19 + TypeScript + antd v6.
+- **React + Vite Web UI:** `web/` — React 19 + TypeScript + Vite.
 - **Shared API contract:** `api/openapi.yaml` — single source of truth for the API.
 
 Architecture, design constraints, standards, and roadmap live in:
@@ -29,7 +29,7 @@ If implementation behavior conflicts with the docs, **the docs are the source of
 ```text
 apps/hellingd        backend daemon
 apps/helling-cli     CLI client
-web/                 frontend (React 19, TypeScript, Vite, antd 6)
+web/                 frontend (React 19, TypeScript, Vite)
 api/openapi.yaml     API contract used for code generation
 deploy/              installer ISO, Caddy, systemd, and packaging artifacts
 ```
@@ -166,7 +166,7 @@ Authoritative reference: `docs/standards/coding.md` and `docs/standards/security
 Frontend rules:
 
 - Use generated API client and React Query hooks from `web/src/api/generated/`.
-- antd v6 is the only UI component library.
+- Do not add a UI component library without updating the frontend standards and package manifest in the same change.
 - TypeScript strict mode mandatory.
 
 ## Security checks
@@ -361,4 +361,5 @@ The default driver is pure-Go `modernc.org/sqlite`, no CGO required. If you see 
 - `docs/spec/architecture.md` — canonical architecture
 - `docs/standards/coding.md` — code style and architecture rules
 - `docs/standards/security.md` — security model and constraints
-- `docs/roadmap/v0.1.md` — current milestone
+- `docs/plans/v0.2-plan.md` — current milestone plan
+- `docs/v0.1.md` — historical v0.1 milestone

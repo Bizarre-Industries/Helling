@@ -24,6 +24,7 @@ export interface ConfirmModalProps {
   body?: string;
   danger?: boolean;
   confirmLabel?: string;
+  confirmText?: string;
   confirmMatch?: string;
   onConfirm?: () => void;
 }
@@ -47,7 +48,11 @@ export const toast = (kind: ToastKind, title: string, msg?: string): void => {
 };
 
 export const openConfirm = (props: ConfirmModalProps): void => {
-  ui().openModal?.('confirm', props as unknown as Record<string, unknown>);
+  const { confirmLabel, confirmText, ...rest } = props;
+  ui().openModal?.('confirm', {
+    ...rest,
+    confirmText: confirmText ?? confirmLabel,
+  } as Record<string, unknown>);
 };
 
 export const openModal = (kind: ModalKind, props?: Record<string, unknown>): void => {

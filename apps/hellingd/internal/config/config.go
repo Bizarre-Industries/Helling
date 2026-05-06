@@ -18,6 +18,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const maxSessionTTLHours = 24 * 30
+
 // Config is the top-level runtime configuration.
 type Config struct {
 	StateDir string       `yaml:"state_dir"`
@@ -46,6 +48,7 @@ type AuthConfig struct {
 	AccessTTLMinutes  int    `yaml:"access_ttl_minutes"`
 	JWTSigningKeyPath string `yaml:"jwt_signing_key_path"`
 	SetupTokenPath    string `yaml:"setup_token_path"`
+	ScheduleTokenPath string `yaml:"schedule_runner_token_path"`
 	LoginRateLimit    int    `yaml:"login_rate_limit_per_15m"`
 	Argon2TimeCost    int    `yaml:"argon2_time_cost"`
 	Argon2MemoryKiB   int    `yaml:"argon2_memory_kib"`
@@ -54,8 +57,13 @@ type AuthConfig struct {
 
 // IncusConfig points hellingd at the Incus daemon.
 type IncusConfig struct {
-	SocketPath string `yaml:"socket_path"` // empty = use INCUS_SOCKET env or default
-	Project    string `yaml:"project"`     // Incus project, defaults to "default"
+	SocketPath        string `yaml:"socket_path"`          // empty = use INCUS_SOCKET env or default
+	Project           string `yaml:"project"`              // Incus project, defaults to "default"
+	HTTPSEndpoint     string `yaml:"https_endpoint"`       // loopback HTTPS endpoint for delegated mTLS
+	CACertPath        string `yaml:"ca_cert_path"`         // Incus server certificate path
+	TLSServerName     string `yaml:"tls_server_name"`      // optional TLS server name override
+	HellingCAKeyPath  string `yaml:"helling_ca_key_path"`  // encrypted Helling CA private key
+	HellingCACertPath string `yaml:"helling_ca_cert_path"` // public Helling CA certificate
 }
 
 // Defaults returns a Config populated with safe defaults.
@@ -76,14 +84,19 @@ func Defaults() Config {
 			AccessTTLMinutes:  15,
 			JWTSigningKeyPath: "/var/lib/helling/jwt/ed25519.key",
 			SetupTokenPath:    "/etc/helling/setup-token",
+			ScheduleTokenPath: "/etc/helling/schedule-runner.token",
 			LoginRateLimit:    5,
 			Argon2TimeCost:    3,
 			Argon2MemoryKiB:   64 * 1024,
 			Argon2Parallelism: 4,
 		},
 		Incus: IncusConfig{
-			SocketPath: "/var/lib/incus/unix.socket.user",
-			Project:    "default",
+			SocketPath:        "/var/lib/incus/unix.socket.user",
+			Project:           "default",
+			HTTPSEndpoint:     "https://127.0.0.1:8443",
+			CACertPath:        "/var/lib/incus/server.crt",
+			HellingCAKeyPath:  "/var/lib/helling/ca.key.age",
+			HellingCACertPath: "/var/lib/helling/ca.crt",
 		},
 	}
 }
@@ -116,6 +129,12 @@ func Load(path string) (Config, error) {
 }
 
 func applyEnv(cfg *Config) {
+	applyBaseEnv(cfg)
+	applyIncusEnv(cfg)
+	applyAuthEnv(cfg)
+}
+
+func applyBaseEnv(cfg *Config) {
 	if v := os.Getenv("HELLING_STATE_DIR"); v != "" {
 		cfg.StateDir = v
 	}
@@ -128,12 +147,33 @@ func applyEnv(cfg *Config) {
 	if v := os.Getenv("HELLING_LOG_FORMAT"); v != "" {
 		cfg.Log.Format = v
 	}
+}
+
+func applyIncusEnv(cfg *Config) {
 	if v := os.Getenv("HELLING_INCUS_SOCKET"); v != "" {
 		cfg.Incus.SocketPath = v
 	}
 	if v := os.Getenv("HELLING_INCUS_PROJECT"); v != "" {
 		cfg.Incus.Project = v
 	}
+	if v := os.Getenv("HELLING_INCUS_HTTPS_ENDPOINT"); v != "" {
+		cfg.Incus.HTTPSEndpoint = v
+	}
+	if v := os.Getenv("HELLING_INCUS_CA_CERT_PATH"); v != "" {
+		cfg.Incus.CACertPath = v
+	}
+	if v := os.Getenv("HELLING_INCUS_TLS_SERVER_NAME"); v != "" {
+		cfg.Incus.TLSServerName = v
+	}
+	if v := os.Getenv("HELLING_INCUS_HELLING_CA_KEY_PATH"); v != "" {
+		cfg.Incus.HellingCAKeyPath = v
+	}
+	if v := os.Getenv("HELLING_INCUS_HELLING_CA_CERT_PATH"); v != "" {
+		cfg.Incus.HellingCACertPath = v
+	}
+}
+
+func applyAuthEnv(cfg *Config) {
 	if v := os.Getenv("HELLING_SESSION_TTL_HOURS"); v != "" {
 		if h, err := strconv.Atoi(v); err == nil && h > 0 {
 			cfg.Auth.SessionTTLHours = h
@@ -149,6 +189,9 @@ func applyEnv(cfg *Config) {
 	}
 	if v := os.Getenv("HELLING_AUTH_SETUP_TOKEN_PATH"); v != "" {
 		cfg.Auth.SetupTokenPath = v
+	}
+	if v := os.Getenv("HELLING_AUTH_SCHEDULE_TOKEN_PATH"); v != "" {
+		cfg.Auth.ScheduleTokenPath = v
 	}
 }
 
@@ -168,6 +211,9 @@ func (c *Config) validate() error {
 	if c.Auth.SessionTTLHours <= 0 {
 		return errors.New("auth.session_ttl_hours must be > 0")
 	}
+	if c.Auth.SessionTTLHours > maxSessionTTLHours {
+		return fmt.Errorf("auth.session_ttl_hours must be <= %d", maxSessionTTLHours)
+	}
 	if err := c.Auth.validate(); err != nil {
 		return err
 	}
@@ -180,6 +226,22 @@ func (c *Config) validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("log.level %q invalid", c.Log.Level)
+	}
+	return c.Incus.validate()
+}
+
+func (i *IncusConfig) validate() error {
+	if i.HellingCAKeyPath == "" {
+		return errors.New("incus.helling_ca_key_path must not be empty")
+	}
+	if !filepath.IsAbs(i.HellingCAKeyPath) {
+		return errors.New("incus.helling_ca_key_path must be absolute")
+	}
+	if i.HellingCACertPath == "" {
+		return errors.New("incus.helling_ca_cert_path must not be empty")
+	}
+	if !filepath.IsAbs(i.HellingCACertPath) {
+		return errors.New("incus.helling_ca_cert_path must be absolute")
 	}
 	return nil
 }
@@ -196,6 +258,12 @@ func (a *AuthConfig) validate() error {
 	}
 	if !filepath.IsAbs(a.SetupTokenPath) {
 		return errors.New("auth.setup_token_path must be absolute")
+	}
+	if a.ScheduleTokenPath == "" {
+		return errors.New("auth.schedule_runner_token_path must not be empty")
+	}
+	if !filepath.IsAbs(a.ScheduleTokenPath) {
+		return errors.New("auth.schedule_runner_token_path must be absolute")
 	}
 	if a.LoginRateLimit <= 0 {
 		return errors.New("auth.login_rate_limit_per_15m must be > 0")

@@ -120,10 +120,40 @@ create_identities_and_paths() {
   fi
 
   install -d -o root -g helling -m 0750 /etc/helling
+  install -d -o root -g root -m 0750 /etc/helling/incus-trust.d
+  install -d -o root -g helling -m 0770 /etc/systemd/system/helling-managed
   install -d -o helling -g helling -m 0700 /etc/helling/age /etc/helling/certs
   install -d -o helling -g helling -m 0750 /var/lib/helling /var/log/helling
+  install -d -o helling -g helling -m 0750 /var/lib/helling/incus-trust
+  install -d -o helling -g helling -m 0700 /var/lib/helling/incus-trust/requests
   install -d -o helling -g helling -m 0700 /var/lib/helling/jwt
   install -d -o helling -g helling-proxy -m 0755 /run/helling
+  if [ ! -f /etc/helling/schedule-runner.token ]; then
+    dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n' >/etc/helling/schedule-runner.token
+    printf '\n' >>/etc/helling/schedule-runner.token
+  fi
+  chown root:helling /etc/helling/schedule-runner.token
+  chmod 0640 /etc/helling/schedule-runner.token
+  if [ -f /usr/lib/helling/helling-unit-link ]; then
+    chown root:helling /usr/lib/helling/helling-unit-link
+    chmod 4750 /usr/lib/helling/helling-unit-link
+  fi
+  if [ -f /usr/lib/helling/helling-incus-trust ]; then
+    chown root:helling /usr/lib/helling/helling-incus-trust
+    chmod 4750 /usr/lib/helling/helling-incus-trust
+  fi
+  if [ -f /usr/lib/helling/helling-firewall ]; then
+    chown root:helling /usr/lib/helling/helling-firewall
+    chmod 4750 /usr/lib/helling/helling-firewall
+    setcap cap_net_admin+ep /usr/lib/helling/helling-firewall 2>/dev/null || true
+  fi
+  if [ ! -f /etc/helling/incus-trust.d/default.json ]; then
+    cat >/etc/helling/incus-trust.d/default.json <<'JSON'
+{"user_id":0,"projects":["default"],"actions":["register","revoke"]}
+JSON
+    chown root:root /etc/helling/incus-trust.d/default.json
+    chmod 0600 /etc/helling/incus-trust.d/default.json
+  fi
 }
 
 write_setup_token_if_missing() {
@@ -156,6 +186,7 @@ auth:
   access_ttl_minutes: 15
   jwt_signing_key_path: /var/lib/helling/jwt/ed25519.key
   setup_token_path: /etc/helling/setup-token
+  schedule_runner_token_path: /etc/helling/schedule-runner.token
   login_rate_limit_per_15m: 5
   argon2_time_cost: 3
   argon2_memory_kib: 65536
@@ -163,6 +194,8 @@ auth:
 incus:
   socket_path: /var/lib/incus/unix.socket.user
   project: default
+  https_endpoint: https://127.0.0.1:8443
+  ca_cert_path: /var/lib/incus/server.crt
 YAML
   chown root:helling /etc/helling/helling.yaml
   chmod 0640 /etc/helling/helling.yaml

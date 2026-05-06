@@ -14,42 +14,46 @@ import (
 
 // Schedule mirrors a row in the schedules table.
 type Schedule struct {
-	ID        string
-	UserID    int64
-	Name      string
-	Kind      string
-	Target    string
-	CronExpr  string
-	Enabled   bool
-	LastRunAt *time.Time
-	NextRunAt *time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         string
+	UserID     int64
+	Name       string
+	Kind       string
+	Target     string
+	OnCalendar string
+	Enabled    bool
+	UnitName   string
+	LastStatus *string
+	LastError  *string
+	LastRunAt  *time.Time
+	NextRunAt  *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // CreateSchedule inserts a new schedule and returns it.
-func (s *Store) CreateSchedule(ctx context.Context, userID int64, name, kind, target, cronExpr string) (Schedule, error) {
+func (s *Store) CreateSchedule(ctx context.Context, userID int64, name, kind, target, onCalendar string) (Schedule, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return Schedule{}, fmt.Errorf("generating schedule id: %w", err)
 	}
 	now := time.Now().UTC()
 	sch := Schedule{
-		ID:        id.String(),
-		UserID:    userID,
-		Name:      name,
-		Kind:      kind,
-		Target:    target,
-		CronExpr:  cronExpr,
-		Enabled:   true,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:         id.String(),
+		UserID:     userID,
+		Name:       name,
+		Kind:       kind,
+		Target:     target,
+		OnCalendar: onCalendar,
+		Enabled:    true,
+		UnitName:   "helling-schedule-" + id.String(),
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 	_, err = s.db.ExecContext(
 		ctx,
-		`INSERT INTO schedules (id, user_id, name, kind, target, cron_expr, enabled, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-		sch.ID, sch.UserID, sch.Name, sch.Kind, sch.Target, sch.CronExpr, now.Unix(), now.Unix(),
+		`INSERT INTO schedules (id, user_id, name, kind, target, on_calendar, enabled, unit_name, last_status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'never', ?, ?)`,
+		sch.ID, sch.UserID, sch.Name, sch.Kind, sch.Target, sch.OnCalendar, sch.UnitName, now.Unix(), now.Unix(),
 	)
 	if err != nil {
 		return Schedule{}, fmt.Errorf("inserting schedule: %w", err)
@@ -63,12 +67,13 @@ func (s *Store) GetSchedule(ctx context.Context, id string) (Schedule, error) {
 	var createdAt, updatedAt int64
 	var lastRunAt, nextRunAt sql.NullInt64
 	var enabled int
+	var unitName, lastStatus, lastError sql.NullString
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, user_id, name, kind, target, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
+		`SELECT id, user_id, name, kind, target, on_calendar, enabled, last_run_at, next_run_at, unit_name, last_status, last_error, created_at, updated_at
 		 FROM schedules WHERE id = ?`, id,
-	).Scan(&sch.ID, &sch.UserID, &sch.Name, &sch.Kind, &sch.Target, &sch.CronExpr, &enabled,
-		&lastRunAt, &nextRunAt, &createdAt, &updatedAt)
+	).Scan(&sch.ID, &sch.UserID, &sch.Name, &sch.Kind, &sch.Target, &sch.OnCalendar, &enabled,
+		&lastRunAt, &nextRunAt, &unitName, &lastStatus, &lastError, &createdAt, &updatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Schedule{}, ErrNotFound
 	}
@@ -76,6 +81,13 @@ func (s *Store) GetSchedule(ctx context.Context, id string) (Schedule, error) {
 		return Schedule{}, fmt.Errorf("loading schedule: %w", err)
 	}
 	sch.Enabled = enabled != 0
+	sch.UnitName = defaultString(unitName, "helling-schedule-"+sch.ID)
+	if lastStatus.Valid {
+		sch.LastStatus = &lastStatus.String
+	}
+	if lastError.Valid {
+		sch.LastError = &lastError.String
+	}
 	if lastRunAt.Valid {
 		ts := time.Unix(lastRunAt.Int64, 0).UTC()
 		sch.LastRunAt = &ts
@@ -95,11 +107,11 @@ func (s *Store) ListSchedules(ctx context.Context, kind string) ([]Schedule, err
 	var err error
 	if kind == "" {
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT id, user_id, name, kind, target, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
+			`SELECT id, user_id, name, kind, target, on_calendar, enabled, last_run_at, next_run_at, unit_name, last_status, last_error, created_at, updated_at
 			 FROM schedules ORDER BY created_at DESC`)
 	} else {
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT id, user_id, name, kind, target, cron_expr, enabled, last_run_at, next_run_at, created_at, updated_at
+			`SELECT id, user_id, name, kind, target, on_calendar, enabled, last_run_at, next_run_at, unit_name, last_status, last_error, created_at, updated_at
 			 FROM schedules WHERE kind = ? ORDER BY created_at DESC`, kind)
 	}
 	if err != nil {
@@ -110,15 +122,15 @@ func (s *Store) ListSchedules(ctx context.Context, kind string) ([]Schedule, err
 }
 
 // UpdateSchedule updates mutable fields of a schedule.
-func (s *Store) UpdateSchedule(ctx context.Context, id, name, cronExpr string, enabled bool) error {
+func (s *Store) UpdateSchedule(ctx context.Context, id, name, onCalendar string, enabled bool) error {
 	en := 0
 	if enabled {
 		en = 1
 	}
 	_, err := s.db.ExecContext(
 		ctx,
-		`UPDATE schedules SET name = ?, cron_expr = ?, enabled = ?, updated_at = ? WHERE id = ?`,
-		name, cronExpr, en, time.Now().Unix(), id,
+		`UPDATE schedules SET name = ?, on_calendar = ?, enabled = ?, updated_at = ? WHERE id = ?`,
+		name, onCalendar, en, time.Now().Unix(), id,
 	)
 	if err != nil {
 		return fmt.Errorf("updating schedule: %w", err)
@@ -141,6 +153,20 @@ func (s *Store) TouchScheduleRun(ctx context.Context, id string, nextRunAt time.
 	return nil
 }
 
+// MarkScheduleRunStarted records that a schedule run was submitted to Incus.
+func (s *Store) MarkScheduleRunStarted(ctx context.Context, id string) error {
+	now := time.Now().Unix()
+	_, err := s.db.ExecContext(
+		ctx,
+		`UPDATE schedules SET last_run_at = ?, last_error = NULL, updated_at = ? WHERE id = ?`,
+		now, now, id,
+	)
+	if err != nil {
+		return fmt.Errorf("marking schedule run started: %w", err)
+	}
+	return nil
+}
+
 // DeleteSchedule removes a schedule by id. Idempotent.
 func (s *Store) DeleteSchedule(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM schedules WHERE id = ?`, id)
@@ -157,11 +183,19 @@ func scanSchedules(rows *sql.Rows) ([]Schedule, error) {
 		var createdAt, updatedAt int64
 		var lastRunAt, nextRunAt sql.NullInt64
 		var enabled int
-		if err := rows.Scan(&sch.ID, &sch.UserID, &sch.Name, &sch.Kind, &sch.Target, &sch.CronExpr, &enabled,
-			&lastRunAt, &nextRunAt, &createdAt, &updatedAt); err != nil {
+		var unitName, lastStatus, lastError sql.NullString
+		if err := rows.Scan(&sch.ID, &sch.UserID, &sch.Name, &sch.Kind, &sch.Target, &sch.OnCalendar, &enabled,
+			&lastRunAt, &nextRunAt, &unitName, &lastStatus, &lastError, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("scanning schedule: %w", err)
 		}
 		sch.Enabled = enabled != 0
+		sch.UnitName = defaultString(unitName, "helling-schedule-"+sch.ID)
+		if lastStatus.Valid {
+			sch.LastStatus = &lastStatus.String
+		}
+		if lastError.Valid {
+			sch.LastError = &lastError.String
+		}
 		if lastRunAt.Valid {
 			ts := time.Unix(lastRunAt.Int64, 0).UTC()
 			sch.LastRunAt = &ts

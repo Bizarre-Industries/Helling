@@ -139,7 +139,7 @@ rules:
 
   helling-tag-declared:
     description: |
-      Every tag referenced by an operation must be one of the v0.1 declared tags.
+      Every tag referenced by an operation must be one of the declared tags.
     severity: error
     given: "$.paths..tags[*]"
     then:
@@ -149,6 +149,12 @@ rules:
           - auth
           - instances
           - operations
+          - users
+          - schedules
+          - webhooks
+          - firewall
+          - events
+          - audit
           - meta
 
   helling-servers-present:

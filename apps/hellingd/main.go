@@ -24,8 +24,10 @@ import (
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/config"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/incus"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/poller"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/proxy"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/server"
 	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/store"
+	"github.com/Bizarre-Industries/helling/apps/hellingd/internal/systemd"
 )
 
 // Build-time variables, populated via -ldflags by the Makefile.
@@ -82,40 +84,40 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	jwtSigner, err := auth.LoadOrCreateJWTSigner(cfg.Auth.JWTSigningKeyPath)
+	hellingCA, jwtSigner, err := loadRuntimeSecrets(&cfg, st)
 	if err != nil {
-		return fmt.Errorf("loading JWT signing key: %w", err)
+		return err
 	}
 
-	// Connect to Incus. A failure here is non-fatal: the daemon still serves
-	// /healthz, /v1/version, and the auth surface; instance/operation
-	// endpoints will return 503 until Incus is reachable.
-	incusClient, err := incus.Connect(cfg.Incus.SocketPath)
-	if err != nil {
-		logger.Warn(
-			"incus client unavailable; instance endpoints will return 503",
-			slog.String("socket", cfg.Incus.SocketPath),
-			slog.Any("err", err),
-		)
-	}
+	incusClient := connectIncusClient(cfg.Incus.SocketPath, logger)
+	incusProxy := proxy.NewIncusProxy(cfg.Incus.SocketPath, logger)
+	delegatedIncusProxy := buildDelegatedIncusProxy(&cfg.Incus, st, logger)
 
 	srv, err := server.New(&server.Config{
 		Store:   st,
 		Logger:  logger,
 		Version: server.VersionInfo{Version: version, Commit: commit, BuildTime: buildTime},
 		Auth: server.AuthSettings{
-			SessionTTL:     time.Duration(cfg.Auth.SessionTTLHours) * time.Hour,
-			AccessTTL:      time.Duration(cfg.Auth.AccessTTLMinutes) * time.Minute,
-			UsernameLimit:  5,
-			UsernameWindow: 15 * time.Minute,
-			IPLimit:        20,
-			IPWindow:       15 * time.Minute,
-			SetupTokenPath: cfg.Auth.SetupTokenPath,
-			Argon2:         argon2ParamsFromConfig(&cfg.Auth),
-			JWTSigner:      jwtSigner,
+			SessionTTL:        time.Duration(cfg.Auth.SessionTTLHours) * time.Hour,
+			AccessTTL:         time.Duration(cfg.Auth.AccessTTLMinutes) * time.Minute,
+			UsernameLimit:     5,
+			UsernameWindow:    15 * time.Minute,
+			IPLimit:           20,
+			IPWindow:          15 * time.Minute,
+			SetupTokenPath:    cfg.Auth.SetupTokenPath,
+			ScheduleTokenPath: cfg.Auth.ScheduleTokenPath,
+			Argon2:            argon2ParamsFromConfig(&cfg.Auth),
+			JWTSigner:         jwtSigner,
 		},
 		IncusProber: incusProber(cfg.Incus.SocketPath),
-		Incus:       incusClient,
+		IncusMetrics: func(ctx context.Context) (string, error) {
+			return incus.ScrapeMetrics(ctx, cfg.Incus.SocketPath)
+		},
+		Incus:               incusClient,
+		IncusProxy:          incusProxy,
+		DelegatedIncusProxy: delegatedIncusProxy,
+		ScheduleUnits:       systemd.ScheduleManager{},
+		IncusTrust:          incus.UserTrustService{Store: st, CA: hellingCA},
 	})
 	if err != nil {
 		return fmt.Errorf("building server: %w", err)
@@ -130,16 +132,25 @@ func run() error {
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		// SSE streams refresh their write deadline before each frame; non-SSE
+		// responses retain a socket-level deadline as a last-resort bound.
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	srv.StartBackground(ctx)
+
 	// Background operation poller. Mirrors Incus operation state into our
 	// operations table. Exits when the context is canceled.
 	go poller.Run(ctx, st, incusClient, logger, 5*time.Second)
+	go incus.WatchLifecycleEvents(ctx, "ws://incus/1.0/events?type=lifecycle", &http.Client{Transport: incus.UnixTransport(cfg.Incus.SocketPath)}, func(raw []byte) {
+		if err := srv.MirrorIncusLifecycleEvent(ctx, raw); err != nil {
+			logger.Warn("mirror incus lifecycle event", slog.Any("err", err))
+		}
+	})
 
 	serveErr := make(chan error, 1)
 	go func() {
@@ -165,6 +176,54 @@ func run() error {
 
 	logger.Info("shutdown complete")
 	return nil
+}
+
+func connectIncusClient(socketPath string, logger *slog.Logger) incus.Client {
+	// A failure here is non-fatal: the daemon still serves /healthz,
+	// /v1/version, and the auth surface; instance/operation endpoints return
+	// 503 until Incus is reachable.
+	incusClient, err := incus.Connect(socketPath)
+	if err != nil {
+		logger.Warn(
+			"incus client unavailable; instance endpoints will return 503",
+			slog.String("socket", socketPath),
+			slog.Any("err", err),
+		)
+	}
+	return incusClient
+}
+
+func loadRuntimeSecrets(cfg *config.Config, st *store.Store) (*incus.CertificateAuthority, *auth.JWTSigner, error) {
+	hellingCA, err := incus.LoadOrCreateCertificateAuthority(
+		cfg.Incus.HellingCAKeyPath,
+		cfg.Incus.HellingCACertPath,
+		st.EncryptSecret,
+		st.DecryptSecret,
+		time.Now().UTC(),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading Helling Incus CA: %w", err)
+	}
+	jwtSigner, err := auth.LoadOrCreateJWTSigner(cfg.Auth.JWTSigningKeyPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading JWT signing key: %w", err)
+	}
+	return hellingCA, jwtSigner, nil
+}
+
+func buildDelegatedIncusProxy(cfg *config.IncusConfig, st *store.Store, logger *slog.Logger) *proxy.DelegatedIncusProxy {
+	delegatedIncusProxy, err := proxy.NewDelegatedIncusProxy(proxy.DelegatedIncusProxyConfig{
+		Endpoint:     cfg.HTTPSEndpoint,
+		CACertPath:   cfg.CACertPath,
+		ServerName:   cfg.TLSServerName,
+		CertProvider: proxy.StoreUserCertificateProvider(st),
+		Logger:       logger,
+	})
+	if err != nil {
+		logger.Warn("delegated incus proxy unavailable; non-admin proxy calls will be rejected", slog.Any("err", err))
+		return nil
+	}
+	return delegatedIncusProxy
 }
 
 func newLogger(cfg config.LogConfig) *slog.Logger {

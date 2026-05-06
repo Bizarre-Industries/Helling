@@ -50,7 +50,7 @@ export function normalizeIncusInstances(raws: IncusInstance[] | undefined): Inst
 }
 
 export function normalizePodmanContainer(raw: PodmanContainer): Container {
-  const firstName = (raw.Names && raw.Names[0]) ?? raw.Id.slice(0, 12);
+  const firstName = raw.Names?.[0] ?? raw.Id.slice(0, 12);
   return {
     id: raw.Id,
     name: firstName.startsWith('/') ? firstName.slice(1) : firstName,

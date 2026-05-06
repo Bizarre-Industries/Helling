@@ -54,7 +54,9 @@ func Load(explicit string) (Profile, error) {
 	}
 	raw, err := os.ReadFile(path) //nolint:gosec // path is operator-controlled
 	if errors.Is(err, os.ErrNotExist) {
-		return Profile{}, nil
+		prof := Profile{}
+		applyEnv(&prof)
+		return prof, nil
 	}
 	if err != nil {
 		return Profile{}, fmt.Errorf("config: read %s: %w", path, err)
@@ -63,7 +65,17 @@ func Load(explicit string) (Profile, error) {
 	if err := yaml.Unmarshal(raw, &prof); err != nil {
 		return Profile{}, fmt.Errorf("config: parse %s: %w", path, err)
 	}
+	applyEnv(&prof)
 	return prof, nil
+}
+
+func applyEnv(prof *Profile) {
+	if v := os.Getenv("HELLING_API"); v != "" {
+		prof.API = v
+	}
+	if v := os.Getenv("HELLING_TOKEN"); v != "" {
+		prof.Token = v
+	}
 }
 
 // Save writes the profile to disk with 0600 permissions, creating parent

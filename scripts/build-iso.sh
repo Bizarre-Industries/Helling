@@ -28,6 +28,7 @@ Environment:
   HELLING_ISO_WORKDIR  live-build working directory, default: dist/iso/live-build
   HELLING_ISO_OUTDIR   output directory, default: dist/iso
   HELLING_SKIP_WEB_BUILD=1  reuse web/dist instead of running Bun build
+  HELLING_ISO_RELEASE_GATE=1  required for full ISO generation unless HEAD is an exact v* tag
 USAGE
 }
 
@@ -130,6 +131,15 @@ prepare_workdir() {
       go build -trimpath -ldflags="-s -w -X main.version=$VERSION" \
       -o "$WORKDIR/config/includes.binary/helling/target-root/usr/lib/helling/hellingd" ./apps/hellingd
     GOOS=linux GOARCH="$go_arch" CGO_ENABLED=0 \
+      go build -trimpath -ldflags="-s -w" \
+      -o "$WORKDIR/config/includes.binary/helling/target-root/usr/lib/helling/helling-unit-link" ./apps/hellingd/cmd/helling-unit-link
+    GOOS=linux GOARCH="$go_arch" CGO_ENABLED=0 \
+      go build -trimpath -ldflags="-s -w" \
+      -o "$WORKDIR/config/includes.binary/helling/target-root/usr/lib/helling/helling-incus-trust" ./apps/hellingd/cmd/helling-incus-trust
+    GOOS=linux GOARCH="$go_arch" CGO_ENABLED=0 \
+      go build -trimpath -ldflags="-s -w" \
+      -o "$WORKDIR/config/includes.binary/helling/target-root/usr/lib/helling/helling-firewall" ./apps/hellingd/cmd/helling-firewall
+    GOOS=linux GOARCH="$go_arch" CGO_ENABLED=0 \
       go build -trimpath -ldflags="-s -w -X main.version=$VERSION" \
       -o "$WORKDIR/config/includes.binary/helling/target-root/usr/bin/helling" ./apps/helling-cli
   )
@@ -182,6 +192,19 @@ sign_iso() {
   done_ "Detached signature written to $iso_path.asc"
 }
 
+require_release_gate() {
+  if [ "${HELLING_ISO_RELEASE_GATE:-0}" = "1" ]; then
+    return
+  fi
+  if git -C "$REPO_ROOT" describe --exact-match --tags HEAD 2>/dev/null | grep -Eq '^v[0-9]+[.][0-9]+[.][0-9]+$'; then
+    if [ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]; then
+      fail "refusing release-tag ISO build from a dirty working tree. Set HELLING_ISO_RELEASE_GATE=1 only for an intentional local version-gate build."
+    fi
+    return
+  fi
+  fail "full ISO generation is release-gate only. Use --verify-only/--prepare-only for normal checks, or set HELLING_ISO_RELEASE_GATE=1 for an intentional version-gate build."
+}
+
 main() {
   verify_sources
   if [ "$VERIFY_ONLY" = "1" ]; then
@@ -191,11 +214,13 @@ main() {
 
   local deb_arch
   deb_arch="$(detect_arch)"
-  prepare_workdir "$deb_arch"
   if [ "$PREPARE_ONLY" = "1" ]; then
+    prepare_workdir "$deb_arch"
     done_ "live-build workdir prepared at $WORKDIR"
     return
   fi
+  require_release_gate
+  prepare_workdir "$deb_arch"
   build_iso "$deb_arch"
 }
 

@@ -1,6 +1,7 @@
 -- 001_initial.sql
 -- Creates users, sessions, and operations tables per docs/spec/architecture.md §4.
 
+-- +goose Up
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT    NOT NULL UNIQUE,
@@ -33,3 +34,8 @@ CREATE TABLE IF NOT EXISTS operations (
 );
 CREATE INDEX IF NOT EXISTS idx_operations_user   ON operations(user_id);
 CREATE INDEX IF NOT EXISTS idx_operations_status ON operations(status);
+
+-- +goose Down
+DROP TABLE IF EXISTS operations;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;

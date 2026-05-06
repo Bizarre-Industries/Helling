@@ -27,7 +27,7 @@ POST /api/v1/schedules → creates systemd timer + service unit
 The timer's service unit runs:
 
 ```text
-ExecStart=/usr/local/bin/helling schedule run backup <instance-name>
+ExecStart=/usr/bin/helling schedule run <schedule-id>
 ```
 
 Which calls the Incus backup API via the proxy.

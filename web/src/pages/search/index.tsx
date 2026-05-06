@@ -116,25 +116,27 @@ export default function PageSearch({ query = 'db', onNav }: Props) {
         {filterTabs.map((t) => {
           const count = t === 'all' ? RESULTS.length : RESULTS.filter((r) => r.type === t).length;
           return (
-            <span
+            <button
+              type="button"
               key={t}
-              className={'chip ' + (filter === t ? 'chip--on' : '')}
+              className={`chip ${filter === t ? 'chip--on' : ''}`}
               onClick={() => setFilter(t)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', border: 0 }}
             >
               {t}{' '}
               <span className="mono dim" style={{ marginLeft: 4 }}>
                 {count}
               </span>
-            </span>
+            </button>
           );
         })}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {filtered.map((r, i) => (
-          <div
-            key={i}
+        {filtered.map((r) => (
+          <button
+            type="button"
+            key={`${r.type}-${r.name}`}
             className="card"
             style={{
               padding: '12px 14px',
@@ -142,8 +144,11 @@ export default function PageSearch({ query = 'db', onNav }: Props) {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
+              border: 0,
+              textAlign: 'left',
             }}
-            onClick={() => onNav(r.type === 'instance' ? 'instance:' + r.name : r.type)}
+            onClick={() => onNav(r.type === 'instance' ? `instance:${r.name}` : r.type)}
           >
             <div
               style={{
@@ -186,7 +191,7 @@ export default function PageSearch({ query = 'db', onNav }: Props) {
               </div>
             </div>
             <I n="arrow-right" s={14} style={{ color: 'var(--h-text-3)' }} />
-          </div>
+          </button>
         ))}
       </div>
     </div>

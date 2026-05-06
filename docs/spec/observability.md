@@ -1,6 +1,6 @@
 # Observability Specification
 
-Normative logging, metrics, and event observability contract for Helling v0.1.
+Normative logging, metrics, and event observability contract for Helling.
 
 ## Scope
 
@@ -36,10 +36,10 @@ Rules:
 
 ## Metrics Surface
 
-- Endpoint: `/metrics`
+- Endpoint: `/metrics` on the `hellingd` Unix socket. The packaged Caddy edge config does not expose `/metrics` publicly; if an operator adds an edge route for it, they MUST protect it because proxied upstream metrics can contain inventory labels.
 - Format: Prometheus exposition
 
-Required metric families (v0.1 baseline):
+Required metric families:
 
 - `helling_api_requests_total`
 - `helling_api_errors_total`
@@ -47,6 +47,9 @@ Required metric families (v0.1 baseline):
 - `helling_goroutines`
 - `helling_open_connections`
 - `helling_db_size_bytes`
+- `helling_upstream_metrics_scrape_success{upstream="incus"}`
+
+When Incus is reachable, `/metrics` appends the native Incus `/1.0/metrics` Prometheus exposition after Helling-owned metrics. Scrape failures MUST leave Helling metrics available and set `helling_upstream_metrics_scrape_success{upstream="incus"}` to `0`. Helling-owned metric names reserve the `helling_*` prefix; proxied upstream metric names are expected to stay in their native upstream namespace such as `incus_*` to avoid duplicate HELP/TYPE collisions.
 
 Node/resource metrics may include:
 

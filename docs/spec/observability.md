@@ -1,6 +1,6 @@
 # Observability Specification
 
-Normative logging, metrics, and event observability contract for Helling v0.1.
+Normative logging, metrics, and event observability contract for Helling.
 
 ## Scope
 
@@ -39,7 +39,7 @@ Rules:
 - Endpoint: `/metrics`
 - Format: Prometheus exposition
 
-Required metric families (v0.1 baseline):
+Required metric families:
 
 - `helling_api_requests_total`
 - `helling_api_errors_total`

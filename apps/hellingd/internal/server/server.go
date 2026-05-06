@@ -100,6 +100,7 @@ type Server struct {
 	mfaMu        sync.Mutex
 	mfaTokens    map[string]mfaChallenge
 	events       *eventHub
+	metrics      *metricsRegistry
 	webhookQueue chan store.OutboxEvent
 	webhookWake  chan struct{}
 }
@@ -152,6 +153,7 @@ func New(cfg *Config) (*Server, error) {
 		setup:        newFirstAdminSetupService(cfgCopy.Store, cfgCopy.Auth.Argon2, cfgCopy.Auth.SetupTokenPath),
 		mfaTokens:    make(map[string]mfaChallenge),
 		events:       newEventHub(),
+		metrics:      newMetricsRegistry(),
 		webhookQueue: make(chan store.OutboxEvent, 8192),
 		webhookWake:  make(chan struct{}, 1),
 	}
@@ -180,9 +182,11 @@ func (s *Server) routes() chi.Router {
 	r.Use(loggerMiddleware(s.cfg.Logger))
 	r.Use(middleware.Recoverer)
 	r.Use(timeoutExceptSSE(60 * time.Second))
+	r.Use(s.metricsMiddleware)
 
 	// Public, unauthenticated.
 	r.Get("/healthz", s.handleHealth)
+	r.Get("/metrics", s.handleMetrics)
 	r.Get("/v1/version", s.handleVersion)
 
 	r.Route("/v1", s.registerV1Routes)

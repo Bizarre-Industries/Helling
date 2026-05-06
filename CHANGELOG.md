@@ -34,6 +34,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Features
 
+- Add Prometheus `/metrics` baseline for v0.3 observability
 - Wire Incus instance + operations endpoints (Stage 3) ([`a07f83d`])
 ## [0.1.0-alpha] — 2026-05-03
 

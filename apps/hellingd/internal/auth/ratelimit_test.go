@@ -61,3 +61,16 @@ func TestRateLimiterWindowExpiry(t *testing.T) {
 		t.Fatal("after window expiry, should allow")
 	}
 }
+
+func TestRateLimiterKeyCap(t *testing.T) {
+	t.Parallel()
+	rl := NewRateLimiter(1, time.Hour)
+	for i := 0; i < maxRateLimiterKeys; i++ {
+		if !rl.Allow(string(rune(i)) + "-key") {
+			t.Fatalf("key %d should be allowed", i)
+		}
+	}
+	if rl.Allow("overflow") {
+		t.Fatal("overflow key should be denied when key cap reached")
+	}
+}

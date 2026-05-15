@@ -12,6 +12,8 @@ import (
 //   - per-source-IP: 20 failures per 15 minutes
 //
 // State is in-memory; restart wipes counters. Persistence deferred to v0.2.
+const maxRateLimiterKeys = 4096
+
 type RateLimiter struct {
 	limit  int
 	window time.Duration
@@ -38,6 +40,13 @@ func (r *RateLimiter) Allow(key string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if _, exists := r.hits[key]; !exists && len(r.hits) >= maxRateLimiterKeys {
+		r.gcAllLocked(cutoff)
+		if len(r.hits) >= maxRateLimiterKeys {
+			return false
+		}
+	}
+
 	stamps := r.hits[key]
 	pruned := stamps[:0]
 	for _, t := range stamps {
@@ -59,4 +68,20 @@ func (r *RateLimiter) Reset(key string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.hits, key)
+}
+
+func (r *RateLimiter) gcAllLocked(cutoff time.Time) {
+	for key, stamps := range r.hits {
+		pruned := stamps[:0]
+		for _, t := range stamps {
+			if t.After(cutoff) {
+				pruned = append(pruned, t)
+			}
+		}
+		if len(pruned) == 0 {
+			delete(r.hits, key)
+			continue
+		}
+		r.hits[key] = pruned
+	}
 }

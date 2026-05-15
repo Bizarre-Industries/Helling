@@ -259,12 +259,6 @@ func (s *Server) deleteMFAChallenge(tokenHash string) {
 // clientIP returns a best-effort source IP. Strips port; honors no proxy
 // headers (hellingd is socket-only; helling-proxy is the only client).
 func clientIP(r *http.Request) string {
-	if forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]); forwarded != "" {
-		return forwarded
-	}
-	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
-		return realIP
-	}
 	host := strings.TrimSpace(r.RemoteAddr)
 	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
 		host = parsedHost

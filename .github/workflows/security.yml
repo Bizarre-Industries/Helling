@@ -112,7 +112,7 @@ jobs:
       - name: Upload SARIF
         # Upload even on scan failure so findings appear in the Code Scanning tab.
         if: steps.prereq.outputs.skip != 'true' && always() && hashFiles('grype.sarif') != ''
-        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4.35.4
         with:
           sarif_file: grype.sarif
           category: grype
@@ -152,7 +152,7 @@ jobs:
       # invocation with `results_format: json` and parsing `.score` from JSON —
       # deliberately not doing that here because the floor would be arbitrary.
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4.35.4
         with:
           sarif_file: results.sarif
           category: ossf-scorecard

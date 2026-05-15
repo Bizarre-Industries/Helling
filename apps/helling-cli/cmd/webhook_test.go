@@ -83,6 +83,29 @@ func TestWebhookCreate_PostsBody(t *testing.T) {
 	}
 }
 
+func TestWebhookCreate_SecretStdinPostsBody(t *testing.T) {
+	useTempConfigDir(t)
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(b, &gotBody)
+		_, _ = w.Write([]byte(`{"data":{"id":"wh1"}}`))
+	}))
+	t.Cleanup(srv.Close)
+	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
+	if _, err := runWebhookWithInput(t, []string{
+		"create", "w1",
+		"--url=https://example.test/h",
+		"--secret-stdin",
+		"--events=instance.created,instance.deleted",
+	}, webhookSecretFixture+"\n"); err != nil {
+		t.Fatal(err)
+	}
+	if gotBody["secret"] != webhookSecretFixture {
+		t.Fatalf("body: %+v", gotBody)
+	}
+}
+
 func TestWebhookUpdate_SendsEnabledWhenSet(t *testing.T) {
 	useTempConfigDir(t)
 	var gotBody map[string]any

@@ -17,6 +17,11 @@ import (
 
 func runUser(t *testing.T, args []string) (string, error) {
 	t.Helper()
+	return runUserWithInput(t, args, "")
+}
+
+func runUserWithInput(t *testing.T, args []string, stdin string) (string, error) {
+	t.Helper()
 	root := cmd.NewUserCmd()
 	root.PersistentFlags().String("api", "", "")
 	root.PersistentFlags().String("output", "", "")
@@ -26,6 +31,7 @@ func runUser(t *testing.T, args []string) (string, error) {
 	buf := &bytes.Buffer{}
 	root.SetOut(buf)
 	root.SetErr(buf)
+	root.SetIn(strings.NewReader(stdin))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err := root.ExecuteContext(ctx)
@@ -63,6 +69,25 @@ func TestUserCreate_PostsBody(t *testing.T) {
 		t.Fatalf("create: %v out=%q", err, out)
 	}
 	if gotBody["username"] != "bob" || gotBody["is_admin"] != true || gotBody["password"] != "fixture-pw" {
+		t.Fatalf("body: %+v", gotBody)
+	}
+}
+
+func TestUserCreate_PasswordStdinPostsBody(t *testing.T) {
+	useTempConfigDir(t)
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(b, &gotBody)
+		_, _ = w.Write([]byte(`{"data":{"id":"u1","username":"bob","is_admin":true},"meta":{"request_id":"r"}}`))
+	}))
+	t.Cleanup(srv.Close)
+	seedProfile(t, config.Profile{API: srv.URL, AccessToken: "jwt.x"})
+	out, err := runUserWithInput(t, []string{"create", "bob", "--admin", "--password-stdin"}, "fixture-pw\n")
+	if err != nil {
+		t.Fatalf("create: %v out=%q", err, out)
+	}
+	if gotBody["password"] != "fixture-pw" {
 		t.Fatalf("body: %+v", gotBody)
 	}
 }

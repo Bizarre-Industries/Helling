@@ -22,8 +22,8 @@ func (s *Server) handleListOperations(w http.ResponseWriter, r *http.Request) {
 	limit := 0
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 {
-			writeError(w, http.StatusBadRequest, "bad_request", "limit must be a positive integer")
+		if err != nil || n < 1 || n > 200 {
+			writeError(w, http.StatusBadRequest, "bad_request", "limit must be between 1 and 200")
 			return
 		}
 		limit = n

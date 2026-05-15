@@ -212,6 +212,41 @@ func TestAPITokenBearerAuthAndRevoke(t *testing.T) {
 	}
 }
 
+func TestAPITokenCannotEscalateScopeViaTokenCreation(t *testing.T) {
+	t.Parallel()
+	srv, st := newTestServer(t)
+	seedRegularUser(t, st, "scope-user")
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	cookie := loginCookie(t, ts, "scope-user", testPassword)
+
+	resp := postJSON(t, ts.Client(), ts.URL+"/v1/auth/tokens", map[string]string{
+		"name":   "reader",
+		"scopes": "read",
+	}, cookie)
+	var readToken createTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&readToken); err != nil {
+		t.Fatalf("decode read token response: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated || readToken.Token == "" {
+		t.Fatalf("read token creation status=%d body=%+v", resp.StatusCode, readToken)
+	}
+
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/auth/tokens", strings.NewReader(`{"name":"writer","scopes":"write"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+readToken.Token)
+	resp, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("POST /auth/tokens with read token: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusForbidden {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("scope escalation status: got %d want 403 body=%s", resp.StatusCode, string(body))
+	}
+}
+
 func TestAPIV1LoginReturnsJWTBearer(t *testing.T) {
 	t.Parallel()
 	st, err := store.Open(t.TempDir())

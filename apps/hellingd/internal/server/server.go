@@ -294,12 +294,12 @@ func (s *Server) registerV1Routes(r chi.Router) {
 		// Auth.
 		r.Post("/auth/logout", s.handleLogout)
 		r.Get("/auth/me", s.handleMe)
-		r.Post("/auth/totp/setup", s.handleTOTPSetup)
-		r.Post("/auth/totp/verify", s.handleTOTPVerify)
-		r.Delete("/auth/totp", s.handleTOTPDelete)
+		r.With(s.writeScopeMiddleware).Post("/auth/totp/setup", s.handleTOTPSetup)
+		r.With(s.writeScopeMiddleware).Post("/auth/totp/verify", s.handleTOTPVerify)
+		r.With(s.writeScopeMiddleware).Delete("/auth/totp", s.handleTOTPDelete)
 		r.Get("/auth/tokens", s.handleListTokens)
-		r.Post("/auth/tokens", s.handleCreateToken)
-		r.Delete("/auth/tokens/{id}", s.handleRevokeToken)
+		r.With(s.writeScopeMiddleware).Post("/auth/tokens", s.handleCreateToken)
+		r.With(s.writeScopeMiddleware).Delete("/auth/tokens/{id}", s.handleRevokeToken)
 
 		// Instances.
 		r.Get("/instances", s.handleListInstances)

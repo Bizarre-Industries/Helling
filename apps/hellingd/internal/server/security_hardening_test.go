@@ -247,6 +247,64 @@ func TestAPITokenCannotEscalateScopeViaTokenCreation(t *testing.T) {
 	}
 }
 
+func TestReadScopedTokenCannotMutateAuthState(t *testing.T) {
+	t.Parallel()
+	srv, st := newTestServer(t)
+	seedRegularUser(t, st, "auth-state-user")
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	cookie := loginCookie(t, ts, "auth-state-user", testPassword)
+
+	resp := postJSON(t, ts.Client(), ts.URL+"/v1/auth/tokens", map[string]string{
+		"name":   "reader",
+		"scopes": auth.ScopeRead,
+	}, cookie)
+	var readToken createTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&readToken); err != nil {
+		t.Fatalf("decode read token response: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated || readToken.Token == "" {
+		t.Fatalf("read token creation status=%d body=%+v", resp.StatusCode, readToken)
+	}
+
+	mutations := []struct {
+		name string
+		req  *http.Request
+	}{
+		{
+			name: "totp setup",
+			req: func() *http.Request {
+				r, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/auth/totp/setup", strings.NewReader(`{}`))
+				r.Header.Set("Content-Type", "application/json")
+				return r
+			}(),
+		},
+		{
+			name: "token revoke",
+			req: func() *http.Request {
+				r, _ := http.NewRequestWithContext(t.Context(), http.MethodDelete, ts.URL+"/v1/auth/tokens/"+readToken.ID, http.NoBody)
+				return r
+			}(),
+		},
+	}
+
+	for _, tc := range mutations {
+		tc.req.Header.Set("Authorization", "Bearer "+readToken.Token)
+		resp, err := ts.Client().Do(tc.req)
+		if err != nil {
+			t.Fatalf("%s request failed: %v", tc.name, err)
+		}
+		func() {
+			defer func() { _ = resp.Body.Close() }()
+			if resp.StatusCode != http.StatusForbidden {
+				body, _ := io.ReadAll(resp.Body)
+				t.Fatalf("%s status: got %d want 403 body=%s", tc.name, resp.StatusCode, string(body))
+			}
+		}()
+	}
+}
+
 func TestAPIV1LoginReturnsJWTBearer(t *testing.T) {
 	t.Parallel()
 	st, err := store.Open(t.TempDir())

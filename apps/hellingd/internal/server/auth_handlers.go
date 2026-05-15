@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -256,19 +257,59 @@ func (s *Server) deleteMFAChallenge(tokenHash string) {
 	delete(s.mfaTokens, tokenHash)
 }
 
-// clientIP returns a best-effort source IP. Strips port; honors no proxy
-// headers (hellingd is socket-only; helling-proxy is the only client).
+// clientIP returns a best-effort source IP. When RemoteAddr is a Unix-socket
+// peer marker, prefer proxy headers set by the fronting reverse proxy.
 func clientIP(r *http.Request) string {
-	host := strings.TrimSpace(r.RemoteAddr)
-	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
-		host = parsedHost
-	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		host = strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
+	host := normalizedRemoteHost(r.RemoteAddr)
+	if !isParsableIP(host) {
+		if forwarded := parseForwardedFor(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+			return forwarded
+		}
+		if realIP := parseIP(r.Header.Get("X-Real-IP")); realIP != "" {
+			return realIP
+		}
 	}
 	if host == "" {
 		return "unknown"
 	}
 	return host
+}
+
+func normalizedRemoteHost(remoteAddr string) string {
+	host := strings.TrimSpace(remoteAddr)
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
+	}
+	return strings.TrimSpace(host)
+}
+
+func parseForwardedFor(value string) string {
+	parts := strings.Split(value, ",")
+	for _, part := range parts {
+		if ip := parseIP(part); ip != "" {
+			return ip
+		}
+	}
+	return ""
+}
+
+func parseIP(value string) string {
+	ip := strings.TrimSpace(value)
+	if ip == "" {
+		return ""
+	}
+	parsed, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ""
+	}
+	return parsed.String()
+}
+
+func isParsableIP(value string) bool {
+	_, err := netip.ParseAddr(strings.TrimSpace(value))
+	return err == nil
 }
 
 func (s *Server) allowFailedLoginAttempt(username, sourceIP string) bool {

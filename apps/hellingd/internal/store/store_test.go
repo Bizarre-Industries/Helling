@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -147,5 +149,54 @@ func TestSessionExpiryReturnsNotFound(t *testing.T) {
 	}
 	if _, err := st.GetSessionByTokenHash(ctx, "expired"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expired session: got %v want ErrNotFound", err)
+	}
+}
+
+func TestOpenCreatesPrivatePaths(t *testing.T) {
+	t.Parallel()
+	stateDir := filepath.Join(t.TempDir(), "state")
+	st, err := Open(stateDir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+
+	dirInfo, err := os.Stat(stateDir)
+	if err != nil {
+		t.Fatalf("stat state dir: %v", err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0o750 {
+		t.Fatalf("state dir mode = %o, want 750", got)
+	}
+
+	dbInfo, err := os.Stat(filepath.Join(stateDir, "helling.db"))
+	if err != nil {
+		t.Fatalf("stat db: %v", err)
+	}
+	if got := dbInfo.Mode().Perm(); got != 0o600 {
+		t.Fatalf("db mode = %o, want 600", got)
+	}
+}
+
+func TestOpenRepairsOverPermissiveDBMode(t *testing.T) {
+	t.Parallel()
+	stateDir := t.TempDir()
+	dbPath := filepath.Join(stateDir, "helling.db")
+	if err := os.WriteFile(dbPath, []byte(""), 0o666); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	st, err := Open(stateDir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+
+	info, err := os.Stat(dbPath)
+	if err != nil {
+		t.Fatalf("stat db: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("db mode = %o, want 600", got)
 	}
 }

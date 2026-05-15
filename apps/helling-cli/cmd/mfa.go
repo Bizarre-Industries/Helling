@@ -61,10 +61,20 @@ func newAuthMfaVerifyCmd() *cobra.Command {
 
 func newAuthMfaDisableCmd() *cobra.Command {
 	var password string
+	var passwordStdin bool
 	c := &cobra.Command{
 		Use:   "disable",
 		Short: "Disable TOTP MFA (requires the current password)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if passwordStdin {
+				secret, err := readLine(cmd.InOrStdin(), cmd.OutOrStdout(), "")
+				if err != nil {
+					return err
+				}
+				password = secret
+			} else if err := promptSecretIfEmpty(cmd, &password, "password", "Password: "); err != nil {
+				return err
+			}
 			cli, ctx, cancel, err := userClient(cmd.Context())
 			if err != nil {
 				return err
@@ -79,7 +89,7 @@ func newAuthMfaDisableCmd() *cobra.Command {
 			return werr
 		},
 	}
-	c.Flags().StringVar(&password, "password", "", "Current password (required)")
-	_ = c.MarkFlagRequired("password")
+	c.Flags().StringVar(&password, "password", "", "Current password (NOT recommended on shared hosts)")
+	c.Flags().BoolVar(&passwordStdin, "password-stdin", false, "Read current password from stdin")
 	return c
 }

@@ -55,7 +55,7 @@ func TestAuthMfaVerify_SendsCode(t *testing.T) {
 	}
 }
 
-func TestAuthMfaDisable_RequiresPassword(t *testing.T) {
+func TestAuthMfaDisable_SendsPasswordFlag(t *testing.T) {
 	useTempConfigDir(t)
 	var gotBody map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +77,8 @@ func TestAuthMfaDisable_MissingPasswordFails(t *testing.T) {
 	useTempConfigDir(t)
 	seedProfile(t, config.Profile{API: "http://example.test", AccessToken: "jwt.x"})
 	if _, err := runAuthTop(t, []string{"mfa", "disable"}); err == nil {
-		t.Fatal("expected required-flag error")
+		t.Fatal("expected non-interactive password error")
+	} else if !strings.Contains(err.Error(), "--password is required in non-interactive mode") {
+		t.Fatalf("err: %v", err)
 	}
 }

@@ -72,15 +72,15 @@ install_go_tools() {
   # Tools installable via `go install`. Order matters — task first so later
   # invocations of `task` work if this script gets interrupted.
   GOTOOLS=(
-    "github.com/go-task/task/v3/cmd/task@latest"
-    "github.com/evilmartians/lefthook@latest"
+    "github.com/go-task/task/v3/cmd/task@v3.45.4"
+    "github.com/evilmartians/lefthook@v1.13.6"
     "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8"
-    "golang.org/x/vuln/cmd/govulncheck@latest"
-    "mvdan.cc/gofumpt@latest"
-    "golang.org/x/tools/cmd/goimports@latest"
-    "mvdan.cc/sh/v3/cmd/shfmt@latest"
-    "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest"
-    "github.com/pressly/goose/v3/cmd/goose@latest"
+    "golang.org/x/vuln/cmd/govulncheck@v1.1.3"
+    "mvdan.cc/gofumpt@v0.8.0"
+    "golang.org/x/tools/cmd/goimports@v0.38.0"
+    "mvdan.cc/sh/v3/cmd/shfmt@v3.9.0"
+    "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0"
+    "github.com/pressly/goose/v3/cmd/goose@v3.21.1"
   )
 
   # Note: gitleaks and sqlc are NOT in this list.
@@ -110,8 +110,7 @@ install_go_tools() {
     skip "vacuum"
   else
     log "Installing vacuum..."
-    mkdir -p "$HOME/.local/bin"
-    curl -fsSL https://quobix.com/scripts/install_vacuum.sh | INSTALL_DIR="$HOME/.local/bin" sh
+    go install github.com/daveshanley/vacuum/cmd/vacuum@v0.26.4
     done_ "vacuum"
   fi
 
@@ -132,13 +131,7 @@ install_gitleaks_binary() {
 
   log "Installing gitleaks (from binary release)..."
 
-  # Resolve latest release tag via GitHub API (no auth; public repo).
-  local tag
-  tag="$(curl -fsSL https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
-    | grep -oE '"tag_name":\s*"v[^"]+"' | head -1 | cut -d'"' -f4)"
-  if [ -z "$tag" ]; then
-    fail "Could not determine latest gitleaks release tag"
-  fi
+  local tag="v8.30.0"
   local version="${tag#v}"
 
   # Filename convention (as of v8.x):
@@ -178,12 +171,7 @@ install_sqlc_binary() {
 
   log "Installing sqlc (from binary release)..."
 
-  local tag
-  tag="$(curl -fsSL https://api.github.com/repos/sqlc-dev/sqlc/releases/latest \
-    | grep -oE '"tag_name":\s*"v[^"]+"' | head -1 | cut -d'"' -f4)"
-  if [ -z "$tag" ]; then
-    fail "Could not determine latest sqlc release tag"
-  fi
+  local tag="v1.31.0"
   local version="${tag#v}"
 
   # Filename convention:
@@ -334,14 +322,14 @@ install_node_tools() {
   if have markdownlint-cli2; then
     skip "markdownlint-cli2"
   else
-    npm install -g markdownlint-cli2@latest
+    npm install -g markdownlint-cli2@0.20.0
     done_ "markdownlint-cli2"
   fi
 
   if have prettier; then
     skip "prettier"
   else
-    npm install -g prettier@latest
+    npm install -g prettier@3.3.3
     done_ "prettier"
   fi
 }
@@ -355,7 +343,7 @@ install_frontend_tools() {
     skip "bun"
   else
     log "Installing bun..."
-    curl -fsSL https://bun.sh/install | bash
+    npm install -g bun@1.2.15
     done_ "bun (restart shell or source ~/.bashrc to use)"
   fi
 
@@ -375,8 +363,7 @@ install_security_tools() {
     skip "grype"
   else
     log "Installing grype..."
-    curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
-      | sh -s -- -b "$HOME/.local/bin"
+    go install github.com/anchore/grype/cmd/grype@v0.99.1
     done_ "grype"
   fi
 }

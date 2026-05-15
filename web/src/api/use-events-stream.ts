@@ -25,6 +25,7 @@ export type HellingEvent = {
 };
 
 type EventsResponse = {
+  data?: HellingEvent[];
   events?: HellingEvent[];
 };
 
@@ -60,7 +61,7 @@ async function fetchEventsBatch(): Promise<HellingEvent[]> {
     throw new Error(`events: HTTP ${resp.status}`);
   }
   const body = (await resp.json()) as EventsResponse;
-  return body.events ?? [];
+  return body.data ?? body.events ?? [];
 }
 
 function trimSeenEvents(seen: Set<string>) {

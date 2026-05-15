@@ -27,13 +27,13 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.0.0
         with:
-          bun-version: latest
+          bun-version: "1.2.18"
 
       - name: Install lint and tools
         run: |
-          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
-          go install mvdan.cc/gofumpt@latest
-          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.0
+          go install mvdan.cc/gofumpt@v0.9.2
+          go install golang.org/x/tools/cmd/goimports@v0.39.0
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 
       - name: Install web deps
@@ -64,6 +64,6 @@ jobs:
           go-version: "1.26"
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           (cd apps/hellingd && govulncheck ./...)
           (cd apps/helling-cli && govulncheck ./...)

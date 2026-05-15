@@ -71,15 +71,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceIP := clientIP(r)
-	if !s.allowFailedLoginAttempt(req.Username, sourceIP) {
-		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
-		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
-		return
-	}
 
 	u, err := s.cfg.Store.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			if !s.allowFailedLoginAttempt(req.Username, sourceIP) {
+				s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+				return
+			}
 			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 			writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 			return
@@ -90,6 +90,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, err := auth.Verify(u.PasswordHash, req.Password)
 	if err != nil || !ok {
+		if !s.allowFailedLoginAttempt(req.Username, sourceIP) {
+			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+			return
+		}
 		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 		return

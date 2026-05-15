@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +16,9 @@ import (
 
 // CookieName is the name of the session cookie issued by /auth/login.
 const CookieName = "helling_session"
+
+const maxLoginBodyBytes int64 = 8 << 10
+const maxUsernameLen = 128
 
 type loginRequest struct {
 	Username string `json:"username"`
@@ -43,8 +48,15 @@ type userResponse struct {
 
 //nolint:gocyclo // Login intentionally spells out rate-limit, password, TOTP, and session branches.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxLoginBodyBytes)
 	var req loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
@@ -53,17 +65,19 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "username and password required")
 		return
 	}
-
-	ip := clientIP(r)
-	if !s.userLimiter.Allow(req.Username) || !s.ipLimiter.Allow(ip) {
-		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
-		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+	if len(req.Username) > maxUsernameLen {
+		writeError(w, http.StatusBadRequest, "bad_request", "username and password required")
 		return
 	}
 
 	u, err := s.cfg.Store.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			if !s.allowFailedLoginAttempt(req.Username, clientIP(r)) {
+				s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+				return
+			}
 			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 			writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 			return
@@ -74,6 +88,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, err := auth.Verify(u.PasswordHash, req.Password)
 	if err != nil || !ok {
+		if !s.allowFailedLoginAttempt(req.Username, clientIP(r)) {
+			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+			return
+		}
 		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 		return
@@ -104,8 +123,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Login succeeded: clear failure counters for this username.
+	// Login succeeded: clear failure counters for this username and source.
 	s.userLimiter.Reset(req.Username)
+	s.ipLimiter.Reset(clientIP(r))
 
 	accessToken, expiresIn, err := s.issueSession(w, r, &u)
 	if err != nil {
@@ -239,12 +259,30 @@ func (s *Server) deleteMFAChallenge(tokenHash string) {
 // clientIP returns a best-effort source IP. Strips port; honors no proxy
 // headers (hellingd is socket-only; helling-proxy is the only client).
 func clientIP(r *http.Request) string {
-	host := r.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i > -1 {
-		host = host[:i]
+	if forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]); forwarded != "" {
+		return forwarded
+	}
+	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
+		return realIP
+	}
+	host := strings.TrimSpace(r.RemoteAddr)
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
 	}
 	if host == "" {
 		return "unknown"
 	}
 	return host
+}
+
+func (s *Server) allowFailedLoginAttempt(username, sourceIP string) bool {
+	if !s.userLimiter.Allow(username) {
+		return false
+	}
+	if !s.ipLimiter.Allow(sourceIP) {
+		return false
+	}
+	return true
 }

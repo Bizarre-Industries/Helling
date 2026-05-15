@@ -127,13 +127,12 @@ done
 
 # ---- inject SSH key ----
 
-log "Authorizing host SSH key for $VM_USER@$VM_IP (will prompt for password the first time)"
+log "Validating SSH trust and key-based auth for $VM_USER@$VM_IP"
 KNOWN_HOST="$VM_IP"
 [ "$VM_SSH_PORT" = "22" ] || KNOWN_HOST="[$VM_IP]:$VM_SSH_PORT"
-ssh-keygen -F "$KNOWN_HOST" >/dev/null 2>&1 || ssh-keyscan -p "$VM_SSH_PORT" -H "$VM_IP" >>"$HOME/.ssh/known_hosts" 2>/dev/null
+ssh-keygen -F "$KNOWN_HOST" >/dev/null 2>&1 || fail "No known_hosts entry for $KNOWN_HOST. Verify the VM host key out-of-band and add it manually (for example: ssh-keyscan -p $VM_SSH_PORT -H $VM_IP >> ~/.ssh/known_hosts after fingerprint verification), then re-run."
 if ! ssh -p "$VM_SSH_PORT" -o BatchMode=yes -o ConnectTimeout=5 "$VM_USER@$VM_IP" true 2>/dev/null; then
-  # Pipe pubkey via stdin so the value isn't interpolated into the remote shell.
-  ssh -p "$VM_SSH_PORT" "$VM_USER@$VM_IP" 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && key=$(cat) && grep -qF "$key" ~/.ssh/authorized_keys 2>/dev/null || echo "$key" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' <"$VM_SSHKEY"
+  fail "SSH key auth is not configured for $VM_USER@$VM_IP. Add $(basename "$VM_SSHKEY") to ~/.ssh/authorized_keys from the VM console, then re-run."
 fi
 
 SSH() { ssh -p "$VM_SSH_PORT" -o BatchMode=yes "$VM_USER@$VM_IP" "$@"; }

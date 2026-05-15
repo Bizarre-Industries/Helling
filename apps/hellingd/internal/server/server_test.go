@@ -237,6 +237,37 @@ func TestLoginRateLimitTriggers429(t *testing.T) {
 	}
 }
 
+func TestLoginRateLimitDoesNotBlockValidCredentials(t *testing.T) {
+	t.Parallel()
+	srv, st := newTestServer(t)
+	seedUser(t, st, "dana", "rightpw")
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	for i := range 5 {
+		body, _ := json.Marshal(loginRequest{Username: "dana", Password: "wrongpw"})
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/auth/login", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatalf("failed attempt %d: %v", i+1, err)
+		}
+		_ = resp.Body.Close()
+	}
+
+	body, _ := json.Marshal(loginRequest{Username: "dana", Password: "rightpw"})
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("valid login POST: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status: got %d want 204", resp.StatusCode)
+	}
+}
+
 func TestLoginRejectsMalformedJSON(t *testing.T) {
 	t.Parallel()
 	srv, _ := newTestServer(t)

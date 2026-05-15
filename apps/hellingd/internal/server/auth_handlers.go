@@ -70,15 +70,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "username and password required")
 		return
 	}
+	sourceIP := clientIP(r)
+	if !s.allowFailedLoginAttempt(req.Username, sourceIP) {
+		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+		return
+	}
 
 	u, err := s.cfg.Store.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			if !s.allowFailedLoginAttempt(req.Username, clientIP(r)) {
-				s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
-				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
-				return
-			}
 			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 			writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 			return
@@ -89,11 +90,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, err := auth.Verify(u.PasswordHash, req.Password)
 	if err != nil || !ok {
-		if !s.allowFailedLoginAttempt(req.Username, clientIP(r)) {
-			s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
-			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
-			return
-		}
 		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "invalid username or password")
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 		return
@@ -126,7 +122,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Login succeeded: clear failure counters for this username and source.
 	s.userLimiter.Reset(req.Username)
-	s.ipLimiter.Reset(clientIP(r))
+	s.ipLimiter.Reset(sourceIP)
 
 	accessToken, expiresIn, err := s.issueSession(w, r, &u)
 	if err != nil {

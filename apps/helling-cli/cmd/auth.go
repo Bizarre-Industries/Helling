@@ -179,7 +179,8 @@ func runAuthLogin(cmd *cobra.Command, username, password *string) error {
 		return err
 	}
 	prof.API = api
-	cli, err := client.New(&prof, api)
+	loginProfile := config.Profile{API: api}
+	cli, err := client.New(&loginProfile, api)
 	if err != nil {
 		return err
 	}

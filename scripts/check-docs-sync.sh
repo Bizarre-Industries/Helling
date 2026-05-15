@@ -81,7 +81,7 @@ cd "$REPO_ROOT"
 # Resolve range
 # ────────────────────────────────────────────────────────────────────
 if [ "$MODE" = "range" ]; then
-  if ! git rev-parse --verify --quiet "$RANGE" >/dev/null 2>&1; then
+  if ! git rev-list --quiet "$RANGE" >/dev/null 2>&1; then
     RANGE="HEAD~5..HEAD"
   fi
 fi

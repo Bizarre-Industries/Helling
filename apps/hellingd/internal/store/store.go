@@ -36,12 +36,12 @@ func Open(stateDir string) (*Store, error) {
 	if err := os.MkdirAll(stateDir, 0o750); err != nil {
 		return nil, fmt.Errorf("creating state dir %s: %w", stateDir, err)
 	}
-	if err := ensurePrivatePath(stateDir, 0o750); err != nil {
+	if err := ensurePrivateDir(stateDir, 0o750); err != nil {
 		return nil, err
 	}
 
 	dbPath := filepath.Join(stateDir, "helling.db")
-	if err := ensurePrivatePath(dbPath, 0o600); err != nil {
+	if err := ensurePrivateFile(dbPath, 0o600); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +70,24 @@ func Open(stateDir string) (*Store, error) {
 	return &Store{db: db, ageIdentity: identity, ageRecipient: identity.Recipient()}, nil
 }
 
-func ensurePrivatePath(path string, mode os.FileMode) error {
+func ensurePrivateDir(path string, mode os.FileMode) error {
+	if err := os.Chmod(path, mode); err != nil {
+		return fmt.Errorf("chmod %s: %w", path, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+	if info.Mode().Perm() != mode {
+		return fmt.Errorf("%s has mode %o, want %o", path, info.Mode().Perm(), mode)
+	}
+	return nil
+}
+
+func ensurePrivateFile(path string, mode os.FileMode) error {
 	f, err := os.OpenFile(path, os.O_CREATE, mode)
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", path, err)

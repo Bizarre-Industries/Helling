@@ -311,6 +311,10 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "scopes must be read, write, or admin")
 		return
 	}
+	if tokenScopes, fromToken := apiTokenScopesFromContext(r.Context()); fromToken && !scopeAllows(tokenScopes, req.Scopes) {
+		writeError(w, http.StatusForbidden, "forbidden", req.Scopes+" API token scope required")
+		return
+	}
 
 	raw, hash, err := auth.NewAPIToken()
 	if err != nil {

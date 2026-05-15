@@ -103,6 +103,42 @@ func TestAuthLogin_StoresTokensAndPrintsConfirmation(t *testing.T) {
 	}
 }
 
+func TestAuthLogin_DoesNotSendStoredCredentialsToLoginEndpoint(t *testing.T) {
+	useTempConfigDir(t)
+	seedProfile(t, config.Profile{
+		API:           "http://old-host:8080",
+		AccessToken:   "old-access-token",
+		Token:         "helling_api_old-token",
+		RefreshCookie: "helling_session=old-cookie",
+	})
+	var sawAuthz, sawCookie string
+	srv := fakeHellingd(t, map[string]http.HandlerFunc{
+		"/api/v1/auth/login": func(w http.ResponseWriter, r *http.Request) {
+			sawAuthz = r.Header.Get("Authorization")
+			sawCookie = r.Header.Get("Cookie")
+			http.SetCookie(w, &http.Cookie{Name: "helling_session", Value: "session-xyz"})
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{"access_token": "jwt.live", "token_type": "Bearer", "expires_in": 900},
+			})
+		},
+	})
+
+	_, err := runCmd(
+		t,
+		[]string{"login", "--username", "admin", "--password", "fixture", "--api", srv.URL},
+		"",
+	)
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if sawAuthz != "" {
+		t.Fatalf("authorization leaked to login endpoint: %q", sawAuthz)
+	}
+	if sawCookie != "" {
+		t.Fatalf("cookie leaked to login endpoint: %q", sawCookie)
+	}
+}
+
 func TestAuthSetup_PostsFirstAdminPayload(t *testing.T) {
 	useTempConfigDir(t)
 	var saw map[string]string

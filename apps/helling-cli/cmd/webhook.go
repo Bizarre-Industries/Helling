@@ -63,6 +63,7 @@ func newWebhookListCmd() *cobra.Command {
 
 func newWebhookCreateCmd() *cobra.Command {
 	var url, secret string
+	var secretStdin bool
 	var events []string
 	c := &cobra.Command{
 		Use:   "create <name>",
@@ -74,6 +75,12 @@ func newWebhookCreateCmd() *cobra.Command {
 				return err
 			}
 			defer cancel()
+			if secretStdin {
+				secret, err = readSecretFromStdin(cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
 			body := map[string]any{
 				"name":   args[0],
 				"url":    url,
@@ -89,7 +96,9 @@ func newWebhookCreateCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&url, "url", "", "Destination URL (required)")
-	c.Flags().StringVar(&secret, "secret", "", "HMAC secret (16+ chars)")
+	c.Flags().StringVar(&secret, "secret", "", "HMAC secret (deprecated: exposes secret in process args)")
+	c.Flags().BoolVar(&secretStdin, "secret-stdin", false, "Read HMAC secret from stdin")
+	_ = c.Flags().MarkDeprecated("secret", "use --secret-stdin to avoid leaking secrets in process args")
 	c.Flags().StringSliceVar(&events, "events", nil, "Event types (comma-separated)")
 	_ = c.MarkFlagRequired("url")
 	return c

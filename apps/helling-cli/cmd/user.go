@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -89,6 +91,7 @@ func newUserListCmd() *cobra.Command {
 func newUserCreateCmd() *cobra.Command {
 	var isAdmin bool
 	var password string
+	var passwordStdin bool
 	c := &cobra.Command{
 		Use:   "create <username>",
 		Short: "Create a Helling-managed user",
@@ -100,6 +103,12 @@ func newUserCreateCmd() *cobra.Command {
 			}
 			defer cancel()
 			body := map[string]any{"username": args[0], "is_admin": isAdmin}
+			if passwordStdin {
+				password, err = readSecretFromStdin(cmd.InOrStdin())
+				if err != nil {
+					return err
+				}
+			}
 			if password != "" {
 				body["password"] = password
 			}
@@ -112,8 +121,22 @@ func newUserCreateCmd() *cobra.Command {
 		},
 	}
 	c.Flags().BoolVar(&isAdmin, "admin", false, "Create an admin user")
-	c.Flags().StringVar(&password, "password", "", "Optional password (argon2id hashed)")
+	c.Flags().StringVar(&password, "password", "", "Optional password (deprecated: exposes secret in process args)")
+	c.Flags().BoolVar(&passwordStdin, "password-stdin", false, "Read password from stdin")
+	_ = c.Flags().MarkDeprecated("password", "use --password-stdin to avoid leaking secrets in process args")
 	return c
+}
+
+func readSecretFromStdin(r io.Reader) (string, error) {
+	line, err := bufio.NewReader(r).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("read secret from stdin: %w", err)
+	}
+	secret := strings.TrimSpace(line)
+	if secret == "" {
+		return "", errors.New("stdin secret is empty")
+	}
+	return secret, nil
 }
 
 func newUserGetCmd() *cobra.Command {

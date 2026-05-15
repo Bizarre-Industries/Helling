@@ -3014,7 +3014,6 @@ Object.assign(window, {
   PageImages,
   PageBackups,
   PageTemplates,
-  PageBMC,
   PageCluster,
   PageSettings,
 });

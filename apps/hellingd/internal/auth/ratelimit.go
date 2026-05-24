@@ -70,6 +70,30 @@ func (r *RateLimiter) Reset(key string) {
 	delete(r.hits, key)
 }
 
+// HitLimit reports whether key has already reached the limit within the window.
+// It does not record a new attempt.
+func (r *RateLimiter) HitLimit(key string) bool {
+	now := time.Now()
+	cutoff := now.Add(-r.window)
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	stamps := r.hits[key]
+	pruned := stamps[:0]
+	for _, t := range stamps {
+		if t.After(cutoff) {
+			pruned = append(pruned, t)
+		}
+	}
+	if len(pruned) == 0 {
+		delete(r.hits, key)
+		return false
+	}
+	r.hits[key] = pruned
+	return len(pruned) >= r.limit
+}
+
 func (r *RateLimiter) gcAllLocked(cutoff time.Time) {
 	for key, stamps := range r.hits {
 		pruned := stamps[:0]

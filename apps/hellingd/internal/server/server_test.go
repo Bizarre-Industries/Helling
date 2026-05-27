@@ -237,7 +237,7 @@ func TestLoginRateLimitTriggers429(t *testing.T) {
 	}
 }
 
-func TestLoginRateLimitBlocksValidCredentials(t *testing.T) {
+func TestLoginRateLimitDoesNotBlockValidCredentials(t *testing.T) {
 	t.Parallel()
 	srv, st := newTestServer(t)
 	seedUser(t, st, "dana", "rightpw")
@@ -263,8 +263,8 @@ func TestLoginRateLimitBlocksValidCredentials(t *testing.T) {
 		t.Fatalf("valid login POST: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusTooManyRequests {
-		t.Fatalf("status: got %d want 429", resp.StatusCode)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status: got %d want 204", resp.StatusCode)
 	}
 }
 

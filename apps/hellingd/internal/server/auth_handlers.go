@@ -71,6 +71,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceIP := clientIP(r)
+	if s.isLoginRateLimited(req.Username, sourceIP) {
+		s.auditForAnonymous(r, "auth.login", outcomeFailed, "user", req.Username, "login rate limited")
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts; try again later")
+		return
+	}
 
 	u, err := s.cfg.Store.GetUserByUsername(r.Context(), req.Username)
 	if err != nil {

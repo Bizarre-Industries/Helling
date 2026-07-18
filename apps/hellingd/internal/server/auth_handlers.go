@@ -18,8 +18,10 @@ import (
 // CookieName is the name of the session cookie issued by /auth/login.
 const CookieName = "helling_session"
 
-const maxLoginBodyBytes int64 = 8 << 10
-const maxUsernameLen = 128
+const (
+	maxLoginBodyBytes int64 = 8 << 10
+	maxUsernameLen          = 128
+)
 
 type loginRequest struct {
 	Username string `json:"username"`

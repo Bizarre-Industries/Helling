@@ -201,5 +201,17 @@
   "199": "hey-api.config.ts",
   "200": "vitest.config.ts",
   "201": "UpdateUserScope200JSONResponse",
-  "202": "@types/react-dom"
+  "202": "@types/react-dom",
+  "203": "Section 07 — Accessibility",
+  "204": "Section 09 — Operator ergonomics",
+  "205": "Section 10 — Security & supply chain",
+  "206": "UnescapedCookieParamError",
+  "207": "TestEventsSSEStreamsNewEvents",
+  "208": "ResponseWriter",
+  "209": "Time",
+  "210": "Client",
+  "211": "Cookie",
+  "212": "Response",
+  "213": "Store",
+  "214": "T"
 }

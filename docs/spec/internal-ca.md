@@ -25,6 +25,7 @@ Helling will maintain an internal CA to issue per-user client certificates for m
 ### Bootstrap Process
 
 1. At first hellingd startup:
+
    - Check if the configured age identity exists
    - If not, generate new age identity → store to file
    - Generate CA key (Ed25519) → encrypt with age identity → write to `/var/lib/helling/ca.key.age`

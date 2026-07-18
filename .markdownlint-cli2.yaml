@@ -12,6 +12,8 @@ ignores:
   - "dist/**"
   - "bin/**"
   - "web/src/api/generated/**"
+  # graphify-out/ is deterministic generated documentation.
+  - "graphify-out/**"
   # refs/ contains vendored reference copies of other projects.
   # Not authored by Helling; not our lint responsibility.
   - "refs/**"

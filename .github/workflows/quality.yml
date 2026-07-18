@@ -168,7 +168,7 @@ jobs:
             !refs
       - name: Prettier check
         run: |
-          npx -y prettier@3.3.3 --check '**/*.md' --ignore-path .gitignore
+          npx -y prettier@3.3.3 --check '**/*.md' --ignore-path .gitignore --ignore-path .prettierignore
 
   yaml:
     name: YAML lint (strict)

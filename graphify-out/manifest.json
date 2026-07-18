@@ -415,9 +415,9 @@
     "semantic_hash": "25ddb29c130c04d507afd8147f477012"
   },
   "apps/hellingd/internal/server/auth_handlers.go": {
-    "mtime": 1781067922.7812588,
-    "ast_hash": "823765e1f04838f97efa73246cb9d763",
-    "semantic_hash": "823765e1f04838f97efa73246cb9d763"
+    "mtime": 1784411032.2612348,
+    "ast_hash": "476ceb7b720adf3047be62cfebe424b2",
+    "semantic_hash": ""
   },
   "apps/hellingd/internal/server/auth_handlers_clientip_test.go": {
     "mtime": 1781067922.7813294,
@@ -500,9 +500,9 @@
     "semantic_hash": "2cf3ce97067bda07183bf5debd4701ff"
   },
   "apps/hellingd/internal/server/security_hardening_test.go": {
-    "mtime": 1781067922.7825067,
-    "ast_hash": "5095f3e14775998d14bec1769820de26",
-    "semantic_hash": "5095f3e14775998d14bec1769820de26"
+    "mtime": 1784411116.2746077,
+    "ast_hash": "4e0cc071ccef91e71cd8cc56c6a17b8e",
+    "semantic_hash": ""
   },
   "apps/hellingd/internal/server/server.go": {
     "mtime": 1781067922.7825885,
@@ -1230,8 +1230,8 @@
     "semantic_hash": "4555d74a159edb4173450736dc04d463"
   },
   ".claude/agents/README.md": {
-    "mtime": 1781067922.7689683,
-    "ast_hash": "28179acca011e8775021281dc5626fdd",
+    "mtime": 1784411121.4200191,
+    "ast_hash": "af1b2bdd5bacd35b57355fbae5d13ea1",
     "semantic_hash": ""
   },
   ".claude/agents/council-architect.md": {
@@ -1435,8 +1435,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/quality.yml": {
-    "mtime": 1781067922.773622,
-    "ast_hash": "df894a597ff0193bfc755141773d4c4c",
+    "mtime": 1784411116.2740922,
+    "ast_hash": "774d9a8a8b4e737bc37d1843a6eff265",
     "semantic_hash": ""
   },
   ".github/workflows/security.yml": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   ".markdownlint-cli2.yaml": {
-    "mtime": 1781067922.7740254,
-    "ast_hash": "d6387a4d6a72200e30766efb658f147f",
+    "mtime": 1784411032.2599423,
+    "ast_hash": "092ebf1686191d4263a01105f0e98500",
     "semantic_hash": ""
   },
   ".markdownlint.yaml": {
@@ -1470,8 +1470,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1784408722.013862,
-    "ast_hash": "d7430e0c1b68c891225a58ffe0ec340e",
+    "mtime": 1784411032.2607777,
+    "ast_hash": "2c9a72555f44160e9524b3470f6352b5",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
@@ -1540,8 +1540,8 @@
     "semantic_hash": ""
   },
   "docs/audits/webui-2026-04-27.md": {
-    "mtime": 1781067922.7876017,
-    "ast_hash": "e3d529db4e8ec9d97a7ce587f2d5bf62",
+    "mtime": 1784411121.486914,
+    "ast_hash": "b1fa5b4f70621503e540b195d0d7ce8e",
     "semantic_hash": ""
   },
   "docs/ci-reference.md": {
@@ -1955,8 +1955,8 @@
     "semantic_hash": ""
   },
   "docs/design/patterns/detail-views.md": {
-    "mtime": 1781067922.7927055,
-    "ast_hash": "c51bb36f04a35c3388d40bffc3313cf3",
+    "mtime": 1784411121.5569198,
+    "ast_hash": "2a2f0bde72f409a37c5547577965544b",
     "semantic_hash": ""
   },
   "docs/design/patterns/empty-states.md": {
@@ -2155,8 +2155,8 @@
     "semantic_hash": ""
   },
   "docs/spec/internal-ca.md": {
-    "mtime": 1781067922.795633,
-    "ast_hash": "a077b6559eb7bfdb1b1f7e20dca74ef7",
+    "mtime": 1784411121.5730054,
+    "ast_hash": "6fa48669ecdf36ce52aee248337bc0a0",
     "semantic_hash": ""
   },
   "docs/spec/kubernetes.md": {

@@ -167,9 +167,7 @@ function InstanceSummary({ instance }: { instance: Instance }) {
       <Descriptions.Item label="Created">{instance.createdAt}</Descriptions.Item>
 
       <Descriptions.Item label="Tags" span={4}>
-        {instance.tags?.map((t) => (
-          <Tag key={t}>{t}</Tag>
-        ))}
+        {instance.tags?.map((t) => <Tag key={t}>{t}</Tag>)}
         <Button type="dashed" size="small" style={{ marginLeft: 4 }}>
           + Add
         </Button>

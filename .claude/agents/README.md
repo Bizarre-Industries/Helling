@@ -8,6 +8,7 @@ Drives the council and self-critique pattern described in
    failure mode in the diff. Default for non-escalated changes.
 2. **The five council members** — fire in parallel, single-shot, Opus-backed.
    Trigger automatically on:
+
    - new ADR creation
    - new external dependency (`go.mod`, `web/package.json`, GH Actions, MCP)
    - breaking change to a service's public API or
@@ -17,6 +18,7 @@ Drives the council and self-critique pattern described in
      config, or `.github/workflows/release.yml`
 
    Members:
+
    - **[`council-architect.md`](council-architect.md)** — structural
      fit, ADR coverage, invariant adherence.
    - **[`council-security.md`](council-security.md)** — credential

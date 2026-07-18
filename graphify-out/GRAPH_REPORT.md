@@ -1,7 +1,7 @@
 # Graph Report - Helling  (2026-07-19)
 
 ## Corpus Check
-- 441 files · ~334,477 words
+- 441 files · ~334,521 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ed5a0a32`
+- Built from commit: `0ca8eac8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -870,24 +870,24 @@ Cohesion: 0.40
 Nodes (5): F-37 — `auth-store.ts` violates `docs/spec/auth.md` §2.2 🔴 BLOCKER · NEW · ✅ Phase 1, F-46 — no `<noscript>`, no CSP meta, no SRI 🟡 MINOR · NEW, F-47 — global `ResizeObserver` warning suppression 🔵 NIT · NEW · ✅ Phase 1, F-49 — no Renovate/Dependabot config 🔵 NIT · NEW, Section 10 — Security & supply chain
 
 ## Knowledge Gaps
-- **597 isolated node(s):** `Council deliberation flow`, `When the council theater alarm trips`, `Why no test-runner / linter agents`, `Why not agent teams (the heavier multi-Claude-instance pattern)`, `Project overview` (+592 more)
+- **597 isolated node(s):** `Project overview`, `Monorepo layout`, `Required toolchain`, `Setup commands`, `Code generation (mandatory)` (+592 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **49 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `writeError()` connect `writeError` to `ResponseWriter`, `.handleCreateSchedule`, `server.go`, `Context`, `firewall_handlers.go`, `audit_handlers.go`, `.handleInstanceStateChange`, `.newReverseProxy`, `.handleCreateUser`, `writeJSON`, `New`, `events_handlers.go`, `Context`, `UserFromContext`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
 - **Why does `Handler()` connect `ResponseWriter` to `server.gen.go`, `server.go`, `Context`, `.ListSchedules`, `auth_ext_handlers.go`, `Context`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
+  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Why does `writeError()` connect `writeError` to `ResponseWriter`, `.handleCreateSchedule`, `server.go`, `Context`, `firewall_handlers.go`, `audit_handlers.go`, `.handleInstanceStateChange`, `.newReverseProxy`, `.handleCreateUser`, `writeJSON`, `New`, `events_handlers.go`, `Context`, `UserFromContext`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **Why does `New()` connect `New` to `doGet`, `server.go`, `Context`, `firewall_handlers.go`, `UserFromContext`, `loginCookie`, `events_handlers.go`, `Hash`, `newTestServer`, `RateLimiter`, `auth_audit_test.go`, `Config`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Are the 99 inferred relationships involving `HandlerFunc` (e.g. with `.AuthLogin()` and `.AuthMfaComplete()`) actually correct?**
   _`HandlerFunc` has 99 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 70 inferred relationships involving `writeError()` (e.g. with `streamAuditJournal()` and `.adminMiddleware()`) actually correct?**
   _`writeError()` has 70 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 47 inferred relationships involving `useTempConfigDir()` (e.g. with `TestAuditExport_CSVFlag()` and `TestAuditExport_JSONDefault()`) actually correct?**
   _`useTempConfigDir()` has 47 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Council deliberation flow`, `When the council theater alarm trips`, `Why no test-runner / linter agents` to the rest of the system?**
+- **What connects `Project overview`, `Monorepo layout`, `Required toolchain` to the rest of the system?**
   _597 weakly-connected nodes found - possible documentation gaps or missing edges._

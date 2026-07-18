@@ -41,6 +41,7 @@ The Go workspace is declared in `go.work` and includes the two Go apps. Each app
 - Go 1.26 (toolchain 1.26.2 pinned)
 - Bun (frontend tooling and Hey API generation)
 - `oapi-codegen` v2 (managed as a Go tool dependency in `apps/hellingd/go.mod`)
+- `tygo` v0.2.21 (Go event types to TypeScript)
 - `golangci-lint`, `gofumpt`, `goimports`
 
 Bootstrap with:

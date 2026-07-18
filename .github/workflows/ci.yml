@@ -32,9 +32,21 @@ jobs:
       - name: Install lint and tools
         run: |
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.0
+          go install github.com/gzuidhof/tygo@v0.2.21
           go install mvdan.cc/gofumpt@v0.9.2
           go install golang.org/x/tools/cmd/goimports@v0.39.0
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+
+      - name: Install sqlc
+        env:
+          SQLC_VERSION: "1.31.0"
+          SQLC_SHA256: "e35394ba3df5e62669e76627f45172d18c6cbb1479e4762c51b29b0eafc16dc0"
+        run: |
+          curl -fsSL -o /tmp/sqlc.tar.gz \
+            "https://github.com/sqlc-dev/sqlc/releases/download/v${SQLC_VERSION}/sqlc_${SQLC_VERSION}_linux_amd64.tar.gz"
+          echo "${SQLC_SHA256}  /tmp/sqlc.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/sqlc.tar.gz -C "$HOME/go/bin" sqlc
+          sqlc version
 
       - name: Install web deps
         working-directory: web

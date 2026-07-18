@@ -80,6 +80,7 @@ install_go_tools() {
     "golang.org/x/tools/cmd/goimports@v0.38.0"
     "mvdan.cc/sh/v3/cmd/shfmt@v3.9.0"
     "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0"
+    "github.com/gzuidhof/tygo@v0.2.21"
     "github.com/pressly/goose/v3/cmd/goose@v3.21.1"
   )
 

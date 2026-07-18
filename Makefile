@@ -40,8 +40,9 @@ help: ## Show this help
 
 .PHONY: dev-setup
 dev-setup: ## Install required tools, frontend deps, and git hooks
-	@echo "→ installing Go tools (oapi-codegen, golangci-lint, gofumpt, goimports)"
+	@echo "→ installing Go tools (oapi-codegen, tygo, golangci-lint, gofumpt, goimports)"
 	$(GO) install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	$(GO) install github.com/gzuidhof/tygo@v0.2.21
 	$(GO) install mvdan.cc/gofumpt@latest
 	$(GO) install golang.org/x/tools/cmd/goimports@latest
 	@echo "→ ensure golangci-lint is installed (https://golangci-lint.run/welcome/install/)"

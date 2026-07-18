@@ -205,7 +205,7 @@
     "semantic_hash": "f2907349b3bab61794e58ba06899d27f"
   },
   "apps/hellingd/api/server.gen.go": {
-    "mtime": 1781067922.7778206,
+    "mtime": 1784412257.2647562,
     "ast_hash": "f7a335d6813d67893c3997a952becb17",
     "semantic_hash": "f7a335d6813d67893c3997a952becb17"
   },
@@ -225,9 +225,9 @@
     "semantic_hash": "339a53e40487b459cc76b271dd5c34b0"
   },
   "apps/hellingd/go.mod": {
-    "mtime": 1781067922.7781684,
-    "ast_hash": "015b226103442dd730bf7dded9ccb08c",
-    "semantic_hash": "015b226103442dd730bf7dded9ccb08c"
+    "mtime": 1784411844.986983,
+    "ast_hash": "f50b3f9d354a12010d62d09277a7d572",
+    "semantic_hash": ""
   },
   "apps/hellingd/internal/audit/audit.go": {
     "mtime": 1781067922.778429,
@@ -675,17 +675,17 @@
     "semantic_hash": "423f7a57a92b25962856a8c413275804"
   },
   "apps/hellingd/internal/store/sqlc/db.go": {
-    "mtime": 1781067922.785123,
+    "mtime": 1784412257.819799,
     "ast_hash": "4b99095379e5ce80a01ab76eb75d9d6b",
     "semantic_hash": "4b99095379e5ce80a01ab76eb75d9d6b"
   },
   "apps/hellingd/internal/store/sqlc/models.go": {
-    "mtime": 1781067922.785199,
+    "mtime": 1784412257.8199844,
     "ast_hash": "c5dea78f4649d4ab0c7de46dddff418e",
     "semantic_hash": "c5dea78f4649d4ab0c7de46dddff418e"
   },
   "apps/hellingd/internal/store/sqlc/platform.sql.go": {
-    "mtime": 1781067922.785269,
+    "mtime": 1784412257.8201015,
     "ast_hash": "e5f364cb3e4851b0e03bc23d49ff660a",
     "semantic_hash": "e5f364cb3e4851b0e03bc23d49ff660a"
   },
@@ -830,9 +830,9 @@
     "semantic_hash": "5de867b7fbdfe4c303b50027802212e0"
   },
   "scripts/install-tools.sh": {
-    "mtime": 1781067922.7985504,
-    "ast_hash": "4eb97791ef859db96cd7730fa5636057",
-    "semantic_hash": "4eb97791ef859db96cd7730fa5636057"
+    "mtime": 1784411970.9877048,
+    "ast_hash": "37561820b82f82c0526b4b9149de360c",
+    "semantic_hash": ""
   },
   "scripts/parallels-vm-bootstrap.sh": {
     "mtime": 1781067922.7986264,
@@ -915,7 +915,7 @@
     "semantic_hash": "4adf1d4c231d2a16e8e15423125530f9"
   },
   "web/src/api/events.gen.ts": {
-    "mtime": 1781067922.800114,
+    "mtime": 1784411947.7420788,
     "ast_hash": "4eef7062289ed1a3c0b321d90952781f",
     "semantic_hash": "4eef7062289ed1a3c0b321d90952781f"
   },
@@ -1425,8 +1425,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1781067922.7734728,
-    "ast_hash": "1aa9aae294756e315552e4b9aea948ab",
+    "mtime": 1784412063.0555184,
+    "ast_hash": "4624e1ef5a698ab56c7816e8d19f02db",
     "semantic_hash": ""
   },
   ".github/workflows/codeql.yml": {
@@ -1470,8 +1470,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1784411032.2607777,
-    "ast_hash": "2c9a72555f44160e9524b3470f6352b5",
+    "mtime": 1784411970.9881287,
+    "ast_hash": "12f0b620c2db9c5be7e612550e22ee80",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {

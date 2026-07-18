@@ -96,3 +96,7 @@ refs/
 
 
 api/openapi.yaml.tmp
+
+# Graphify local cache and usage accounting
+graphify-out/cache/
+graphify-out/cost.json

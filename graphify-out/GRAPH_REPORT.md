@@ -1,16 +1,16 @@
 # Graph Report - Helling  (2026-07-19)
 
 ## Corpus Check
-- 441 files · ~334,521 words
+- 441 files · ~334,552 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3678 nodes · 7804 edges · 215 communities (166 shown, 49 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 753 edges (avg confidence: 0.78)
+- 3683 nodes · 7803 edges · 231 communities (177 shown, 54 thin omitted)
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 752 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0ca8eac8`
+- Built from commit: `e21148b5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -219,6 +219,22 @@
 - Response
 - Store
 - T
+- Config
+- .ServeHTTP
+- clientIP
+- Context
+- auth_ext_handlers.go
+- newSetupTokenServer
+- DialEventsWithClient
+- config_test.go
+- totpAt
+- loadOrCreateAgeIdentity
+- Duration
+- Mutex
+- Time
+- Context
+- FileMode
+- X25519Identity
 
 ## God Nodes (most connected - your core abstractions)
 1. `writeError()` - 76 edges
@@ -233,21 +249,21 @@
 10. `UnauthorizedJSONResponse` - 38 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `TestAdminPolicyDenyEmitsAuditReason()` --calls--> `seedRegularUser()`  [INFERRED]
-  apps/hellingd/internal/server/auth_audit_test.go → apps/hellingd/internal/server/security_hardening_test.go
-- `TestAuthMFACompletionEmitsAuditRecords()` --calls--> `seedRegularUser()`  [INFERRED]
-  apps/hellingd/internal/server/auth_audit_test.go → apps/hellingd/internal/server/security_hardening_test.go
-- `TestEventsSSEStreamsNewEvents()` --calls--> `seedRegularUser()`  [INFERRED]
-  apps/hellingd/internal/server/events_handlers_test.go → apps/hellingd/internal/server/security_hardening_test.go
-- `TestNonAdminCannotUseTypedInstanceHandlers()` --calls--> `seedRegularUser()`  [INFERRED]
-  apps/hellingd/internal/server/instance_handlers_test.go → apps/hellingd/internal/server/security_hardening_test.go
-- `TestAuthFailedLoginEmitsAuditRecord()` --calls--> `postJSON()`  [INFERRED]
-  apps/hellingd/internal/server/auth_audit_test.go → apps/hellingd/internal/server/security_hardening_test.go
+- `New()` --calls--> `NewRateLimiter()`  [INFERRED]
+  apps/hellingd/internal/server/server.go → apps/hellingd/internal/auth/ratelimit.go
+- `TestLoadOrCreateCertificateAuthorityPersistsEncryptedKey()` --calls--> `Open()`  [INFERRED]
+  apps/hellingd/internal/incus/certificates_test.go → apps/hellingd/internal/store/store.go
+- `readLockedDownJSONFile()` --calls--> `Open()`  [INFERRED]
+  apps/hellingd/internal/incus/trust_helper.go → apps/hellingd/internal/store/store.go
+- `newIncusTrustTestStore()` --calls--> `Open()`  [INFERRED]
+  apps/hellingd/internal/incus/user_trust_test.go → apps/hellingd/internal/store/store.go
+- `newTestStore()` --calls--> `Open()`  [INFERRED]
+  apps/hellingd/internal/poller/poller_test.go → apps/hellingd/internal/store/store.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (215 total, 49 thin omitted)
+## Communities (231 total, 54 thin omitted)
 
 ### Community 0 - "server.gen.go"
 Cohesion: 0.01
@@ -255,7 +271,7 @@ Nodes (188): AuditEvent, AuditEventListEnvelope, AuditEventOutcome, AuthLogin202
 
 ### Community 1 - "index.ts"
 Cohesion: 0.03
-Nodes (190): RFC-3339, deleteHostFirewallRule(), listHostFirewallRules(), listSchedules(), listWebhooks(), Options, runSchedule(), AuditEvent (+182 more)
+Nodes (190): RFC-3339, deleteHostFirewallRule(), deleteSchedule(), deleteWebhook(), listHostFirewallRules(), listSchedules(), Options, testWebhook() (+182 more)
 
 ### Community 2 - "ResponseWriter"
 Cohesion: 0.04
@@ -263,15 +279,15 @@ Nodes (29): ChiServerOptions, CreateInstance409JSONResponse, CreateUser409JSONRe
 
 ### Community 3 - "react-query.gen.ts"
 Cohesion: 0.02
-Nodes (141): authLogin(), authMfaComplete(), createHostFirewallRule(), createInstance(), createSchedule(), createUser(), createWebhook(), deleteInstance() (+133 more)
+Nodes (140): authLogin(), authMfaComplete(), createHostFirewallRule(), createInstance(), createSchedule(), createUser(), createWebhook(), deleteInstance() (+132 more)
 
 ### Community 4 - "useTempConfigDir"
 Cohesion: 0.05
-Nodes (111): T, runAudit(), TestAuditExport_CSVFlag(), TestAuditExport_JSONDefault(), TestAuditQuery_ForwardsFilters(), fakeHellingd(), Server, T (+103 more)
+Nodes (112): T, runAudit(), TestAuditExport_CSVFlag(), TestAuditExport_JSONDefault(), TestAuditQuery_ForwardsFilters(), fakeHellingd(), Server, T (+104 more)
 
 ### Community 5 - "UserTrustService"
-Cohesion: 0.06
-Nodes (47): Duration, PrivateKey, LoadOrCreateJWTSigner(), mustRandomHex(), NewJWTSigner(), NewJWTSignerFromSeed(), trimSpaceBytes(), certificateSerial() (+39 more)
+Cohesion: 0.09
+Nodes (33): certificateSerial(), createAndStoreCertificateAuthority(), Certificate, PrivateKey, Time, IssueUserCertificate(), IssueUserCertificateWithCA(), LoadOrCreateCertificateAuthority() (+25 more)
 
 ### Community 6 - "UnauthorizedJSONResponse"
 Cohesion: 0.03
@@ -279,11 +295,11 @@ Nodes (37): AuthLogin401JSONResponse, AuthMfaComplete401JSONResponse, AuthSetup4
 
 ### Community 7 - "OperationHandle"
 Cohesion: 0.06
-Nodes (43): Connect(), decodeResponse(), Context, Instance, Request, Response, Transport, newRequest() (+35 more)
+Nodes (46): Connect(), decodeResponse(), Context, Instance, Request, Response, Transport, newRequest() (+38 more)
 
 ### Community 8 - "New"
-Cohesion: 0.06
-Nodes (33): Context, NullString, Store, Time, nullableInt(), nullableString(), ptrString(), scanFirewallRule() (+25 more)
+Cohesion: 0.08
+Nodes (23): Context, NullString, Store, Time, nullableInt(), nullableString(), ptrString(), scanFirewallRule() (+15 more)
 
 ### Community 9 - "firewall_handlers.go"
 Cohesion: 0.08
@@ -319,31 +335,31 @@ Nodes (22): CreateHostFirewallRule403JSONResponse, CreateSchedule403JSONResponse
 
 ### Community 17 - "app.jsx"
 Cohesion: 0.09
-Nodes (29): ADR-0031, clearAccessToken(), emitChange(), isAuthenticated(), setAccessToken(), subscribeAuthChange(), LogoutRequest, performLogout() (+21 more)
+Nodes (30): ADR-0031, ADR-0037, clearAccessToken(), emitChange(), isAuthenticated(), setAccessToken(), subscribeAuthChange(), LogoutRequest (+22 more)
 
 ### Community 19 - ".handleLogin"
-Cohesion: 0.13
-Nodes (18): clientIP(), T, TestClientIP(), Request, User, isParsableIP(), normalizedRemoteHost(), parseForwardedFor() (+10 more)
+Cohesion: 0.25
+Nodes (6): Request, User, wantsAuthJSON(), ResponseWriter, mfaChallenge, Server
 
 ### Community 20 - "New"
-Cohesion: 0.11
-Nodes (34): New(), applyWebhookUpdate(), blockedWebhookIP(), deliverWebhookOnce(), deliverWebhookWithClient(), Client, Conn, Context (+26 more)
+Cohesion: 0.05
+Nodes (55): escapeMetricLabel(), Duration, Mutex, Request, ResponseWriter, Server, metricLabels(), newMetricsRegistry() (+47 more)
 
 ### Community 21 - "UUID"
 Cohesion: 0.09
 Nodes (19): DeleteHostFirewallRuleRequestObject, DeleteScheduleRequestObject, DeleteWebhookRequestObject, FirewallRule, FirewallRuleAction, FirewallRuleDirection, FirewallRuleEnvelope, FirewallRuleListEnvelope (+11 more)
 
 ### Community 22 - "newTestStore"
-Cohesion: 0.07
-Nodes (43): Store, T, Webhook, seedWebhookForEvents(), TestClaimPendingOutboxEventsPreventsDuplicateClaim(), TestClaimPendingOutboxEventsReclaimsStaleProcessing(), TestCreateEventQueuesOnlyMatchingWebhooks(), TestListEventsSinceReturnsAscendingAfterID() (+35 more)
+Cohesion: 0.08
+Nodes (40): Store, T, Webhook, seedWebhookForEvents(), TestClaimPendingOutboxEventsPreventsDuplicateClaim(), TestClaimPendingOutboxEventsReclaimsStaleProcessing(), TestCreateEventQueuesOnlyMatchingWebhooks(), TestListEventsSinceReturnsAscendingAfterID() (+32 more)
 
 ### Community 23 - "events_handlers.go"
-Cohesion: 0.13
-Nodes (28): DialEvents(), DialEventsWithClient(), Client, Conn, Context, MapLifecycleEvent(), WatchLifecycleEvents(), eventMatchesFilter() (+20 more)
+Cohesion: 0.18
+Nodes (20): eventMatchesFilter(), eventToResponse(), flushSSE(), Context, Event, Mutex, Request, ResponseWriter (+12 more)
 
 ### Community 24 - "Hash"
-Cohesion: 0.06
-Nodes (40): decodeArgon2idHash(), DefaultArgon2Params(), Hash(), fastParams(), T, TestHashRefusesEmptyPassword(), TestHashVerifyRoundtrip(), TestVerifyRejectsMalformedHash() (+32 more)
+Cohesion: 0.20
+Nodes (16): decodeArgon2idHash(), DefaultArgon2Params(), Hash(), fastParams(), T, TestHashRefusesEmptyPassword(), TestHashVerifyRoundtrip(), TestVerifyRejectsMalformedHash() (+8 more)
 
 ### Community 25 - "models.go"
 Cohesion: 0.09
@@ -354,8 +370,8 @@ Cohesion: 0.13
 Nodes (12): Context, Rows, Store, Time, scanSchedules(), defaultString(), Context, NullString (+4 more)
 
 ### Community 27 - "UserFromContext"
-Cohesion: 0.19
-Nodes (13): decodeBase32(), totpAt(), ValidateTOTP(), auditID(), Context, Mutex, Request, ResponseWriter (+5 more)
+Cohesion: 0.23
+Nodes (10): auditID(), Context, Mutex, Request, ResponseWriter, Server, User, UserFromContext() (+2 more)
 
 ### Community 28 - "mocks.ts"
 Cohesion: 0.11
@@ -366,8 +382,8 @@ Cohesion: 0.27
 Nodes (7): Request, ResponseWriter, Server, Request, ResponseWriter, Server, writeError()
 
 ### Community 30 - "bodySerializer.gen.ts"
-Cohesion: 0.12
-Nodes (23): createQuerySerializer(), formDataBodySerializer, jsonBodySerializer, QuerySerializer, QuerySerializerOptionsObject, urlSearchParamsBodySerializer, ArraySeparatorStyle, ArrayStyle (+15 more)
+Cohesion: 0.13
+Nodes (21): BodySerializer, formDataBodySerializer, jsonBodySerializer, QuerySerializerOptionsObject, urlSearchParamsBodySerializer, ArraySeparatorStyle, ArrayStyle, MatrixStyle (+13 more)
 
 ### Community 31 - "pages.jsx"
 Cohesion: 0.09
@@ -390,8 +406,8 @@ Cohesion: 0.11
 Nodes (24): local.debian_134_checksums, local.default_iso_checksum, local.default_iso_url, local.iso_checksum, local.iso_url, local.parallels_tools_flavor, local.preseed_installer_locale, local.ssh_public_key_b64 (+16 more)
 
 ### Community 36 - "utils.gen.ts"
-Cohesion: 0.17
-Nodes (21): createClient(), TODO: we probably want to return error and improve types, ReqInit, buildUrl(), checkForExistence(), createConfig(), createInterceptors(), defaultHeaders (+13 more)
+Cohesion: 0.16
+Nodes (22): createClient(), TODO: we probably want to return error and improve types, ReqInit, buildUrl(), checkForExistence(), createConfig(), createInterceptors(), createQuerySerializer() (+14 more)
 
 ### Community 37 - "user.go"
 Cohesion: 0.24
@@ -402,8 +418,8 @@ Cohesion: 0.22
 Nodes (13): Context, Request, ResponseWriter, Server, Time, scheduleArtifactName(), scheduleToResponse(), scheduleUnitSpec() (+5 more)
 
 ### Community 39 - "server.go"
-Cohesion: 0.15
-Nodes (20): Client, Context, Duration, Logger, Store, Time, loggerMiddleware(), RequestIDFromContext() (+12 more)
+Cohesion: 0.18
+Nodes (17): Client, Duration, Store, Time, incusProxyMutation(), requestStartedFromContext(), timeoutExceptSSE(), AuditEmitFunc (+9 more)
 
 ### Community 40 - "ui-store.ts"
 Cohesion: 0.13
@@ -411,11 +427,11 @@ Nodes (21): closeModal(), Density, dismissToast(), emit(), getSnapshot(), listen
 
 ### Community 41 - "auth.go"
 Cohesion: 0.23
-Nodes (22): decodeJWTClaims(), Client, Command, Context, Reader, Writer, NewAuthCmd(), newAuthLoginCmd() (+14 more)
+Nodes (21): decodeJWTClaims(), Client, Command, Context, Reader, Writer, NewAuthCmd(), newAuthLoginCmd() (+13 more)
 
 ### Community 42 - "proxy.go"
-Cohesion: 0.06
-Nodes (62): applyAuthEnv(), applyBaseEnv(), applyEnv(), applyIncusEnv(), Defaults(), FileMode, Load(), T (+54 more)
+Cohesion: 0.17
+Nodes (22): Certificate, Logger, Store, Transport, loadCertPool(), MustParseURL(), NewDelegatedIncusProxy(), NewIncusProxy() (+14 more)
 
 ### Community 43 - "QueryStateView.tsx"
 Cohesion: 0.13
@@ -430,12 +446,12 @@ Cohesion: 0.08
 Nodes (23): Bootstrap Process, By Helling (Proxy), By Incus, CA Certificate, CA Key Encryption, CA Key Management, CA Rotation, Certificate Lifecycle (+15 more)
 
 ### Community 46 - ".handleInstanceStateChange"
-Cohesion: 0.18
-Nodes (15): Client, Request, ResponseWriter, Server, isAlreadyExists(), isConflict(), isNotFound(), toOperationResponse() (+7 more)
+Cohesion: 0.24
+Nodes (12): Client, Request, ResponseWriter, Server, isAlreadyExists(), isConflict(), isNotFound(), toOperationResponse() (+4 more)
 
 ### Community 47 - "loginCookie"
-Cohesion: 0.17
-Nodes (20): Client, Context, Instance, InstanceCreate, OperationStatus, Request, Server, Store (+12 more)
+Cohesion: 0.25
+Nodes (18): Client, Request, Server, Store, T, mustRequest(), newServerWithIncus(), TestCreateInstanceCreatesOperationRow() (+10 more)
 
 ### Community 48 - "compilerOptions"
 Cohesion: 0.10
@@ -450,19 +466,19 @@ Cohesion: 0.28
 Nodes (7): auditDurationMS(), auditStatusForOutcome(), Request, Server, User, Logger, jwtIDFromContext()
 
 ### Community 51 - "Store"
-Cohesion: 0.28
+Cohesion: 0.23
 Nodes (13): Context, Store, T, User, seedAdminUser(), TestCreateScheduleInstallsSystemdUnits(), TestCreateScheduleRejectsOnCalendarInjectionBeforeInstall(), TestDeleteScheduleRemovesSystemdUnits() (+5 more)
 
 ### Community 52 - "writeJSON"
-Cohesion: 0.30
-Nodes (7): writeJSON(), boolToStatus(), errToString(), Request, ResponseWriter, Server, systemInfoResponse
+Cohesion: 0.20
+Nodes (10): Request, ResponseWriter, Server, writeJSON(), boolToStatus(), errToString(), Request, ResponseWriter (+2 more)
 
 ### Community 53 - "queries.ts"
 Cohesion: 0.24
 Nodes (17): getAccessToken(), authedFetch(), fetchIncusInstances(), fetchIncusList(), fetchPodmanContainers(), IncusImage, IncusNetwork, IncusOperation (+9 more)
 
 ### Community 54 - "index.ts"
-Cohesion: 0.20
+Cohesion: 0.19
 Nodes (16): BuildUrlFn, Client, ClientOptions, Config, CreateClientConfig, MethodFn, OmitKeys, Options (+8 more)
 
 ### Community 55 - "window-globals.ts"
@@ -478,12 +494,12 @@ Cohesion: 0.19
 Nodes (12): HashAPIToken(), NewAPIToken(), ValidScopes(), apiTokenScopesFromContext(), Context, Request, ResponseWriter, Server (+4 more)
 
 ### Community 58 - "newTestServer"
-Cohesion: 0.27
-Nodes (16): Config, Server, Store, T, newTestServer(), newTestServerWithConfig(), seedUser(), TestHealthAndVersion() (+8 more)
+Cohesion: 0.36
+Nodes (14): Config, Server, Store, T, newTestServer(), newTestServerWithConfig(), seedUser(), TestHealthAndVersion() (+6 more)
 
 ### Community 59 - "RateLimiter"
-Cohesion: 0.21
-Nodes (11): Duration, Mutex, Time, NewRateLimiter(), T, TestRateLimiterAllowsUpToLimit(), TestRateLimiterIsolatesKeys(), TestRateLimiterKeyCap() (+3 more)
+Cohesion: 0.19
+Nodes (12): NewRateLimiter(), T, TestRateLimiterAllowsUpToLimit(), TestRateLimiterIsolatesKeys(), TestRateLimiterKeyCap(), TestRateLimiterReset(), TestRateLimiterWindowExpiry(), RateLimiter (+4 more)
 
 ### Community 60 - "auth_audit_test.go"
 Cohesion: 0.29
@@ -498,8 +514,8 @@ Cohesion: 0.12
 Nodes (17): @biomejs/biome, @hey-api/openapi-ts, jsdom, @testing-library/jest-dom, @testing-library/react, @types/react, vite, @vitejs/plugin-react (+9 more)
 
 ### Community 63 - "Config"
-Cohesion: 0.21
-Nodes (11): escapeMetricLabel(), Duration, Mutex, Request, ResponseWriter, Server, metricLabels(), newMetricsRegistry() (+3 more)
+Cohesion: 0.13
+Nodes (20): Context, ScrapeMetrics(), argon2ParamsFromConfig(), buildDelegatedIncusProxy(), connectIncusClient(), Client, Config, FileMode (+12 more)
 
 ### Community 64 - "helling-first-boot.sh"
 Cohesion: 0.26
@@ -534,16 +550,16 @@ Cohesion: 0.34
 Nodes (7): Context, Rows, Store, Time, scanOperationRow(), Operation, OperationStatus
 
 ### Community 72 - "Context"
-Cohesion: 0.25
-Nodes (6): Mutex, Request, ResponseWriter, Router, Server, incusProxyMutation()
+Cohesion: 0.20
+Nodes (9): Context, Logger, Mutex, Request, ResponseWriter, Router, Server, loggerMiddleware() (+1 more)
 
 ### Community 73 - "dependencies"
 Cohesion: 0.15
 Nodes (13): @hey-api/client-fetch, lucide-react, react, react-dom, @scalar/api-reference-react, @tanstack/react-query, dependencies, @hey-api/client-fetch (+5 more)
 
 ### Community 74 - "types.gen.ts"
-Cohesion: 0.21
-Nodes (11): AuthToken, BodySerializer, QuerySerializerOptions, ServerSentEventsOptions, ServerSentEventsResult, StreamEvent, Client, Config (+3 more)
+Cohesion: 0.20
+Nodes (12): Auth, AuthToken, QuerySerializer, QuerySerializerOptions, ServerSentEventsOptions, ServerSentEventsResult, StreamEvent, Client (+4 more)
 
 ### Community 75 - "icon.tsx"
 Cohesion: 0.28
@@ -827,7 +843,7 @@ Nodes (4): deleteHostFirewallRuleMutation(), listHostFirewallRulesOptions(), lis
 
 ### Community 146 - "client.gen.ts"
 Cohesion: 0.50
-Nodes (3): ADR-0037, client, CreateClientConfig
+Nodes (3): client, CreateClientConfig, ClientOptions
 
 ### Community 147 - "TestPodmanRequestAllowed"
 Cohesion: 0.80
@@ -853,6 +869,10 @@ Nodes (4): noUnusedImports, noUnusedVariables, useExhaustiveDependencies, correc
 Cohesion: 0.50
 Nodes (3): *.css, *.jsx, Window
 
+### Community 187 - "fakeOpHandle"
+Cohesion: 0.18
+Nodes (11): Duration, PrivateKey, LoadOrCreateJWTSigner(), mustRandomHex(), NewJWTSigner(), NewJWTSignerFromSeed(), trimSpaceBytes(), JWTClaims (+3 more)
+
 ### Community 201 - "UpdateUserScope200JSONResponse"
 Cohesion: 0.40
 Nodes (5): F-10 — sidebar grows linearly forever 🟠 MAJOR, F-11 — crumb-to-route mapping ad-hoc 🟠 MAJOR, F-12 — Firewall + FirewallEditor split unclear 🟡 MINOR, F-13 — Marketplace + Templates overlap 🟡 MINOR, Section 04 — Information architecture & navigation
@@ -869,20 +889,60 @@ Nodes (5): F-32 — no global "what changed?" view 🟠 MAJOR, F-33 — backup s
 Cohesion: 0.40
 Nodes (5): F-37 — `auth-store.ts` violates `docs/spec/auth.md` §2.2 🔴 BLOCKER · NEW · ✅ Phase 1, F-46 — no `<noscript>`, no CSP meta, no SRI 🟡 MINOR · NEW, F-47 — global `ResizeObserver` warning suppression 🔵 NIT · NEW · ✅ Phase 1, F-49 — no Renovate/Dependabot config 🔵 NIT · NEW, Section 10 — Security & supply chain
 
+### Community 215 - "Config"
+Cohesion: 0.27
+Nodes (12): applyAuthEnv(), applyBaseEnv(), applyEnv(), applyIncusEnv(), Defaults(), FileMode, Load(), AuthConfig (+4 more)
+
+### Community 216 - ".ServeHTTP"
+Cohesion: 0.29
+Nodes (8): Request, ResponseWriter, podmanRequestAllowed(), T, TestPodmanRequestAllowed(), TestProxyDirectorStripsHellingCredentials(), writeProxyError(), Header
+
+### Community 217 - "clientIP"
+Cohesion: 0.26
+Nodes (10): clientIP(), T, TestClientIP(), isParsableIP(), normalizedRemoteHost(), parseForwardedFor(), parseIP(), writeAuthData() (+2 more)
+
+### Community 218 - "Context"
+Cohesion: 0.26
+Nodes (4): Context, Store, Time, TOTPSecret
+
+### Community 219 - "auth_ext_handlers.go"
+Cohesion: 0.20
+Nodes (10): Store, Time, newFirstAdminSetupService(), createTokenRequest, createTokenResponse, firstAdminSetupService, mfaCompleteRequest, setupStatusResponse (+2 more)
+
+### Community 220 - "newSetupTokenServer"
+Cohesion: 0.35
+Nodes (10): Server, Store, T, Writer, newSetupTokenServer(), TestRetireSetupTokenTruncatesWhenDirectoryCannotUnlink(), TestSetupCreatesAdminWithInstallerTokenAndLogsAuditEvent(), TestSetupRejectsOversizedBody() (+2 more)
+
+### Community 221 - "DialEventsWithClient"
+Cohesion: 0.39
+Nodes (8): DialEvents(), DialEventsWithClient(), Client, Conn, Context, MapLifecycleEvent(), WatchLifecycleEvents(), LifecycleEvent
+
+### Community 222 - "config_test.go"
+Cohesion: 0.67
+Nodes (5): T, TestLoadAcceptsDefaultConfig(), TestLoadRejectsInvalidAuthConfig(), TestLoadRejectsInvalidSocketConfig(), writeConfig()
+
+### Community 223 - "totpAt"
+Cohesion: 0.83
+Nodes (3): decodeBase32(), totpAt(), ValidateTOTP()
+
+### Community 224 - "loadOrCreateAgeIdentity"
+Cohesion: 0.67
+Nodes (3): ageIdentityPath(), X25519Identity, loadOrCreateAgeIdentity()
+
 ## Knowledge Gaps
 - **597 isolated node(s):** `Project overview`, `Monorepo layout`, `Required toolchain`, `Setup commands`, `Code generation (mandatory)` (+592 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **49 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **54 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Handler()` connect `ResponseWriter` to `server.gen.go`, `server.go`, `Context`, `.ListSchedules`, `auth_ext_handlers.go`, `Context`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+  _High betweenness centrality (0.091) - this node is a cross-community bridge._
 - **Why does `writeError()` connect `writeError` to `ResponseWriter`, `.handleCreateSchedule`, `server.go`, `Context`, `firewall_handlers.go`, `audit_handlers.go`, `.handleInstanceStateChange`, `.newReverseProxy`, `.handleCreateUser`, `writeJSON`, `New`, `events_handlers.go`, `Context`, `UserFromContext`?**
   _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **Why does `New()` connect `New` to `doGet`, `server.go`, `Context`, `firewall_handlers.go`, `UserFromContext`, `loginCookie`, `events_handlers.go`, `Hash`, `newTestServer`, `RateLimiter`, `auth_audit_test.go`, `Config`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Why does `New()` connect `New` to `doGet`, `server.go`, `Context`, `firewall_handlers.go`, `OperationHandle`, `UserFromContext`, `auth_ext_handlers.go`, `loginCookie`, `newSetupTokenServer`, `Store`, `events_handlers.go`, `newTestServer`, `RateLimiter`, `auth_audit_test.go`?**
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **Are the 99 inferred relationships involving `HandlerFunc` (e.g. with `.AuthLogin()` and `.AuthMfaComplete()`) actually correct?**
   _`HandlerFunc` has 99 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 70 inferred relationships involving `writeError()` (e.g. with `streamAuditJournal()` and `.adminMiddleware()`) actually correct?**

@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const maxRateLimiterKeys = 4096
+
 // RateLimiter is a sliding-window per-key counter. Used to throttle login
 // attempts. Two keyspaces are expected per docs/standards/security.md:
 //
@@ -12,8 +14,6 @@ import (
 //   - per-source-IP: 20 failures per 15 minutes
 //
 // State is in-memory; restart wipes counters. Persistence deferred to v0.2.
-const maxRateLimiterKeys = 4096
-
 type RateLimiter struct {
 	limit  int
 	window time.Duration

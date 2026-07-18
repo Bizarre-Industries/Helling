@@ -41,7 +41,7 @@ func Open(stateDir string) (*Store, error) {
 	}
 
 	dbPath := filepath.Join(stateDir, "helling.db")
-	if err := ensurePrivateFile(dbPath, 0o600); err != nil {
+	if err := ensurePrivateFile(stateDir, "helling.db", 0o600); err != nil {
 		return nil, err
 	}
 
@@ -87,8 +87,15 @@ func ensurePrivateDir(path string, mode os.FileMode) error {
 	return nil
 }
 
-func ensurePrivateFile(path string, mode os.FileMode) error {
-	f, err := os.OpenFile(path, os.O_CREATE, mode)
+func ensurePrivateFile(dir, name string, mode os.FileMode) error {
+	path := filepath.Join(dir, name)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("opening state dir %s: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+
+	f, err := root.OpenFile(name, os.O_CREATE, mode)
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", path, err)
 	}
@@ -100,7 +107,7 @@ func ensurePrivateFile(path string, mode os.FileMode) error {
 		return fmt.Errorf("closing %s: %w", path, err)
 	}
 
-	info, err := os.Stat(path)
+	info, err := root.Stat(name)
 	if err != nil {
 		return fmt.Errorf("stat %s: %w", path, err)
 	}

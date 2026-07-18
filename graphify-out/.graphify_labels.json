@@ -213,5 +213,21 @@
   "211": "Cookie",
   "212": "Response",
   "213": "Store",
-  "214": "T"
+  "214": "T",
+  "215": "Config",
+  "216": ".ServeHTTP",
+  "217": "clientIP",
+  "218": "Context",
+  "219": "auth_ext_handlers.go",
+  "220": "newSetupTokenServer",
+  "221": "DialEventsWithClient",
+  "222": "config_test.go",
+  "223": "totpAt",
+  "224": "loadOrCreateAgeIdentity",
+  "225": "Duration",
+  "226": "Mutex",
+  "227": "Time",
+  "228": "Context",
+  "229": "FileMode",
+  "230": "X25519Identity"
 }

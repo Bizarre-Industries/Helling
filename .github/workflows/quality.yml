@@ -159,7 +159,7 @@ jobs:
       # Bumped 2026-04-21: v16.0.0 → v22.0.0 (6 major versions behind).
       # Major jumps: markdownlint-cli2 v0.13 → v0.20, markdownlint v0.34 → v0.40.
       # No config changes required — same `globs` input schema.
-      - uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd # v23.2.0
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: |
             **/*.md
